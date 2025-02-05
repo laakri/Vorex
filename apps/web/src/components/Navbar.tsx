@@ -10,34 +10,32 @@ import { Menu } from "lucide-react";
 
 const Navbar = () => {
   return (
-    <nav className="fixed top-0 w-full bg-white border-b z-50">
+    <nav className="fixed top-0 w-full bg-background border-b z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-indigo-600 rounded-full" />
-            <span className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 text-transparent bg-clip-text">
-              Vorex
-            </span>
+            <div className="w-8 h-8 bg-primary rounded-full" />
+            <span className="text-2xl font-bold text-primary">Vorex</span>
           </Link>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
             <Link
               to="/"
-              className="text-gray-600 hover:text-indigo-600 transition"
+              className="text-muted-foreground hover:text-primary transition"
             >
               Home
             </Link>
             <Link
               to="/about"
-              className="text-gray-600 hover:text-indigo-600 transition"
+              className="text-muted-foreground hover:text-primary transition"
             >
               About
             </Link>
             <Link
               to="/contact"
-              className="text-gray-600 hover:text-indigo-600 transition"
+              className="text-muted-foreground hover:text-primary transition"
             >
               Contact
             </Link>
