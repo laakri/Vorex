@@ -1,13 +1,13 @@
 import { ThemeProvider } from "@/components/theme-provider";
+import { BrowserRouter } from "react-router-dom";
+import { AppRoutes } from "./route";
 
 function App() {
   return (
     <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-      <div>
-        <p className="read-the-docs">
-          Click on the Vite and React logos to learn more
-        </p>
-      </div>
+      <BrowserRouter>
+        <AppRoutes />
+      </BrowserRouter>
     </ThemeProvider>
   );
 }
