@@ -80,23 +80,23 @@ export function MainTrack() {
             Real-time tracking for your shipments across Tunisia
           </p>
 
-          {/* Improved Tracking Input */}
+          {/* Refined Tracking Input */}
           <div className="max-w-xl mx-auto mt-8">
             <Card className="bg-white/10 backdrop-blur border-white/20">
-              <CardContent className="p-3">
-                <div className="flex gap-3">
+              <CardContent className="p-2">
+                <div className="flex gap-2">
                   <Input
                     placeholder="Enter your tracking number"
-                    className="h-14 bg-white/90 border-0 text-black placeholder:text-gray-500 text-lg px-4"
+                    className="h-11 bg-white/90 border-0 text-black placeholder:text-gray-500 text-base px-3"
                   />
-                  <Button className="h-14 px-8 bg-primary hover:bg-primary/90 text-base font-medium">
-                    <Search className="h-5 w-5 mr-2 stroke-[2]" />
+                  <Button className="h-11 px-6 bg-primary hover:bg-primary/90">
+                    <Search className="h-4 w-4 mr-2" />
                     Track
                   </Button>
                 </div>
               </CardContent>
             </Card>
-            <p className="text-sm text-white/60 mt-3">
+            <p className="text-sm text-white/60 mt-2">
               Example: VRX-1234567890
             </p>
           </div>

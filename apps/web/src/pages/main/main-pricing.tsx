@@ -1,5 +1,3 @@
-import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
 import { Package, Truck, Scale, MapPin, Calculator } from "lucide-react";
 import {
   Card,
@@ -8,7 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Box, Shield, Code } from "lucide-react";
+import { Box } from "lucide-react";
 // Example pricing calculation
 const examplePackages = [
   {
@@ -42,29 +40,6 @@ const distanceRates = [
   { range: "31-100km", price: 2 },
   { range: "101-300km", price: 3 },
   { range: ">300km", price: 4 },
-];
-
-const additionalServices = [
-  {
-    name: "Express Delivery",
-    price: "Additional dt 20",
-    description: "Same-day delivery for urgent shipments",
-  },
-  {
-    name: "Weekend Delivery",
-    price: "Additional dt 15",
-    description: "Saturday and Sunday deliveries",
-  },
-  {
-    name: "Insurance Plus",
-    price: "1% of declared value",
-    description: "Extended coverage up to dt 5000",
-  },
-  {
-    name: "Special Handling",
-    price: "Additional dt 10",
-    description: "For fragile or special care items",
-  },
 ];
 
 export function MainPricing() {
