@@ -159,14 +159,14 @@ export function MainNav() {
               size="sm"
               className="text-sm font-medium"
             >
-              <Link to="/login">Sign in</Link>
+              <Link to="/auth/sign-in">Sign in</Link>
             </Button>
             <Button
               asChild
               size="sm"
               className="text-sm font-medium text-white bg-yellow-600 hover:bg-yellow-500"
             >
-              <Link to="/register">Start shipping</Link>
+              <Link to="/auth/sign-up">Start shipping</Link>
             </Button>
           </div>
 
