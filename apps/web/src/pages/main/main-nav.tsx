@@ -105,19 +105,6 @@ export function MainNav() {
               </NavigationMenuList>
             </NavigationMenu>
 
-            {/* Direct Links */}
-            <Link
-              to="/pricing"
-              className="text-sm font-medium text-foreground/70 transition-colors hover:text-foreground/90"
-            >
-              Pricing
-            </Link>
-            <Link
-              to="/network"
-              className="text-sm font-medium text-foreground/70 transition-colors hover:text-foreground/90"
-            >
-              Network
-            </Link>
             <NavigationMenu>
               <NavigationMenuList>
                 <NavigationMenuItem>
@@ -142,6 +129,13 @@ export function MainNav() {
                 </NavigationMenuItem>
               </NavigationMenuList>
             </NavigationMenu>
+            {/* Direct Links */}
+            <Link
+              to="/pricing"
+              className="text-sm font-medium  transition-colors hover:text-foreground/90"
+            >
+              Pricing
+            </Link>
           </div>
         </div>
 
@@ -149,9 +143,11 @@ export function MainNav() {
         <div className="flex items-center gap-4">
           {/* Track Shipment Quick Access */}
           <div className="hidden lg:block">
-            <Button variant="outline" size="sm" className="gap-2">
-              <Package className="h-4 w-4" />
-              Track Shipment
+            <Button variant="outline" size="sm" className="gap-2" asChild>
+              <Link to="/track">
+                <Package className="h-4 w-4" />
+                Track Shipment
+              </Link>
             </Button>
           </div>
 
@@ -168,7 +164,7 @@ export function MainNav() {
             <Button
               asChild
               size="sm"
-              className="text-sm font-medium bg-primary hover:bg-primary/90"
+              className="text-sm font-medium text-white bg-yellow-600 hover:bg-yellow-500"
             >
               <Link to="/register">Start shipping</Link>
             </Button>
