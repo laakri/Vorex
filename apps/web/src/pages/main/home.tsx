@@ -9,6 +9,7 @@ import {
   Clock,
   Package,
   CheckCircle2,
+  User,
 } from "lucide-react";
 import heroBg from "@/assets/hero-bg.jpg";
 import warehouse from "@/assets/warehouse.jpg";
@@ -28,8 +29,8 @@ export function HomePage() {
         </div>
 
         {/* Hero content */}
-        <div className="container relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center pt-24">
-          <div className="space-y-6">
+        <div className="container mx-auto max-w-7xl relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center justify-center pt-24">
+          <div className="space-y-6 ">
             <h1 className="font-bold text-4xl sm:text-5xl md:text-6xl lg:text-7xl tracking-tight">
               Ship smarter,
               <br />
@@ -55,11 +56,11 @@ export function HomePage() {
           </div>
 
           {/* Delivery Status Stepper */}
-          <div>
+          <div className=" w-max">
             <h3 className="font-semibold text-xl mb-6">How it works</h3>
             <div className="space-y-8">
               {deliverySteps.map((step, index) => (
-                <div key={step.title} className="flex gap-4">
+                <div key={step.title} className="flex gap-4  w-max">
                   <div className="flex flex-col items-center">
                     <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
                       <step.icon className="w-4 h-4 text-primary" />
@@ -112,7 +113,7 @@ export function HomePage() {
 
       {/* Stats Section */}
       <section className="border-y bg-muted/50">
-        <div className="container py-24 sm:py-32">
+        <div className="container py-24 sm:py-12">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
             {stats.map((stat) => (
               <div key={stat.label} className="space-y-2">
@@ -159,6 +160,57 @@ export function HomePage() {
               className="rounded-lg object-cover w-full h-[600px]"
             />
           </div>
+        </div>
+      </section>
+
+      {/* Testimonials Section */}
+      <section className="container py-24 sm:py-32">
+        <div className="mx-auto flex max-w-[58rem] flex-col items-center space-y-4 text-center">
+          <h2 className="font-bold text-3xl leading-[1.1] sm:text-3xl md:text-6xl">
+            Trusted by Businesses
+          </h2>
+          <p className="max-w-[85%] leading-normal text-muted-foreground sm:text-lg sm:leading-7">
+            See what our customers say about their experience with Vorex
+          </p>
+        </div>
+        <div className="mx-auto grid justify-center gap-4 sm:grid-cols-2 md:max-w-[64rem] lg:grid-cols-3 mt-8">
+          {testimonials.map((testimonial) => (
+            <div
+              key={testimonial.author}
+              className="relative overflow-hidden rounded-lg border bg-background p-6"
+            >
+              <div className="space-y-4">
+                <p className="text-muted-foreground">{testimonial.content}</p>
+                <div className="flex items-center gap-4">
+                  <div className="rounded-full bg-primary/10 p-1 text-primary">
+                    {testimonial.image}
+                  </div>
+                  <div>
+                    <h4 className="font-semibold">{testimonial.author}</h4>
+                    <p className="text-sm text-muted-foreground">
+                      {testimonial.role}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="border-t">
+        <div className="container flex flex-col items-center justify-center gap-4 py-24 text-center md:gap-10">
+          <h2 className="font-bold text-3xl leading-[1.1] sm:text-3xl md:text-6xl">
+            Ready to Transform Your Deliveries?
+          </h2>
+          <p className="max-w-[85%] leading-normal text-muted-foreground sm:text-lg sm:leading-7">
+            Join thousands of businesses that trust Vorex for their logistics
+            needs
+          </p>
+          <Button asChild size="lg" className="mt-4">
+            <Link to="/register">Get Started Today</Link>
+          </Button>
         </div>
       </section>
     </>
@@ -244,5 +296,29 @@ const features = [
     title: "Real-time Tracking",
     description: "Live tracking and status updates for all deliveries",
     icon: Clock,
+  },
+];
+
+const testimonials = [
+  {
+    content:
+      "Vorex has revolutionized how we handle our deliveries. The real-time tracking and optimization features have saved us countless hours.",
+    author: "Sarah Johnson",
+    role: "Operations Manager",
+    image: <User className="h-6 w-6" />,
+  },
+  {
+    content:
+      "The warehouse management system is intuitive and powerful. It's helped us reduce errors and improve efficiency by 40%.",
+    author: "Michael Chen",
+    role: "Warehouse Director",
+    image: <User className="h-6 w-6" />,
+  },
+  {
+    content:
+      "As a driver, the mobile app makes my job so much easier. The route optimization is spot-on and the interface is user-friendly.",
+    author: "Ahmed Hassan",
+    role: "Senior Driver",
+    image: <User className="h-6 w-6" />,
   },
 ];

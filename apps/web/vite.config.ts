@@ -7,9 +7,11 @@ export default defineConfig({
   server: {
     watch: {
       usePolling: true,
+      interval: 100,
     },
     hmr: {
       overlay: true,
+      port: 24678,
     },
   },
   resolve: {
