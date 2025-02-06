@@ -1,0 +1,460 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enums
+enum Role {
+  ADMIN
+  SELLER
+  WAREHOUSE_MANAGER
+  DRIVER
+}
+
+enum SecurityLevel {
+  BASIC
+  INTERMEDIATE
+  ADVANCED
+  MASTER
+}
+
+enum ShiftType {
+  MORNING
+  AFTERNOON
+  NIGHT
+  FLEXIBLE
+}
+
+enum LicenseType {
+  A
+  B
+  C
+  D
+  E
+}
+
+enum DriverStatus {
+  AVAILABLE
+  ON_DELIVERY
+  OFF_DUTY
+  ON_BREAK
+  MAINTENANCE
+}
+
+enum VehicleType {
+  MOTORCYCLE
+  CAR
+  VAN
+  SMALL_TRUCK
+  LARGE_TRUCK
+}
+
+enum VehicleStatus {
+  ACTIVE
+  MAINTENANCE
+  REPAIR
+  OUT_OF_SERVICE
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  READY_FOR_PICKUP
+  IN_TRANSIT
+  DELIVERED
+  CANCELLED
+}
+
+enum DeliveryStatus {
+  PENDING
+  PICKED_UP
+  IN_TRANSIT
+  DELIVERED
+  FAILED
+  CANCELLED
+}
+
+enum RouteStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum RefundStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// Models
+model User {
+  id        String   @id @default(cuid())
+  fullName  String
+  email     String   @unique
+  password  String
+  role      Role
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  seller           Seller?
+  warehouseManager WarehouseManager?
+  driver           Driver?
+}
+
+model Seller {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  businessName    String
+  businessType    String
+  description     String?
+  hasRegistration Boolean  @default(false)
+  registrationNo  String?
+  taxId           String?
+  address         String
+  city            String
+  postalCode      String
+  governorate     String
+  phone           String
+  isVerified      Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  user      User       @relation(fields: [userId], references: [id])
+  products  Product[]
+  orders    Order[]
+  documents Document[]
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  sellerId    String
+  name        String
+  description String?
+  price       Float
+  stock       Int
+  sku         String   @unique
+  weight      Float?
+  dimensions  String?
+  category    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  seller     Seller      @relation(fields: [sellerId], references: [id])
+  orderItems OrderItem[]
+}
+
+model Order {
+  id            String      @id @default(cuid())
+  sellerId      String
+  warehouseId   String?
+  status        OrderStatus
+  totalAmount   Float
+  address       String
+  city          String
+  governorate   String
+  postalCode    String
+  phone         String
+  customerName  String
+  customerEmail String?
+  notes         String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  // Relations
+  seller    Seller       @relation(fields: [sellerId], references: [id])
+  warehouse Warehouse?   @relation(fields: [warehouseId], references: [id])
+  items     OrderItem[]
+  delivery  Delivery?
+  rating    Rating?
+  refund    Refund?
+}
+
+model OrderItem {
+  id            String   @id @default(cuid())
+  orderId       String
+  productId     String
+  quantity      Int
+  price         Float
+  weight        Float?
+  dimensions    String?
+  packagingType String?
+  fragile       Boolean  @default(false)
+  perishable    Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  order   Order   @relation(fields: [orderId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+}
+
+model WarehouseManager {
+  id                String        @id @default(cuid())
+  userId           String        @unique
+  warehouseId      String
+  employeeId       String        @unique
+  securityClearance SecurityLevel
+  shiftPreference  ShiftType
+  emergencyContact String
+  specializations  String[]
+  notes            String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  // Relations
+  user            User             @relation(fields: [userId], references: [id])
+  warehouse       Warehouse        @relation(fields: [warehouseId], references: [id])
+  inventoryAudits InventoryAudit[]
+  staffSchedules  StaffSchedule[]
+}
+
+model Warehouse {
+  id          String   @id @default(cuid())
+  name        String
+  address     String
+  city        String
+  governorate String
+  postalCode  String
+  phone       String
+  capacity    Float
+  currentLoad Float
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  managers        WarehouseManager[]
+  sections        WarehouseSection[]
+  orders          Order[]
+  outgoingRoutes  DeliveryRoute[]    @relation("FromWarehouse")
+}
+
+model WarehouseSection {
+  id          String   @id @default(cuid())
+  warehouseId String
+  name        String
+  description String?
+  capacity    Float
+  currentLoad Float
+  sectionType String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id])
+  piles     Pile[]
+}
+
+model Pile {
+  id          String   @id @default(cuid())
+  sectionId   String
+  name        String
+  description String?
+  capacity    Float
+  currentLoad Float
+  pileType    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  section WarehouseSection @relation(fields: [sectionId], references: [id])
+}
+
+model Driver {
+  id                String       @id @default(cuid())
+  userId           String       @unique
+  licenseNumber    String       @unique
+  licenseType      LicenseType
+  licenseExpiry    DateTime
+  vehicleId        String?      @unique
+  address          String
+  city             String
+  postalCode       String
+  governorate      String
+  phone            String
+  emergencyContact String
+  availabilityStatus DriverStatus
+  deliveryZones    String[]
+  rating           Float        @default(0)
+  totalDeliveries  Int          @default(0)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  // Relations
+  user       User             @relation(fields: [userId], references: [id])
+  vehicle    Vehicle?         @relation(fields: [vehicleId], references: [id])
+  deliveries Delivery[]
+  documents  DriverDocument[]
+  routes     DeliveryRoute[]
+}
+
+model Vehicle {
+  id              String        @id @default(cuid())
+  plateNumber     String        @unique
+  type            VehicleType
+  make            String
+  model           String
+  year            Int
+  capacity        Float
+  maxWeight       Float
+  currentStatus   VehicleStatus
+  lastMaintenance DateTime
+  nextMaintenance DateTime
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  // Relations
+  driver         Driver?
+  insuranceInfo  InsuranceInfo?
+}
+
+model InsuranceInfo {
+  id           String   @id @default(cuid())
+  vehicleId    String   @unique
+  provider     String
+  policyNumber String
+  startDate    DateTime
+  endDate      DateTime
+  coverage     String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id])
+}
+
+model DriverDocument {
+  id         String    @id @default(cuid())
+  driverId   String
+  type       String
+  url        String
+  verified   Boolean   @default(false)
+  expiryDate DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  // Relations
+  driver Driver @relation(fields: [driverId], references: [id])
+}
+
+model Document {
+  id        String   @id @default(cuid())
+  sellerId  String
+  type      String
+  url       String
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  // Relations
+  seller Seller @relation(fields: [sellerId], references: [id])
+}
+
+model Delivery {
+  id              String         @id @default(cuid())
+  orderId         String         @unique
+  driverId        String
+  routeId         String
+  status          DeliveryStatus
+  scheduledTime   DateTime
+  startTime       DateTime?
+  completionTime  DateTime?
+  recipientName   String
+  recipientPhone  String
+  notes           String?
+  proofOfDelivery String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  // Relations
+  order  Order         @relation(fields: [orderId], references: [id])
+  driver Driver        @relation(fields: [driverId], references: [id])
+  route  DeliveryRoute @relation(fields: [routeId], references: [id])
+}
+
+model DeliveryRoute {
+  id              String      @id @default(cuid())
+  driverId        String
+  fromWarehouseId String
+  toAddress       String
+  toCity          String
+  toGovernorate   String
+  distance        Float
+  estimatedTime   Float
+  status          RouteStatus
+  startTime       DateTime?
+  endTime         DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  // Relations
+  driver        Driver     @relation(fields: [driverId], references: [id])
+  fromWarehouse Warehouse  @relation("FromWarehouse", fields: [fromWarehouseId], references: [id])
+  deliveries    Delivery[]
+}
+
+model InventoryAudit {
+  id          String   @id @default(cuid())
+  managerId   String
+  warehouseId String
+  date        DateTime
+  findings    String
+  action      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  manager WarehouseManager @relation(fields: [managerId], references: [id])
+}
+
+model StaffSchedule {
+  id          String   @id @default(cuid())
+  managerId   String
+  warehouseId String
+  startTime   DateTime
+  endTime     DateTime
+  staffCount  Int
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  manager WarehouseManager @relation(fields: [managerId], references: [id])
+}
+
+model Rating {
+  id        String   @id @default(cuid())
+  orderId   String   @unique
+  score     Int
+  comment   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  order Order @relation(fields: [orderId], references: [id])
+}
+
+model Refund {
+  id        String      @id @default(cuid())
+  orderId   String      @unique
+  status    RefundStatus
+  amount    Float
+  reason    String
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  // Relations
+  order Order @relation(fields: [orderId], references: [id])
+}
