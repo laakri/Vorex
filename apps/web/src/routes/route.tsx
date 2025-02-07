@@ -1,21 +1,29 @@
 import { Routes, Route } from "react-router-dom";
+// Main layers
 import { MainLayout } from "@/layers/main-layout";
 import { MainHomePage } from "@/pages/main/main-home";
 import { MainPricing } from "@/pages/main/main-pricing";
-import { MainNetwork } from "./pages/main/main-network";
-import { MainAbout } from "./pages/main/main-about";
-import { MainTrack } from "./pages/main/main-track";
-import { MainContact } from "./pages/main/main-contact";
-import { AuthLayout } from "./layers/auth-layout";
-import { SignIn } from "./pages/auth/sign-in";
-import { SignUp } from "./pages/auth/sign-up";
-import { SellerLayout } from "./layers/seller-layout";
-import { SellerOnboarding } from "./pages/seller/seller-onboarding";
-import { SellerDashboard } from "./pages/seller/seller-dashboard";
+import { MainNetwork } from "@/pages/main/main-network";
+import { MainAbout } from "@/pages/main/main-about";
+import { MainTrack } from "@/pages/main/main-track";
+import { MainContact } from "@/pages/main/main-contact";
+// Auth layers
+import { AuthLayout } from "@/layers/auth-layout";
+import { SignIn } from "@/pages/auth/sign-in";
+import { SignUp } from "@/pages/auth/sign-up";
+// Seller layers
+import { SellerLayout } from "@/layers/seller-layout";
+import { SellerOnboarding } from "@/pages/seller/seller-onboarding";
+import { SellerDashboard } from "@/pages/seller/seller-dashboard";
+import { ProductsPage } from "@/pages/seller/products/products";
+// Protected route
+import { ProtectedRoute } from "./protected-route";
+import { SellerGuard } from "./seller-guard";
 
 export function AppRoutes() {
   return (
     <Routes>
+      {/* Seller Platform */}
       <Route path="/" element={<MainLayout />}>
         <Route index element={<MainHomePage />} />
         <Route path="pricing" element={<MainPricing />} />
@@ -23,10 +31,9 @@ export function AppRoutes() {
         <Route path="network" element={<MainNetwork />} />
         <Route path="track" element={<MainTrack />} />
         <Route path="contact" element={<MainContact />} />
-        <Route path="services" element={<div>Services Page</div>} />
-        <Route path="login" element={<div>Login Page</div>} />
-        <Route path="register" element={<div>Register Page</div>} />
       </Route>
+
+      {/* Auth Platform */}
       <Route path="/auth" element={<AuthLayout />}>
         <Route path="sign-in" element={<SignIn />} />
         <Route path="sign-up" element={<SignUp />} />
@@ -34,9 +41,37 @@ export function AppRoutes() {
 
       {/* Seller Platform */}
       <Route path="/seller" element={<SellerLayout />}>
-        <Route index element={<SellerDashboard />} />
-        <Route path="dashboard" element={<SellerDashboard />} />
+        <Route
+          index
+          element={
+            <ProtectedRoute>
+              <SellerGuard>
+                <SellerDashboard />
+              </SellerGuard>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="dashboard"
+          element={
+            <ProtectedRoute>
+              <SellerGuard>
+                <SellerDashboard />
+              </SellerGuard>
+            </ProtectedRoute>
+          }
+        />
         <Route path="onboarding" element={<SellerOnboarding />} />
+        <Route
+          path="products"
+          element={
+            <ProtectedRoute>
+              <SellerGuard>
+                <ProductsPage />
+              </SellerGuard>
+            </ProtectedRoute>
+          }
+        />
       </Route>
 
       {/* Warehouse Platform */}

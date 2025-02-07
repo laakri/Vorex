@@ -1,8 +1,32 @@
+import { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Link } from "react-router-dom";
+import { useAuthStore } from "@/stores/auth.store";
 
 export function SignIn() {
+  const navigate = useNavigate();
+  const signIn = useAuthStore((state) => state.signIn);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setIsLoading(true);
+
+    try {
+      await signIn(email, password);
+      navigate("/seller");
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Failed to sign in");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="space-y-2 text-center">
@@ -12,11 +36,13 @@ export function SignIn() {
         </p>
       </div>
 
-      <form className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4">
         <Input
           type="email"
           placeholder="Email Address"
           className="h-12 bg-muted/50"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
           required
         />
 
@@ -25,6 +51,8 @@ export function SignIn() {
             type="password"
             placeholder="Password"
             className="h-12 bg-muted/50"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
             required
           />
           <div className="text-right">
@@ -37,11 +65,16 @@ export function SignIn() {
           </div>
         </div>
 
+        {error && (
+          <p className="text-sm text-destructive text-center">{error}</p>
+        )}
+
         <Button
           type="submit"
           className="w-full h-12 text-base bg-primary hover:bg-primary/90"
+          disabled={isLoading}
         >
-          Sign In
+          {isLoading ? "Signing in..." : "Sign In"}
         </Button>
       </form>
 
