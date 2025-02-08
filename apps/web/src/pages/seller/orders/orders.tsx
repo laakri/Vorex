@@ -63,10 +63,11 @@ export function OrdersPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [isAddOrderOpen, setIsAddOrderOpen] = useState(false);
 
-  const { data: orders, isLoading, refetch } = useQuery({
-    queryKey: ["orders"],
+  const { data: orders, isLoading, error, refetch } = useQuery({
+    queryKey: ['orders'],
     queryFn: async () => {
-      const response = await api.get("/sellers/orders");
+      const response = await api.get('/sellers/orders');
+      console.log('Orders fetched:', response.data);
       return response.data;
     },
   });
@@ -85,6 +86,11 @@ export function OrdersPage() {
     total: orders?.length ?? 0,
     pending: orders?.filter((o: Order) => o.status === "PENDING").length ?? 0,
     inTransit: orders?.filter((o: Order) => o.status === "IN_TRANSIT").length ?? 0,
+  };
+
+  const handleOrderAdded = async () => {
+    console.log('Order added, refreshing list...');
+    await refetch();
   };
 
   return (
@@ -193,7 +199,19 @@ export function OrdersPage() {
                   </div>
                 </TableCell>
               </TableRow>
-            ) : filteredOrders?.length > 0 ? (
+            ) : error ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-10">
+                  <div className="text-red-500">Error loading orders</div>
+                </TableCell>
+              </TableRow>
+            ) : orders?.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-10">
+                  <div className="text-muted-foreground">No orders found</div>
+                </TableCell>
+              </TableRow>
+            ) : (
               filteredOrders.map((order: Order) => (
                 <TableRow key={order.id}>
                   <TableCell className="font-medium">{order.id}</TableCell>
@@ -221,12 +239,6 @@ export function OrdersPage() {
                   </TableCell>
                 </TableRow>
               ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-10">
-                  <div className="text-muted-foreground">No orders found</div>
-                </TableCell>
-              </TableRow>
             )}
           </TableBody>
         </Table>
@@ -235,7 +247,7 @@ export function OrdersPage() {
       <AddOrderDialog 
         open={isAddOrderOpen}
         onOpenChange={setIsAddOrderOpen}
-        onOrderAdded={() => refetch()}
+        onOrderAdded={handleOrderAdded}
       />
     </div>
   );

@@ -1,4 +1,4 @@
-import { IsString, IsNumber, IsEmail, IsArray, ValidateNested, IsOptional } from 'class-validator';
+import { IsString, IsEmail, IsNumber, IsOptional, IsArray, ValidateNested, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 
 class OrderItemDto {
@@ -6,19 +6,22 @@ class OrderItemDto {
   productId: string;
 
   @IsNumber()
+  @Min(1)
   quantity: number;
 
   @IsNumber()
+  @Min(0)
   price: number;
 
   @IsNumber()
+  @Min(0)
   weight: number;
 
   @IsString()
   dimensions: string;
 
-  @IsOptional()
   @IsString()
+  @IsOptional()
   packagingType?: string;
 
   @IsOptional()
@@ -50,9 +53,12 @@ export class CreateOrderDto {
   @IsString()
   phone: string;
 
-  @IsOptional()
   @IsString()
+  @IsOptional()
   notes?: string;
+
+  @IsNumber()
+  totalAmount: number;
 
   @IsArray()
   @ValidateNested({ each: true })

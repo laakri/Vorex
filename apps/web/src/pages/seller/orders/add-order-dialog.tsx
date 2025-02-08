@@ -29,6 +29,8 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { Trash2 } from "lucide-react";
 import api from "@/lib/axios";
+import { cn } from "@/lib/utils";
+import { Search } from "lucide-react";
 
 interface Product {
   id: string;
@@ -36,6 +38,7 @@ interface Product {
   price: number;
   weight: number;
   dimensions: string;
+  stock: number;
 }
 
 interface AddOrderDialogProps {
@@ -43,17 +46,6 @@ interface AddOrderDialogProps {
   onOpenChange: (open: boolean) => void;
   onOrderAdded: () => void;
 }
-
-const orderItemSchema = z.object({
-  productId: z.string().min(1, "Product is required"),
-  quantity: z.number().min(1, "Quantity must be at least 1"),
-  price: z.number().min(0, "Price cannot be negative"),
-  weight: z.number().min(0, "Weight cannot be negative"),
-  dimensions: z.string(),
-  packagingType: z.string().optional(),
-  fragile: z.boolean().optional(),
-  perishable: z.boolean().optional(),
-});
 
 const orderSchema = z.object({
   customerName: z.string().min(1, "Customer name is required"),
@@ -64,7 +56,16 @@ const orderSchema = z.object({
   postalCode: z.string().min(1, "Postal code is required"),
   phone: z.string().min(8, "Phone number must be at least 8 digits"),
   notes: z.string().optional(),
-  items: z.array(orderItemSchema).min(1, "At least one item is required"),
+  items: z.array(z.object({
+    productId: z.string().min(1, "Product is required"),
+    quantity: z.number().min(1, "Quantity must be at least 1"),
+    price: z.number(),
+    weight: z.number(),
+    dimensions: z.string(),
+    packagingType: z.string().optional(),
+    fragile: z.boolean().optional(),
+    perishable: z.boolean().optional(),
+  })).min(1, "At least one item is required"),
 });
 
 type OrderFormValues = z.infer<typeof orderSchema>;
@@ -81,60 +82,53 @@ export function AddOrderDialog({ open, onOpenChange, onOrderAdded }: AddOrderDia
       postalCode: "",
       phone: "",
       notes: "",
-      items: [{ 
-        productId: "", 
-        quantity: 1, 
-        price: 0,
-        weight: 0,
-        dimensions: "",
-        packagingType: undefined,
-        fragile: false,
-        perishable: false
-      }],
+      items: [
+        {
+          productId: "",
+          quantity: 1,
+          price: 0,
+          weight: 0,
+          dimensions: "",
+          packagingType: "standard",
+          fragile: false,
+          perishable: false,
+        },
+      ],
     },
   });
 
-  const { data: products, isLoading } = useQuery<Product[]>({
-    queryKey: ["products"],
+  const { data: productsResponse, isLoading, error } = useQuery({
+    queryKey: ["seller-products"],
     queryFn: async () => {
-      const response = await api.get("/sellers/products");
-      return response.data.data; // Access the data property of the paginated response
+      try {
+        const response = await api.get("/sellers/orders/products");
+        console.log("Raw products response:", response);
+        
+        if (!response.data) {
+          throw new Error('No data received from server');
+        }
+        
+        if (!response.data.data || !Array.isArray(response.data.data)) {
+          console.error('Invalid response structure:', response.data);
+          throw new Error('Invalid response structure');
+        }
+        
+        return response.data;
+      } catch (error) {
+        console.error("Error fetching products:", {
+          error: error as Error,
+          message: error instanceof Error ? error.message : String(error),
+          response: (error as any)?.response?.data
+        });
+        throw error;
+      }
     },
-    initialData: [], // Provide empty array as initial data
+    retry: 1,
+    staleTime: 30000, // Cache for 30 seconds
   });
-
-  const onSubmit = async (data: OrderFormValues) => {
-    try {
-      await api.post("/sellers/orders", data);
-      onOrderAdded();
-      onOpenChange(false);
-      form.reset();
-    } catch (error) {
-      console.error("Error creating order:", error);
-    }
-  };
-
-  const addItem = () => {
-    const items = form.getValues("items");
-    form.setValue("items", [...items, { 
-      productId: "", 
-      quantity: 1, 
-      price: 0,
-      weight: 0,
-      dimensions: "",
-      packagingType: undefined,
-      fragile: false,
-      perishable: false
-    }]);
-  };
-
-  const removeItem = (index: number) => {
-    const items = form.getValues("items");
-    form.setValue("items", items.filter((_, i) => i !== index));
-  };
 
   const handleProductSelect = (value: string, index: number) => {
-    const selectedProduct = products?.find(p => p.id === value);
+    const selectedProduct = productsResponse?.data?.find((p: Product) => p.id === value);
     if (selectedProduct) {
       form.setValue(`items.${index}.productId`, value);
       form.setValue(`items.${index}.price`, selectedProduct.price);
@@ -143,15 +137,128 @@ export function AddOrderDialog({ open, onOpenChange, onOrderAdded }: AddOrderDia
     }
   };
 
+  const addItem = () => {
+    const currentItems = form.getValues("items");
+    form.setValue("items", [
+      ...currentItems,
+      {
+        productId: "",
+        quantity: 1,
+        price: 0,
+        weight: 0,
+        dimensions: "",
+        packagingType: "standard",
+        fragile: false,
+        perishable: false,
+      },
+    ]);
+  };
+
+  const removeItem = (index: number) => {
+    const currentItems = form.getValues("items");
+    form.setValue(
+      "items",
+      currentItems.filter((_, i) => i !== index)
+    );
+  };
+
+  const onSubmit = async (data: OrderFormValues) => {
+    try {
+      // Validate required fields
+      const requiredFields = {
+        governorate: data.governorate,
+        phone: data.phone,
+        postalCode: data.postalCode
+      };
+
+      const emptyFields = Object.entries(requiredFields)
+        .filter(([_, value]) => !value)
+        .map(([key]) => key);
+
+      if (emptyFields.length > 0) {
+        console.error("Missing required fields:", emptyFields);
+        // Set errors manually for empty fields
+        emptyFields.forEach(field => {
+          form.setError(field as any, {
+            type: "required",
+            message: `${field} is required`
+          });
+        });
+        return;
+      }
+
+      console.log("All required fields present, proceeding with submission");
+      
+      if (!productsResponse?.data) {
+        console.error("No products data available");
+        return;
+      }
+
+      const items = data.items.map(item => {
+        const product = productsResponse.data.find((p:Product) => p.id === item.productId);
+        if (!product) {
+          console.error(`Product not found for ID: ${item.productId}`);
+          return null;
+        }
+        return {
+          productId: item.productId,
+          quantity: item.quantity,
+          price: product.price,
+          weight: product.weight,
+          dimensions: product.dimensions,
+          packagingType: 'standard',
+          fragile: false,
+          perishable: false
+        };
+      }).filter(Boolean);
+
+      const totalAmount = items.reduce((total, item) => {
+        return total + (item!.price * item!.quantity);
+      }, 0);
+
+      const orderData = {
+        customerName: data.customerName,
+        customerEmail: data.customerEmail,
+        address: data.address,
+        city: data.city,
+        governorate: data.governorate,
+        postalCode: data.postalCode,
+        phone: data.phone,
+        notes: data.notes || "",
+        totalAmount,
+        items
+      };
+
+      console.log("Sending order data:", orderData);
+
+      const response = await api.post('/sellers/orders', orderData);
+      console.log("Order creation response:", response);
+
+      if (response.data) {
+        console.log("Order created successfully!");
+        await onOrderAdded();
+        form.reset();
+        onOpenChange(false);
+      }
+    } catch (error: any) {
+      console.error("Error creating order:", {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create New Order</DialogTitle>
           <DialogDescription>
-            Create a new order by filling out the information below.
+            Fill in the order details below.
           </DialogDescription>
         </DialogHeader>
+
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <div className="grid grid-cols-2 gap-4">
@@ -160,9 +267,9 @@ export function AddOrderDialog({ open, onOpenChange, onOrderAdded }: AddOrderDia
                 name="customerName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Customer Name</FormLabel>
+                    <FormLabel>Customer Name *</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input {...field} placeholder="Full name" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -173,9 +280,9 @@ export function AddOrderDialog({ open, onOpenChange, onOrderAdded }: AddOrderDia
                 name="customerEmail"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Customer Email</FormLabel>
+                    <FormLabel>Email *</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input {...field} type="email" placeholder="email@example.com" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -189,9 +296,9 @@ export function AddOrderDialog({ open, onOpenChange, onOrderAdded }: AddOrderDia
                 name="address"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Address</FormLabel>
+                    <FormLabel>Address *</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input {...field} placeholder="Street address" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -202,9 +309,9 @@ export function AddOrderDialog({ open, onOpenChange, onOrderAdded }: AddOrderDia
                 name="city"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>City</FormLabel>
+                    <FormLabel>City *</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input {...field} placeholder="City" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -212,8 +319,114 @@ export function AddOrderDialog({ open, onOpenChange, onOrderAdded }: AddOrderDia
               />
             </div>
 
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="governorate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Governorate *</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select governorate" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {[
+                          "Tunis",
+                          "Ariana",
+                          "Ben Arous",
+                          "Manouba",
+                          "Nabeul",
+                          "Zaghouan",
+                          "Bizerte",
+                          "Béja",
+                          "Jendouba",
+                          "Kef",
+                          "Siliana",
+                          "Sousse",
+                          "Monastir",
+                          "Mahdia",
+                          "Sfax",
+                          "Kairouan",
+                          "Kasserine",
+                          "Sidi Bouzid",
+                          "Gabès",
+                          "Medenine",
+                          "Tataouine",
+                          "Gafsa",
+                          "Tozeur",
+                          "Kebili",
+                        ].map((gov) => (
+                          <SelectItem key={gov} value={gov}>
+                            {gov}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="postalCode"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Postal Code *</FormLabel>
+                    <FormControl>
+                      <Input 
+                        {...field} 
+                        placeholder="####" 
+                        maxLength={4}
+                        pattern="[0-9]{4}"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Phone *</FormLabel>
+                    <FormControl>
+                      <Input 
+                        {...field} 
+                        placeholder="########" 
+                        maxLength={8}
+                        pattern="[0-9]{8}"
+                        type="tel"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+                <FormItem className="col-span-2">
+                  <FormLabel>Notes</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="Additional notes (optional)" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <div className="space-y-4">
-              <div className="font-medium">Order Items</div>
+              <div className="font-medium">Order Items *</div>
               {form.watch("items").map((item, index) => (
                 <div key={index} className="flex gap-4 items-end">
                   <FormField
@@ -228,20 +441,43 @@ export function AddOrderDialog({ open, onOpenChange, onOrderAdded }: AddOrderDia
                         >
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Select product" />
+                              <SelectValue placeholder="Search and select product..." />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
+                            <div className="flex items-center px-3 pb-2">
+                              <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+                              <input
+                                className="flex h-10 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                                placeholder="Search products..."
+                                onChange={(e) => {
+                                  // Filter products as user types
+                                  const searchTerm = e.target.value.toLowerCase();
+                                  // Products will be filtered in the mapping below
+                                }}
+                              />
+                            </div>
                             {isLoading ? (
                               <SelectItem value="loading" disabled>Loading products...</SelectItem>
-                            ) : products && products.length > 0 ? (
-                              products.map((product) => (
+                            ) : error ? (
+                              <SelectItem value="error" disabled>Error loading products</SelectItem>
+                            ) : productsResponse?.data && productsResponse.data.length > 0 ? (
+                              productsResponse.data.map((product: Product) => (
                                 <SelectItem key={product.id} value={product.id}>
-                                  {product.name} - {product.price} DT
+                                  <div className="flex justify-between items-center gap-2 w-full">
+                                    <span className="truncate max-w-[200px]">{product.name}</span>
+                                    <span className={cn(
+                                      "text-sm whitespace-nowrap",
+                                      product.stock === 0 ? "text-destructive font-medium" : "text-muted-foreground"
+                                    )}>
+                                      {product.price.toFixed(2)} DT 
+                                      {product.stock === 0 ? " (Out of stock)" : ` (${product.stock})`}
+                                    </span>
+                                  </div>
                                 </SelectItem>
                               ))
                             ) : (
-                              <SelectItem value="no-products" disabled>No products available</SelectItem>
+                              <SelectItem value="no-products">No products found</SelectItem>
                             )}
                           </SelectContent>
                         </Select>
@@ -284,8 +520,34 @@ export function AddOrderDialog({ open, onOpenChange, onOrderAdded }: AddOrderDia
               </Button>
             </div>
 
+            <div className="space-y-4">
+              {Object.keys(form.formState.errors).length > 0 && (
+                <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">
+                  <p className="font-medium">Please fix the following errors:</p>
+                  <ul className="list-disc list-inside mt-1">
+                    {Object.entries(form.formState.errors).map(([field, error]) => (
+                      <li key={field}>{error.message}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+
             <DialogFooter>
-              <Button type="submit">Create Order</Button>
+              <Button 
+                type="submit" 
+                disabled={form.formState.isSubmitting}
+                className="w-full"
+              >
+                {form.formState.isSubmitting ? (
+                  <div className="flex items-center gap-2">
+                    <span>Creating Order...</span>
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                  </div>
+                ) : (
+                  'Create Order'
+                )}
+              </Button>
             </DialogFooter>
           </form>
         </Form>

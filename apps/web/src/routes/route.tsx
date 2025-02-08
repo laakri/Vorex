@@ -16,15 +16,18 @@ import { SellerLayout } from "@/layers/seller-layout";
 import { SellerOnboarding } from "@/pages/seller/seller-onboarding";
 import { SellerDashboard } from "@/pages/seller/seller-dashboard";
 import { ProductsPage } from "@/pages/seller/products/products";
+import { OrdersPage } from "@/pages/seller/orders/orders";
+import OrderPage from "@/pages/seller/orders/order-page";
+
 // Protected route
 import { ProtectedRoute } from "./protected-route";
 import { SellerGuard } from "./seller-guard";
-import { OrdersPage } from "@/pages/seller/orders/orders";
+
 
 export function AppRoutes() {
   return (
     <Routes>
-      {/* Seller Platform */}
+      {/* Main Platform */}
       <Route path="/" element={<MainLayout />}>
         <Route index element={<MainHomePage />} />
         <Route path="pricing" element={<MainPricing />} />
@@ -32,6 +35,7 @@ export function AppRoutes() {
         <Route path="network" element={<MainNetwork />} />
         <Route path="track" element={<MainTrack />} />
         <Route path="contact" element={<MainContact />} />
+        <Route path="order/:orderId" element={<OrderPage />} />
       </Route>
 
       {/* Auth Platform */}
@@ -73,7 +77,7 @@ export function AppRoutes() {
             </ProtectedRoute>
           }
         />
-      <Route
+        <Route
           path="orders"
           element={
             <ProtectedRoute>
@@ -88,7 +92,6 @@ export function AppRoutes() {
       {/* Warehouse Platform */}
       <Route path="warehouse">
         <Route index element={<div>Warehouse Dashboard</div>} />
-
         <Route path="inventory" element={<div>Inventory Management</div>} />
         <Route path="sections" element={<div>Sections Management</div>} />
       </Route>

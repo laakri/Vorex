@@ -6,6 +6,8 @@ import {
   Param,
   Patch,
   UseGuards,
+  NotFoundException,
+  HttpCode,
 } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
@@ -15,21 +17,77 @@ import { Roles } from '@/common/decorators/roles.decorator';
 import { Role } from '@/common/enums/role.enum';
 import { OrderStatus } from '@/common/enums/order-status.enum';
 import { GetUser } from '@/common/decorators/get-user.decorator';
+import { PrismaService } from 'prisma/prisma.service';
 
 @Controller('sellers/orders')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(Role.SELLER)
 export class OrdersController {
-  constructor(private readonly ordersService: OrdersService) {}
+  constructor(
+    private readonly ordersService: OrdersService,
+    private readonly prisma: PrismaService,
+  ) {}
 
-  @Post()
-  create(@GetUser('id') sellerId: string, @Body() createOrderDto: CreateOrderDto) {
-    return this.ordersService.create(sellerId, createOrderDto);
+  @Get('products')
+  async findProducts(@GetUser('id') userId: string) {
+    console.log('Finding products for user:', userId);
+    
+    // Get the seller with a more detailed query
+    const seller = await this.prisma.seller.findFirst({
+      where: { 
+        userId,
+        isVerified: true 
+      },
+      include: {
+        _count: {
+          select: { products: true }
+        }
+      }
+    });
+    
+    if (!seller) {
+      console.log('No seller found for user:', userId);
+      throw new NotFoundException('Seller not found');
+    }
+    
+    console.log('Found seller:', {
+      sellerId: seller.id,
+      productCount: seller._count.products
+    });
+    
+    return this.ordersService.findProducts(seller.id);
   }
 
   @Get()
-  findAll(@GetUser('id') sellerId: string) {
-    return this.ordersService.findAll(sellerId);
+  async findAll(@GetUser('id') userId: string) {
+    console.log('Finding orders for user:', userId);
+    const seller = await this.prisma.seller.findUnique({
+      where: { userId }
+    });
+    
+    if (!seller) {
+      throw new NotFoundException('Seller not found');
+    }
+
+    return this.ordersService.findAll(seller.id);
+  }
+
+  @Post()
+  @HttpCode(201)
+  async create(
+    @GetUser('id') userId: string,
+    @Body() createOrderDto: CreateOrderDto,
+  ) {
+    console.log('Creating order for user:', userId);
+    const seller = await this.prisma.seller.findUnique({
+      where: { userId }
+    });
+    
+    if (!seller) {
+      throw new NotFoundException('Seller not found');
+    }
+
+    return this.ordersService.create(seller.id, createOrderDto);
   }
 
   @Get(':id')
