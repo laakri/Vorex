@@ -12,6 +12,7 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
+    "@faker-js/faker": "^9.4.0",
     "@nestjs/config": "^4.0.0",
     "@prisma/client": "^6.3.1",
     "class-transformer": "^0.5.1",

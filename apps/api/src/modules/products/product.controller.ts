@@ -7,6 +7,7 @@ import {
   Param,
   Delete,
   Put,
+  Query,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -14,6 +15,7 @@ import { GetUser } from '../auth/decorators/get-user.decorator';
 import { ProductsService } from './product.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
+import { PaginationDto } from './dto/pagination.dto';
 
 @Controller('sellers/products')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -22,8 +24,11 @@ export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
   @Get()
-  findAll(@GetUser('id') sellerId: string) {
-    return this.productsService.findAll(sellerId);
+  findAll(
+    @GetUser('id') sellerId: string,
+    @Query() query: PaginationDto,
+  ) {
+    return this.productsService.findAll(sellerId, query);
   }
 
   @Post()
