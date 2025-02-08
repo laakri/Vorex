@@ -19,6 +19,7 @@ import { ProductsPage } from "@/pages/seller/products/products";
 // Protected route
 import { ProtectedRoute } from "./protected-route";
 import { SellerGuard } from "./seller-guard";
+import { OrdersPage } from "@/pages/seller/orders/orders";
 
 export function AppRoutes() {
   return (
@@ -73,10 +74,21 @@ export function AppRoutes() {
           }
         />
       </Route>
+      <Route
+          path="orders"
+          element={
+            <ProtectedRoute>
+              <SellerGuard>
+                <OrdersPage />
+              </SellerGuard>
+            </ProtectedRoute>
+          }
+        />
 
       {/* Warehouse Platform */}
       <Route path="warehouse">
         <Route index element={<div>Warehouse Dashboard</div>} />
+
         <Route path="inventory" element={<div>Inventory Management</div>} />
         <Route path="sections" element={<div>Sections Management</div>} />
       </Route>
