@@ -7,12 +7,12 @@ import { PrismaModule } from 'prisma/prisma.module';
 import { UsersModule } from './modules/users/users.module';
 import { SellersModule } from './modules/sellers/sellers.module';
 import { ProductsModule } from './modules/products/products.module';
-import { PrismaService } from 'prisma/prisma.service';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      cache: true,
     }),
     PrismaModule,
     AuthModule,
@@ -21,6 +21,6 @@ import { PrismaService } from 'prisma/prisma.service';
     ProductsModule,
   ],
   controllers: [AppController],
-  providers: [AppService, PrismaService],
+  providers: [AppService],
 })
 export class AppModule {}

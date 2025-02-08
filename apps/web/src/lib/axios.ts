@@ -3,6 +3,10 @@ import { useAuthStore } from "@/stores/auth.store";
 
 const api = axios.create({
   baseURL: "http://localhost:3000",
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  withCredentials: true // Important for auth cookies
 });
 
 api.interceptors.request.use((config) => {
