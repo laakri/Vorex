@@ -9,17 +9,19 @@ import {
   Put,
   Query,
 } from '@nestjs/common';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { GetUser } from '../auth/decorators/get-user.decorator';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { GetUser } from '../../common/decorators/get-user.decorator';
 import { ProductsService } from './product.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { PaginationDto } from './dto/pagination.dto';
+import { Roles } from '@/common/decorators/roles.decorator';
+import { Role } from '@/common/enums/role.enum';
 
 @Controller('sellers/products')
 @UseGuards(JwtAuthGuard, RolesGuard)
-// @Roles('SELLER')
+@Roles(Role.SELLER)
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 

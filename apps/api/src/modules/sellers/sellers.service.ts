@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
 import { CompleteProfileDto } from './dto/complete-profile.dto';
+import { Role } from '@/common/enums/role.enum';
 
 @Injectable()
 export class SellersService {
@@ -37,7 +38,7 @@ export class SellersService {
     // Update user role to SELLER if not already
     await this.prisma.user.update({
       where: { id: userId },
-      data: { role: 'SELLER' },
+      data: { role: Role.SELLER },
     });
 
     return seller;
