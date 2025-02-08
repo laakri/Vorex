@@ -73,7 +73,6 @@ export function AppRoutes() {
             </ProtectedRoute>
           }
         />
-      </Route>
       <Route
           path="orders"
           element={
@@ -84,6 +83,7 @@ export function AppRoutes() {
             </ProtectedRoute>
           }
         />
+      </Route>
 
       {/* Warehouse Platform */}
       <Route path="warehouse">

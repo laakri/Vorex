@@ -21,9 +21,11 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, Package, Truck, AlertCircle } from "lucide-react";
+import { Search, Package, Truck, AlertCircle, Plus } from "lucide-react";
 import { format } from "date-fns";
 import api from "@/lib/axios";
+import { Button } from "@/components/ui/button";
+import { AddOrderDialog } from "./add-order-dialog";
 
 interface Order {
   id: string;
@@ -59,8 +61,9 @@ const ORDER_STATUSES: Record<OrderStatus, { label: string; color: string }> = {
 export function OrdersPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [isAddOrderOpen, setIsAddOrderOpen] = useState(false);
 
-  const { data: orders, isLoading } = useQuery({
+  const { data: orders, isLoading, refetch } = useQuery({
     queryKey: ["orders"],
     queryFn: async () => {
       const response = await api.get("/sellers/orders");
@@ -94,6 +97,10 @@ export function OrdersPage() {
             Manage your customer orders
           </p>
         </div>
+        <Button onClick={() => setIsAddOrderOpen(true)}>
+          <Plus className="mr-2 h-4 w-4" />
+          Add Order
+        </Button>
       </div>
 
       {/* Stats Overview */}
@@ -224,6 +231,12 @@ export function OrdersPage() {
           </TableBody>
         </Table>
       </div>
+
+      <AddOrderDialog 
+        open={isAddOrderOpen}
+        onOpenChange={setIsAddOrderOpen}
+        onOrderAdded={() => refetch()}
+      />
     </div>
   );
 } 
