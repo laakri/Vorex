@@ -5,35 +5,8 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  CardFooter,
 } from "@/components/ui/card";
-import {
-  TrendingUp,
-  ArrowUpRight,
-  ArrowDownRight,
-  Filter,
-  Download,
-  PieChart,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import {
-  Bar,
-  BarChart,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
-} from "recharts";
-import {
-  ChartContainer,
-  ChartTooltipContent,
-  ChartLegend,
-  ChartLegendContent,
-} from "@/components/ui/chart";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -41,130 +14,183 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
+import {
+  Package,
+  DollarSign,
+  ShoppingCart,
+  TrendingUp,
+  ArrowUpRight,
+  Users,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Brain, AlertTriangle, Target } from "lucide-react";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  ResponsiveContainer,
+  CartesianGrid,
+} from "recharts";
 import { Progress } from "@/components/ui/progress";
 
-import { motion } from "framer-motion";
-import { Sparkles, ArrowRight, ChevronRight } from "lucide-react";
+type OrderStatus = 'pending' | 'processing' | 'readyForPickup' | 'inTransit' | 'delivered' | 'cancelled';
 
-// Mock data - Replace with real data
-const metrics = [
-  {
-    title: "Total Revenue",
-    value: "12,450 DT",
-    change: "+12.5%",
-    trend: "up",
-  },
-  {
-    title: "Active Orders",
-    value: "25",
-    change: "+3.2%",
-    trend: "up",
-  },
-  {
-    title: "Products Sold",
-    value: "142",
-    change: "-2.1%",
-    trend: "down",
-  },
-  {
-    title: "Pending Deliveries",
-    value: "18",
-    change: "+5.4%",
-    trend: "up",
-  },
-];
-
-// Mock data for charts
-const revenueData = [
-  { month: "Jan", revenue: 8400, orders: 45 },
-  { month: "Feb", revenue: 9200, orders: 52 },
-  { month: "Mar", revenue: 7800, orders: 48 },
-  { month: "Apr", revenue: 12450, orders: 62 },
-  { month: "May", revenue: 11200, orders: 55 },
-  { month: "Jun", revenue: 15000, orders: 70 },
-];
-
-const chartConfig = {
-  revenue: {
-    label: "Revenue",
-    color: "hsl(var(--chart-1))",
-  },
-  orders: {
-    label: "Orders",
-    color: "hsl(var(--chart-2))",
-  },
+type OrderMetrics = {
+  [K in OrderStatus]: number;
+} & {
+  total: number;
+  totalAmount: number;
 };
 
-// Enhanced AI insights
-const aiInsights = {
-  summary: {
-    score: 87,
-    trend: "up",
-    changes: 12,
-    recommendations: 5,
-  },
-  quickActions: [
-    {
-      title: "Optimize Pricing",
-      description: "3 products need price adjustment",
-      impact: "+15% potential revenue",
-      confidence: 92,
-      icon: TrendingUp,
-      action: "Review Now",
-      color: "text-green-500",
-      bgColor: "bg-green-500/10",
-    },
-    {
-      title: "Stock Alert",
-      description: "Potential stockout in 5 days",
-      impact: "Critical",
-      confidence: 89,
-      icon: AlertTriangle,
-      action: "Order Stock",
-      color: "text-amber-500",
-      bgColor: "bg-amber-500/10",
-    },
-  ],
-  opportunities: [
-    {
-      title: "Bundle Opportunity",
-      description: "Create gaming accessories bundle",
-      impact: "+₫8,500 per sale",
-      confidence: 94,
-      icon: Target,
-      progress: 75,
-    },
-    {
-      title: "Price Optimization",
-      description: "Adjust pricing for competitive edge",
-      impact: "+12% revenue potential",
-      confidence: 88,
-      icon: PieChart,
-      progress: 65,
-    },
-  ],
+type ProductMetrics = {
+  totalProducts: number;
+  lowStock: number;
+  outOfStock: number;
 };
+
+type RevenueDataPoint = {
+  date: string;
+  amount: number;
+  orders: number;
+};
+
+type GovernorateRevenue = {
+  governorate: string;
+  amount: number;
+};
+
+type TopProduct = {
+  id: string;
+  name: string;
+  totalSold: number;
+  revenue: number;
+  currentStock: number;
+};
+
+type DashboardData = {
+  orderMetrics: OrderMetrics;
+  productMetrics: ProductMetrics;
+  revenueData: {
+    daily: RevenueDataPoint[];
+    byGovernorate: GovernorateRevenue[];
+  };
+  topProducts: TopProduct[];
+};
+
+// Mock data with proper typing
+const mockData: DashboardData = {
+  orderMetrics: {
+    total: 150,
+    pending: 25,
+    processing: 35,
+    readyForPickup: 15,
+    inTransit: 40,
+    delivered: 30,
+    cancelled: 5,
+    totalAmount: 15000,
+  },
+  productMetrics: {
+    totalProducts: 45,
+    lowStock: 8,
+    outOfStock: 3,
+  },
+  revenueData: {
+    daily: Array.from({ length: 7 }, (_, i) => ({
+      date: new Date(Date.now() - i * 24 * 60 * 60 * 1000).toLocaleDateString(),
+      amount: Math.floor(Math.random() * 5000) + 1000,
+      orders: Math.floor(Math.random() * 30) + 10,
+    })),
+    byGovernorate: [
+      { governorate: "Tunis", amount: 25000 },
+      { governorate: "Sfax", amount: 18000 },
+      { governorate: "Sousse", amount: 15000 },
+    ],
+  },
+  topProducts: Array.from({ length: 5 }, (_, i) => ({
+    id: `prod-${i + 1}`,
+    name: `Product ${i + 1}`,
+    totalSold: Math.floor(Math.random() * 100) + 20,
+    revenue: Math.floor(Math.random() * 10000) + 1000,
+    currentStock: Math.floor(Math.random() * 50) + 5,
+  })),
+};
+
+const ordersByStatus = [
+  { date: '01/03', pending: 12, processing: 8, delivered: 18 },
+  { date: '02/03', pending: 15, processing: 10, delivered: 20 },
+  { date: '03/03', pending: 10, processing: 12, delivered: 22 },
+  { date: '04/03', pending: 8, processing: 15, delivered: 25 },
+  { date: '05/03', pending: 14, processing: 11, delivered: 19 },
+  { date: '06/03', pending: 16, processing: 9, delivered: 21 },
+  { date: '07/03', pending: 11, processing: 13, delivered: 24 },
+];
+
+const recentOrders = [
+  {
+    id: '1',
+    customerName: 'Ahmed Ben Ali',
+    status: 'PENDING',
+    amount: 250.00,
+    items: 3,
+    location: 'Tunis',
+    date: new Date().toISOString(),
+  },
+  // Add more orders...
+];
+
+// Updated mock data for financial insights
+const revenueByCategory = [
+  { category: 'Electronics', revenue: 15800, percentage: 35 },
+  { category: 'Fashion', revenue: 12400, percentage: 28 },
+  { category: 'Home', revenue: 8900, percentage: 20 },
+  { category: 'Sports', revenue: 7200, percentage: 17 },
+];
+
+const dailyRevenue = [
+  { time: '00:00', revenue: 1200 },
+  { time: '04:00', revenue: 800 },
+  { time: '08:00', revenue: 2400 },
+  { time: '12:00', revenue: 3800 },
+  { time: '16:00', revenue: 4200 },
+  { time: '20:00', revenue: 3100 },
+];
+
+const monthlyTrends = [
+  { month: 'Jan', revenue: 42000, orders: 380 },
+  { month: 'Feb', revenue: 38000, orders: 320 },
+  { month: 'Mar', revenue: 45000, orders: 400 },
+];
 
 export function SellerDashboard() {
-  const [timeRange, setTimeRange] = useState("7d");
+  const [timeRange, setTimeRange] = useState<string>("7d");
+
+  // Simplified mock data for the chart
+  const chartData = [
+    { name: 'Mon', revenue: 4000 },
+    { name: 'Tue', revenue: 3000 },
+    { name: 'Wed', revenue: 2000 },
+    { name: 'Thu', revenue: 2780 },
+    { name: 'Fri', revenue: 1890 },
+    { name: 'Sat', revenue: 2390 },
+    { name: 'Sun', revenue: 3490 },
+  ];
 
   return (
-    <div className="space-y-6">
-      {/* Header with Actions */}
-      <div className="flex justify-between items-center">
+    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
+      <div className="flex items-center justify-between space-y-2">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+          <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
           <p className="text-muted-foreground">
-            Welcome back, here's what's happening today.
+            Your store's performance overview
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Select defaultValue={timeRange} onValueChange={setTimeRange}>
+          <Select
+            value={timeRange}
+            onValueChange={(value: string) => setTimeRange(value)}
+          >
             <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Select Range" />
+              <SelectValue placeholder="Select timeframe" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="7d">Last 7 days</SelectItem>
@@ -172,290 +198,415 @@ export function SellerDashboard() {
               <SelectItem value="90d">Last 90 days</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" size="icon">
-            <Filter className="h-4 w-4" />
-          </Button>
-          <Button variant="outline" size="icon">
-            <Download className="h-4 w-4" />
-          </Button>
         </div>
       </div>
 
-      {/* Metrics Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {metrics.map((metric) => (
-          <Card key={metric.title}>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-muted-foreground">
-                  {metric.title}
-                </p>
-                {metric.trend === "up" ? (
-                  <ArrowUpRight className="h-4 w-4 text-green-500" />
-                ) : (
-                  <ArrowDownRight className="h-4 w-4 text-red-500" />
-                )}
-              </div>
-              <div className="flex items-baseline gap-2 mt-2">
-                <h3 className="text-2xl font-bold">{metric.value}</h3>
-                <span
-                  className={cn(
-                    "text-sm",
-                    metric.trend === "up" ? "text-green-500" : "text-red-500"
-                  )}
-                >
-                  {metric.change}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      <Tabs defaultValue="overview" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-3 lg:w-[400px]">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="orders">Orders</TabsTrigger>
+          <TabsTrigger value="products">Products</TabsTrigger>
+        </TabsList>
 
-      {/* Main Content Grid */}
-      <div className="grid gap-6 grid-cols-12">
-        {/* AI Insights Section */}
-        <Card className="col-span-12">
-          <CardHeader className="border-b">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="p-2 rounded-xl bg-primary/10">
-                  <Brain className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <CardTitle className="text-xl">Business Insights</CardTitle>
-                  <CardDescription>
-                    AI-powered recommendations for your growth
-                  </CardDescription>
-                </div>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-primary/5">
-                  <Sparkles className="h-4 w-4 text-primary" />
-                  <span className="text-sm font-medium">
-                    AI Score: {aiInsights.summary.score}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </CardHeader>
-
-          <CardContent className="p-6">
-            <div className="grid gap-6">
-              {/* Quick Actions */}
-              <div className="grid gap-4 grid-cols-2">
-                {aiInsights.quickActions.map((action, index) => (
-                  <motion.div
-                    key={index}
-                    whileHover={{ scale: 1.02 }}
-                    className={cn(
-                      "p-4 rounded-xl border space-y-4",
-                      "hover:shadow-lg transition-all duration-200",
-                      action.bgColor
-                    )}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className={cn("p-2 rounded-lg", action.bgColor)}>
-                        <action.icon className={cn("h-5 w-5", action.color)} />
-                      </div>
-                      <Badge variant="secondary" className="font-medium">
-                        {action.confidence}% confidence
-                      </Badge>
+        <TabsContent value="overview" className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {[
+              {
+                title: "Total Revenue",
+                value: `${mockData.orderMetrics.totalAmount.toLocaleString()} DT`,
+                icon: DollarSign,
+              },
+              {
+                title: "Total Orders",
+                value: mockData.orderMetrics.total.toString(),
+                icon: ShoppingCart,
+              },
+              {
+                title: "Products",
+                value: mockData.productMetrics.totalProducts.toString(),
+                icon: Package,
+              },
+              {
+                title: "Average Order",
+                value: `${(mockData.orderMetrics.totalAmount / mockData.orderMetrics.total).toFixed(2)} DT`,
+                icon: TrendingUp,
+              }
+            ].map((metric) => (
+              <Card key={metric.title}>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between space-x-4">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">{metric.title}</p>
+                      <p className="text-2xl font-bold">{metric.value}</p>
                     </div>
-
-                    <div className="space-y-1">
-                      <h4 className="font-semibold">{action.title}</h4>
-                      <p className="text-sm text-muted-foreground">
-                        {action.description}
-                      </p>
+                    <div className={`p-2 rounded-full bg-primary/10`}>
+                      <metric.icon className="h-5 w-5 text-primary" />
                     </div>
-
-                    <div className="flex items-center justify-between">
-                      <Badge variant="outline" className={action.color}>
-                        {action.impact}
-                      </Badge>
-                      <Button variant="ghost" size="sm" className="gap-2">
-                        {action.action} <ArrowRight className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-
-              {/* Growth Opportunities */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <h3 className="font-semibold">Growth Opportunities</h3>
-                    <p className="text-sm text-muted-foreground">
-                      AI-detected opportunities to grow your business
-                    </p>
                   </div>
-                  <Button variant="ghost" size="sm" className="gap-2">
-                    View All <ChevronRight className="h-4 w-4" />
-                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+            <Card className="col-span-4">
+              <CardHeader>
+                <CardTitle>Revenue & Orders</CardTitle>
+                <CardDescription>Daily revenue and order count</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={mockData.revenueData.daily}>
+                      <XAxis
+                        dataKey="date"
+                        stroke="#888888"
+                        fontSize={12}
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                      <YAxis
+                        stroke="#888888"
+                        fontSize={12}
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(value) => `${value} DT`}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="amount"
+                        stroke="hsl(var(--primary))"
+                        strokeWidth={2}
+                        dot={false}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
                 </div>
+              </CardContent>
+            </Card>
 
-                <div className="grid gap-4 grid-cols-2">
-                  {aiInsights.opportunities.map((opportunity, index) => (
-                    <div
-                      key={index}
-                      className="p-4 rounded-xl border space-y-4"
-                    >
+            <Card className="col-span-3">
+              <CardHeader>
+                <CardTitle>Recent Orders</CardTitle>
+                <CardDescription>Latest customer orders</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-8">
+                  {recentOrders.map((order) => (
+                    <div key={order.id} className="flex items-center">
+                      <div className="space-y-1 flex-1">
+                        <p className="text-sm font-medium leading-none">
+                          {order.customerName}
+                        </p>
+                        <div className="flex items-center text-sm text-muted-foreground gap-2">
+                          <Package className="h-4 w-4" />
+                          <span>{order.items} items</span>
+                          <span>•</span>
+                          <span>{order.location}</span>
+                        </div>
+                      </div>
                       <div className="flex items-center gap-4">
-                        <div className="p-2 rounded-lg bg-primary/10">
-                          <opportunity.icon className="h-5 w-5 text-primary" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between">
-                            <h4 className="font-medium">{opportunity.title}</h4>
-                            <Badge variant="outline">
-                              {opportunity.confidence}% confidence
-                            </Badge>
-                          </div>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            {opportunity.description}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">
-                            Progress
-                          </span>
-                          <span className="font-medium">
-                            {opportunity.progress}%
-                          </span>
-                        </div>
-                        <Progress
-                          value={opportunity.progress}
-                          className="h-2"
-                        />
-                      </div>
-
-                      <div className="flex items-center justify-between">
-                        <Badge variant="secondary" className="font-medium">
-                          {opportunity.impact}
+                        <Badge 
+                          variant={order.status === 'pending' ? 'secondary' : 'default'}
+                        >
+                          {order.status}
                         </Badge>
-                        <Button variant="ghost" size="sm">
-                          Take Action
-                        </Button>
+                        <span className="font-bold">{order.amount} DT</span>
                       </div>
                     </div>
                   ))}
                 </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
+          </div>
 
-        {/* Charts Section */}
-        <div className="col-span-12 grid gap-4 grid-cols-2">
-          {/* Revenue Chart */}
-          <Card>
+          <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+            <Card className="col-span-2">
+              <CardHeader>
+                <CardTitle>Orders by Status</CardTitle>
+                <CardDescription>Daily order status distribution</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={ordersByStatus}>
+                      <XAxis 
+                        dataKey="date" 
+                        stroke="#888888"
+                        fontSize={12}
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                      <YAxis
+                        stroke="#888888"
+                        fontSize={12}
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="delivered"
+                        stroke="hsl(var(--primary))"
+                        strokeWidth={2}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="processing"
+                        stroke="hsl(var(--primary)/0.6)"
+                        strokeWidth={2}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="pending"
+                        stroke="hsl(var(--primary)/0.3)"
+                        strokeWidth={2}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Top Products</CardTitle>
+                <CardDescription>Best performing items</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {mockData.topProducts.map((product) => (
+                    <div key={product.id} className="flex items-center justify-between">
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium leading-none">{product.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {product.totalSold} sold
+                        </p>
+                      </div>
+                      <div className="font-bold">
+                        {product.revenue.toLocaleString()} DT
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Revenue by Category</CardTitle>
+                <CardDescription>Distribution of earnings</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {revenueByCategory.map((category) => (
+                    <div key={category.category} className="flex items-center justify-between">
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium leading-none">{category.category}</p>
+                        <div className="flex items-center gap-2">
+                          <Progress value={category.percentage} className="w-[60px]" />
+                          <span className="text-sm text-muted-foreground">
+                            {category.percentage}%
+                          </span>
+                        </div>
+                      </div>
+                      <div className="font-bold">
+                        {category.revenue.toLocaleString()} DT
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Daily Revenue Pattern</CardTitle>
+                <CardDescription>Revenue distribution by time</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[200px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={dailyRevenue}>
+                      <XAxis 
+                        dataKey="time" 
+                        fontSize={12}
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                      <YAxis
+                        fontSize={12}
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(value) => `${value} DT`}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="revenue"
+                        stroke="hsl(var(--primary))"
+                        strokeWidth={2}
+                        dot={false}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Monthly Performance</CardTitle>
+                <CardDescription>Revenue vs Orders trend</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[200px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={monthlyTrends}>
+                      <XAxis 
+                        dataKey="month" 
+                        fontSize={12}
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                      <YAxis
+                        yAxisId="left"
+                        fontSize={12}
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(value) => `${value} DT`}
+                      />
+                      <YAxis
+                        yAxisId="right"
+                        orientation="right"
+                        fontSize={12}
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(value) => `${value}`}
+                      />
+                      <Line
+                        yAxisId="left"
+                        type="monotone"
+                        dataKey="revenue"
+                        stroke="hsl(var(--primary))"
+                        strokeWidth={2}
+                        dot={false}
+                      />
+                      <Line
+                        yAxisId="right"
+                        type="monotone"
+                        dataKey="orders"
+                        stroke="hsl(var(--primary)/0.3)"
+                        strokeWidth={2}
+                        dot={false}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Main Revenue Chart - Full Width */}
+          <Card className="col-span-full">
             <CardHeader>
               <CardTitle>Revenue Overview</CardTitle>
-              <CardDescription>Monthly revenue and orders</CardDescription>
+              <CardDescription>Daily revenue trend</CardDescription>
             </CardHeader>
             <CardContent>
-              <ChartContainer config={chartConfig} className="h-[300px]">
+              <div className="h-[300px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={revenueData}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis
-                      dataKey="month"
-                      tickLine={false}
-                      axisLine={false}
-                      padding={{ left: 20, right: 20 }}
+                  <LineChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis 
+                      dataKey="name" 
+                      stroke="#888888"
                     />
-                    <YAxis
-                      yAxisId="left"
-                      tickLine={false}
-                      axisLine={false}
-                      tickFormatter={(value) => `${value}DT`}
+                    <YAxis 
+                      stroke="#888888"
+                      tickFormatter={(value) => `${value} DT`}
                     />
-                    <YAxis
-                      yAxisId="right"
-                      orientation="right"
-                      tickLine={false}
-                      axisLine={false}
-                      tickFormatter={(value) => `${value}`}
-                    />
-                    <Tooltip content={<ChartTooltipContent />} />
-                    <ChartLegend content={<ChartLegendContent />} />
                     <Line
-                      yAxisId="left"
                       type="monotone"
                       dataKey="revenue"
-                      stroke="var(--color-revenue)"
-                      strokeWidth={2}
-                      dot={false}
-                    />
-                    <Line
-                      yAxisId="right"
-                      type="monotone"
-                      dataKey="orders"
-                      stroke="var(--color-orders)"
+                      stroke="hsl(var(--primary))"
                       strokeWidth={2}
                       dot={false}
                     />
                   </LineChart>
                 </ResponsiveContainer>
-              </ChartContainer>
-            </CardContent>
-            <CardFooter className="flex justify-between text-sm text-muted-foreground">
-              <div>
-                Total Revenue:{" "}
-                <span className="font-medium text-foreground">64,050 DT</span>
               </div>
-              <div>332 Orders</div>
-            </CardFooter>
+
+              <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                {/* ... stats cards remain the same ... */}
+              </div>
+            </CardContent>
           </Card>
 
-          {/* Products Performance */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Products Performance</CardTitle>
-              <CardDescription>Top selling products</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ChartContainer className="h-[300px]" config={chartConfig}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={[
-                      { name: "Product A", value: 4500 },
-                      { name: "Product B", value: 3800 },
-                      { name: "Product C", value: 3200 },
-                      { name: "Product D", value: 2800 },
-                      { name: "Product E", value: 2200 },
-                    ]}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis dataKey="name" tickLine={false} axisLine={false} />
-                    <YAxis
-                      tickLine={false}
-                      axisLine={false}
-                      tickFormatter={(value) => `${value}DT`}
-                    />
-                    <Tooltip content={<ChartTooltipContent />} />
-                    <Bar
-                      dataKey="value"
-                      fill="hsl(var(--chart-1))"
-                      radius={[4, 4, 0, 0]}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </ChartContainer>
-            </CardContent>
-            <CardFooter>
-              <Button variant="link" className="ml-auto">
-                View All Products
-              </Button>
-            </CardFooter>
-          </Card>
-        </div>
-      </div>
+          {/* Two Column Layout */}
+          <div className="grid gap-4 md:grid-cols-2">
+            {/* Order Status */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Order Status</CardTitle>
+                <CardDescription>Current order distribution</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {Object.entries(mockData.orderMetrics)
+                    .filter(([key]) => key !== 'total' && key !== 'totalAmount')
+                    .map(([status, count]) => (
+                      <div key={status} className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline">
+                            {status.replace(/([A-Z])/g, ' $1').trim()}
+                          </Badge>
+                          <span className="text-sm">{count} orders</span>
+                        </div>
+                        <Progress 
+                          value={(count / mockData.orderMetrics.total) * 100} 
+                          className="w-[100px]" 
+                        />
+                      </div>
+                    ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Top Products */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Top Products</CardTitle>
+                <CardDescription>Best performing items</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {mockData.topProducts.map(product => (
+                    <div key={product.id} className="flex items-center justify-between">
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium">{product.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {product.totalSold} sold
+                        </p>
+                      </div>
+                      <div className="font-medium">
+                        {product.revenue.toLocaleString()} DT
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="orders">
+          {/* Orders specific content */}
+        </TabsContent>
+
+        <TabsContent value="products">
+          {/* Products specific content */}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
+

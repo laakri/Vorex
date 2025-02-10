@@ -21,7 +21,7 @@ export function Logo({ className, size = "md" }: LogoProps) {
         <div className="relative bg-background rounded-lg p-1.5 bg-yellow-600">
           <div className="relative">
             {/* Base box */}
-            <Box className="h-4 w-4 text-primary" strokeWidth={2.5} />
+            <Box className="h-4 w-4 text-white" strokeWidth={2.5} />
             {/* Overlay search icon */}
             <PackageSearch
               className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-4 w-4 text-primary"
