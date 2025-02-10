@@ -13,18 +13,21 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { businessTypes, TUNISIA_GOVERNORATES, BusinessType, Governorate } from "@/config/constants";
 import api from "@/lib/axios";
 
-const businessTypes = [
-  "Retail",
-  "Wholesale",
-  "Manufacturing",
-  "Services",
-  "Food & Beverage",
-  "Electronics",
-  "Fashion",
-  "Other",
-];
+interface OnboardingFormData {
+  businessName: string;
+  businessType: BusinessType | "";
+  description: string;
+  address: string;
+  city: string;
+  governorate: Governorate | "";
+  postalCode: string;
+  phone: string;
+  registrationNo: string;
+  taxId: string;
+}
 
 const steps = [
   {
@@ -42,11 +45,11 @@ const steps = [
     description: "Your business registration details",
     fields: ["registrationNo", "taxId"],
   },
-];
+] as const;
 
 export function SellerOnboarding() {
   const [currentStep, setCurrentStep] = useState(0);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<OnboardingFormData>({
     businessName: "",
     businessType: "",
     description: "",
@@ -73,17 +76,17 @@ export function SellerOnboarding() {
     }));
   };
 
-  const handleSelectChange = (value: string) => {
+  const handleSelectChange = (field: keyof OnboardingFormData) => (value: string) => {
     setFormData((prev) => ({
       ...prev,
-      businessType: value,
+      [field]: value,
     }));
   };
 
   const validateStep = () => {
     const currentFields = steps[currentStep].fields;
     const emptyFields = currentFields.filter(
-      (field) => !formData[field as keyof typeof formData]
+      (field) => !formData[field as keyof OnboardingFormData]
     );
 
     if (emptyFields.length > 0) {
@@ -126,7 +129,7 @@ export function SellerOnboarding() {
 
             <Select
               value={formData.businessType}
-              onValueChange={handleSelectChange}
+              onValueChange={handleSelectChange("businessType")}
             >
               <SelectTrigger className="h-12 bg-muted/50">
                 <SelectValue placeholder="Select Business Type" />
@@ -170,14 +173,21 @@ export function SellerOnboarding() {
               onChange={handleChange}
               required
             />
-            <Input
-              name="governorate"
-              placeholder="Governorate"
-              className="h-12 bg-muted/50"
+            <Select
               value={formData.governorate}
-              onChange={handleChange}
-              required
-            />
+              onValueChange={handleSelectChange("governorate")}
+            >
+              <SelectTrigger className="h-12 bg-muted/50">
+                <SelectValue placeholder="Select Governorate" />
+              </SelectTrigger>
+              <SelectContent>
+                {TUNISIA_GOVERNORATES.map((governorate) => (
+                  <SelectItem key={governorate} value={governorate}>
+                    {governorate}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Input
               name="postalCode"
               placeholder="Postal Code"
