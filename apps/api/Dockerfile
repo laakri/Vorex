@@ -1,34 +1,36 @@
+# Builder stage
 FROM oven/bun:latest as builder
-
 WORKDIR /app
 
-# Copy package files first (removed bun.lockb since it doesn't exist)
+# Copy package files
 COPY package.json ./
-
-# Copy Prisma schema
 COPY prisma ./prisma/
 
-# Install dependencies and generate Prisma client
+# Install dependencies
 RUN bun install
-RUN bunx prisma generate
 
-# Copy the rest of the application
-COPY . .
+# Temporary switch to Node.js for Prisma generation
+FROM node:18-alpine as prisma-builder
+WORKDIR /app
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/prisma ./prisma
+RUN npx prisma generate
 
-# Build the application
-RUN bun run build
-
-# Production stage
+# Final stage
 FROM oven/bun:latest
-
 WORKDIR /app
 
-# Copy built assets and necessary files
-COPY --from=builder /app/dist ./dist
+# Copy built files
 COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json .
-COPY --from=builder /app/prisma ./prisma
+COPY --from=prisma-builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY . .
 
+# Set environment variables
+ENV NODE_ENV=production
+ENV PORT=3000
+
+# Expose port
 EXPOSE 3000
 
-CMD ["bun", "run", "start:prod"]
+# Start the application
+CMD ["bun", "src/main.ts"]
