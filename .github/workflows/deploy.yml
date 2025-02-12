@@ -36,10 +36,6 @@ jobs:
         # Web Environment Variables
         echo "VITE_API_URL=http://128.251.128.84:3000" > apps/web/.env
         
-    - name: Set up Docker Buildx
-      run: |
-        docker buildx create --use
-        
     - name: Deploy with Docker Compose
       env:
         DOCKER_BUILDKIT: 1
@@ -51,7 +47,7 @@ jobs:
         # Remove unused images and volumes
         docker system prune -af
         
-        # Build and start containers with BuildKit
+        # Build and start containers
         docker compose build --parallel
         docker compose up -d
         
