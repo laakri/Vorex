@@ -36,16 +36,24 @@ jobs:
         # Web Environment Variables
         echo "VITE_API_URL=http://48.209.80.195:3000" > apps/web/.env
         
-    - name: Deploy with Docker Compose
+    - name: Set up Docker Buildx
       run: |
-        # Stop and remove existing containers
+        docker buildx create --use
+        
+    - name: Deploy with Docker Compose
+      env:
+        DOCKER_BUILDKIT: 1
+        COMPOSE_DOCKER_CLI_BUILD: 1
+      run: |
+        # Stop existing containers
         docker compose down || true
         
         # Remove unused images and volumes
         docker system prune -af
         
-        # Build and start new containers
-        docker compose up --build -d
+        # Build and start containers with BuildKit
+        docker compose build --parallel
+        docker compose up -d
         
         # Wait for containers to start
         sleep 30
