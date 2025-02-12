@@ -1,15 +1,28 @@
-FROM oven/bun:latest
+FROM oven/bun:latest as builder
 
 WORKDIR /app
 
-COPY package.json bun.lock ./
+# Copy package files
+COPY package.json ./
 
-RUN bun install
-
+# Copy source files
 COPY . .
 
+# Install dependencies
+RUN bun install
+
+# Make sure the build script exists and runs
 RUN bun run build
 
-EXPOSE 5173
+# Production stage
+FROM nginx:alpine
 
-CMD ["bun", "run", "dev"]
+# Copy nginx configuration
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Copy built assets from builder stage
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]

@@ -126,23 +126,15 @@ export class SellersService {
     startDate.setDate(startDate.getDate() - daysAgo);
 
     const [orders, products, topProducts, ordersByStatus, revenueByGovernorate] = await Promise.all([
-      // Get all orders for metrics
+      // Get all orders with orderItems included
       this.prisma.order.findMany({
         where: {
           sellerId: seller.id,
           createdAt: { gte: startDate }
         },
-        select: {
-          id: true,
-          status: true,
-          totalAmount: true,
-          createdAt: true,
-          city: true,
-          governorate: true,
-          orderItems: {
-            select: {
-              quantity: true,
-              price: true,
+        include: {
+          items: {
+            include: {
               product: {
                 select: {
                   category: true
@@ -211,6 +203,18 @@ export class SellersService {
       })
     ]);
 
+    // Calculate revenue by category using orderItems
+    const revenueByCategory = orders.reduce((acc, order) => {
+      order.items.forEach(item => {
+        const category = item.product.category;
+        if (!acc[category]) {
+          acc[category] = 0;
+        }
+        acc[category] += item.price * item.quantity;
+      });
+      return acc;
+    }, {} as Record<string, number>);
+
     // Calculate order metrics
     const orderMetrics = {
       total: orders.length,
@@ -242,18 +246,6 @@ export class SellersService {
       acc[date].orders += 1;
       return acc;
     }, {} as Record<string, { amount: number; orders: number }>);
-
-    // Calculate revenue by category
-    const revenueByCategory = orders.reduce((acc, order) => {
-      order.orderItems.forEach(item => {
-        const category = item.product.category;
-        if (!acc[category]) {
-          acc[category] = 0;
-        }
-        acc[category] += item.price * item.quantity;
-      });
-      return acc;
-    }, {} as Record<string, number>);
 
     // Transform orders by status over time
     const orderStatusTimeline = ordersByStatus.reduce((acc, stat) => {

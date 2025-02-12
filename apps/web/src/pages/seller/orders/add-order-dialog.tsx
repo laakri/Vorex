@@ -427,7 +427,7 @@ export function AddOrderDialog({ open, onOpenChange, onOrderAdded }: AddOrderDia
 
             <div className="space-y-4">
               <div className="font-medium">Order Items *</div>
-              {form.watch("items").map((item, index) => (
+              {form.watch("items").map((_item, index) => (
                 <div key={index} className="flex gap-4 items-end">
                   <FormField
                     control={form.control}
@@ -450,11 +450,7 @@ export function AddOrderDialog({ open, onOpenChange, onOrderAdded }: AddOrderDia
                               <input
                                 className="flex h-10 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
                                 placeholder="Search products..."
-                                onChange={(e) => {
-                                  // Filter products as user types
-                                  const searchTerm = e.target.value.toLowerCase();
-                                  // Products will be filtered in the mapping below
-                                }}
+                               
                               />
                             </div>
                             {isLoading ? (

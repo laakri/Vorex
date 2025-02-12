@@ -1,0 +1,33 @@
+name: Deploy to Azure VM
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v1
+      with:
+        bun-version: latest
+        
+    - name: Build and Deploy
+      run: |
+        # Stop existing containers
+        docker compose down
+        
+        # Pull latest changes
+        git pull origin main
+        
+        # Build and start containers
+        docker compose up --build -d
+        
+        # Clean up unused images
+        docker image prune -f 
