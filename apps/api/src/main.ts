@@ -5,13 +5,28 @@ import { ConfigService } from '@nestjs/config';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const configService = app.get(ConfigService);
 
-  // Enable CORS with specific configuration
-  app.enableCors({
-    origin: ['http://localhost', 'http://localhost:80', 'http://localhost:5173'],
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    credentials: true,
-  });
+  // Get CORS configuration from environment variables
+  const allowedOrigins = configService.get<string>('ALLOWED_ORIGINS')?.split(',') || [];
+  const corsEnabled = configService.get<boolean>('CORS_ENABLED', true);
+  
+  if (corsEnabled) {
+    app.enableCors({
+      origin: (origin, callback) => {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        
+        if (allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.includes('*')) {
+          callback(null, true);
+        } else {
+          callback(new Error('Not allowed by CORS'));
+        }
+      },
+      methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+      credentials: true,
+    });
+  }
 
   // Global Validation Pipe
   app.useGlobalPipes(
@@ -22,11 +37,9 @@ async function bootstrap() {
     }),
   );
 
-  const configService = app.get(ConfigService);
   const port = configService.get<number>('PORT', 3000);
-
   await app.listen(port);
-  console.log(`Application is running on: http://localhost:${port}`);
+  console.log(`Application is running on: ${await app.getUrl()}`);
 }
 
 bootstrap();
