@@ -12,22 +12,39 @@ jobs:
     
     steps:
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
     
     - name: Setup Bun
       uses: oven-sh/setup-bun@v1
       with:
         bun-version: latest
         
-    - name: Build and Deploy
+    - name: Create env files
       run: |
-        # Stop existing containers
-        docker compose down
+        # API Environment Variables
+        echo "DATABASE_URL=postgresql://admin:admin@postgres:5432/vorex_db?schema=public" > apps/api/.env
+        echo "JWT_SECRET=your-secret-key" >> apps/api/.env
+        echo "JWT_EXPIRES_IN=7d" >> apps/api/.env
+        echo "PORT=3000" >> apps/api/.env
         
-        # Pull latest changes
-        git pull origin main
+        # Web Environment Variables
+        echo "VITE_API_URL=http://48.209.80.195:3000" > apps/web/.env
         
-        # Build and start containers
+    - name: Deploy with Docker Compose
+      run: |
+        # Stop and remove existing containers
+        docker compose down || true
+        
+        # Remove unused images and volumes
+        docker system prune -af
+        
+        # Build and start new containers
         docker compose up --build -d
         
-        # Clean up unused images
-        docker image prune -f 
+        # Wait for containers to start
+        sleep 30
+        
+        # Check container status
+        docker ps
+        docker compose logs 
