@@ -31,7 +31,7 @@ export function Logo({ className, size = "md" }: LogoProps) {
         </div>
       </div>
       <span className={cn("font-bold tracking-tight", sizes[size])}>
-        Vorex<span className="text-primary">.</span>
+        Vorexx<span className="text-primary">.</span>
       </span>
     </div>
   );
