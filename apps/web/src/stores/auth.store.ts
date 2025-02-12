@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import axios from "axios";
+import api from "@/lib/axios";
 
 interface User {
   id: string;
@@ -42,43 +42,29 @@ export const useAuthStore = create<AuthState>()(
       },
 
       signIn: async (email: string, password: string) => {
-        const response = await axios.post("http://localhost:3000/auth/login", {
-          email,
-          password,
-        });
-
+        const response = await api.post("/auth/login", { email, password });
         set({
           token: response.data.token,
           user: response.data.user,
           isAuthenticated: true,
           isVerifiedSeller: response.data.user.isVerifiedSeller || false,
         });
-
-        axios.defaults.headers.common[
-          "Authorization"
-        ] = `Bearer ${response.data.token}`;
+        api.defaults.headers.common["Authorization"] = `Bearer ${response.data.token}`;
       },
 
       signUp: async ({ firstName, lastName, email, password }) => {
-        const response = await axios.post(
-          "http://localhost:3000/auth/register",
-          {
-            fullName: `${firstName} ${lastName}`.trim(),
-            email,
-            password,
-          }
-        );
-
+        const response = await api.post("/auth/register", {
+          fullName: `${firstName} ${lastName}`.trim(),
+          email,
+          password,
+        });
         set({
           token: response.data.token,
           user: response.data.user,
           isAuthenticated: true,
           isVerifiedSeller: false,
         });
-
-        axios.defaults.headers.common[
-          "Authorization"
-        ] = `Bearer ${response.data.token}`;
+        api.defaults.headers.common["Authorization"] = `Bearer ${response.data.token}`;
       },
 
       logout: () => {
@@ -88,7 +74,7 @@ export const useAuthStore = create<AuthState>()(
           isAuthenticated: false,
           isVerifiedSeller: false,
         });
-        delete axios.defaults.headers.common["Authorization"];
+        delete api.defaults.headers.common["Authorization"];
       },
     }),
     {

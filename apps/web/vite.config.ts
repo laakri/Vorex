@@ -22,5 +22,9 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     emptyOutDir: true
-  }
+  },
+  define: {
+    'process.env': process.env
+  },
+  envPrefix: 'VITE_'
 });
