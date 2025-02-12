@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: vorex_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgresql://admin:admin@postgres:5432/vorex_db?schema=public
+      NODE_ENV: production
+      JWT_SECRET: 8f4c9d6a2e7b1f5n8q3w9p4m7k2j5h8g1t6y3r9c4v7b2n5x8z1l6s3d9g4h7j
+      JWT_EXPIRES_IN: 7d
+      PORT: 3000
+    depends_on:
+      - postgres
+    ports:
+      - "3000:3000"
+
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+    environment:
+      VITE_API_URL: http://api:3000
+    ports:
+      - "5173:5173"
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:
