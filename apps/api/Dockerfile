@@ -2,14 +2,14 @@ FROM oven/bun:latest as builder
 
 WORKDIR /app
 
-# Copy package files first
-COPY package.json bun.lockb ./
+# Copy package files first (removed bun.lockb since it doesn't exist)
+COPY package.json ./
 
 # Copy Prisma schema
 COPY prisma ./prisma/
 
 # Install dependencies and generate Prisma client
-RUN bun install --frozen-lockfile
+RUN bun install
 RUN bunx prisma generate
 
 # Copy the rest of the application
