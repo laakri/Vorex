@@ -16,21 +16,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-    networks:
-      - vorex_default
-
-  nginx:
-    image: nginx:alpine
-    ports:
-      - "80:80"
-      - "3000:3000"
-    volumes:
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf
-    depends_on:
-      - api
-      - web
-    networks:
-      - vorex_default
 
   api:
     build:
@@ -39,19 +24,16 @@ services:
     environment:
       DATABASE_URL: postgresql://admin:admin@postgres:5432/vorex_db?schema=public
       NODE_ENV: production
-      JWT_SECRET: your-secret-key
+      JWT_SECRET: 8f4c9d6a2e7b1f5n8q3w9p4m7k2j5h8g1t6y3r9c4v7b2n5x8z1l6s3d9g4h7j
       JWT_EXPIRES_IN: 7d
       PORT: 3000
       ALLOWED_ORIGINS: "http://48.209.80.195,http://48.209.80.195:80,http://localhost:5173"
-    expose:
-      - "3000"
+      CORS_ENABLED: "true"
+    ports:
+      - "3000:3000"
     depends_on:
       postgres:
         condition: service_healthy
-    ports:
-      - "3000"
-    networks:
-      - vorex_default
 
   web:
     build:
@@ -59,18 +41,10 @@ services:
       dockerfile: Dockerfile
     environment:
       VITE_API_URL: "http://48.209.80.195:3000"
-    expose:
-      - "80"
+    ports:
+      - "80:80"
     depends_on:
       - api
-    ports:
-      - "80"
-    networks:
-      - vorex_default
-
-networks:
-  vorex_default:
-    driver: bridge
 
 volumes:
   postgres_data:
