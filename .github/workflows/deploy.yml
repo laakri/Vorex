@@ -34,7 +34,7 @@ jobs:
         echo "PORT=3000" >> apps/api/.env
         
         # Web Environment Variables
-        echo "VITE_API_URL=http://48.209.80.195:3000" > apps/web/.env
+        echo "VITE_API_URL=http://128.251.128.84:3000" > apps/web/.env
         
     - name: Set up Docker Buildx
       run: |

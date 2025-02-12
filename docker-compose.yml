@@ -27,7 +27,7 @@ services:
       JWT_SECRET: 8f4c9d6a2e7b1f5n8q3w9p4m7k2j5h8g1t6y3r9c4v7b2n5x8z1l6s3d9g4h7j
       JWT_EXPIRES_IN: 7d
       PORT: 3000
-      ALLOWED_ORIGINS: "http://48.209.80.195,http://48.209.80.195:80,http://localhost:5173"
+      ALLOWED_ORIGINS: "http://128.251.128.84,http://128.251.128.84:80,http://localhost:5173"
       CORS_ENABLED: "true"
     ports:
       - "3000:3000"
@@ -40,7 +40,7 @@ services:
       context: ./apps/web
       dockerfile: Dockerfile
     environment:
-      VITE_API_URL: "http://48.209.80.195:3000"
+      VITE_API_URL: "http://128.251.128.84:3000"
     ports:
       - "80:80"
     depends_on:
