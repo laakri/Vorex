@@ -37,7 +37,7 @@ jobs:
         echo "CORS_ENABLED=true" >> apps/api/.env
         
         # Web Environment Variables
-        echo "VITE_API_URL=http://128.251.128.84:3000/api" > apps/web/.env
+        echo "VITE_API_URL=http://128.251.128.84/api" > apps/web/.env
         echo "VITE_APP_NAME=Vorex" >> apps/web/.env
         
     - name: Set up Docker Buildx
