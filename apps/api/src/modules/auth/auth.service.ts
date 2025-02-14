@@ -18,7 +18,6 @@ export class AuthService {
   ) {}
 
   async register(dto: RegisterDto) {
-    // Check if user exists
     const exists = await this.prisma.user.findUnique({
       where: { email: dto.email },
     });
@@ -27,27 +26,26 @@ export class AuthService {
       throw new ConflictException('Email already exists');
     }
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(dto.password, 10);
 
-    // Create user
     const user = await this.prisma.user.create({
       data: {
         email: dto.email,
         password: hashedPassword,
         fullName: dto.fullName,
         role: Role.SELLER,
+        isVerifiedSeller: false,
       },
       select: {
         id: true,
         email: true,
         fullName: true,
         role: true,
+        isVerifiedSeller: true,
         createdAt: true,
       },
     });
 
-    // Generate token
     const token = this.generateToken(user);
 
     return {
@@ -57,23 +55,28 @@ export class AuthService {
   }
 
   async login(dto: LoginDto) {
-    // Find user
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email },
+      select: {
+        id: true,
+        email: true,
+        fullName: true,
+        role: true,
+        password: true,
+        isVerifiedSeller: true,
+      },
     });
 
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    // Verify password
     const isPasswordValid = await bcrypt.compare(dto.password, user.password);
 
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    // Generate token
     const token = this.generateToken(user);
 
     return {
@@ -82,6 +85,7 @@ export class AuthService {
         email: user.email,
         fullName: user.fullName,
         role: user.role,
+        isVerifiedSeller: user.isVerifiedSeller,
       },
       token,
     };
