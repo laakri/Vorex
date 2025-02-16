@@ -16,6 +16,8 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - app-network
 
   api:
     build:
@@ -27,24 +29,32 @@ services:
       JWT_SECRET: 8f4c9d6a2e7b1f5n8q3w9p4m7k2j5h8g1t6y3r9c4v7b2n5x8z1l6s3d9g4h7j
       JWT_EXPIRES_IN: 7d
       PORT: 3000
-      ALLOWED_ORIGINS: "http://128.251.128.84,http://128.251.128.84:80"
+      ALLOWED_ORIGINS: "http://128.251.128.84,http://128.251.128.84:80,http://localhost:80"
       CORS_ENABLED: "true"
     ports:
       - "3000:3000"
     depends_on:
       postgres:
         condition: service_healthy
+    networks:
+      - app-network
 
   web:
     build:
       context: ./apps/web
       dockerfile: Dockerfile
     environment:
-      VITE_API_URL: "http://128.251.128.84/api"
+      VITE_API_URL: "/api"
     ports:
       - "80:80"
     depends_on:
       - api
+    networks:
+      - app-network
 
 volumes:
   postgres_data:
+
+networks:
+  app-network:
+    driver: bridge
