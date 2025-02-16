@@ -42,7 +42,7 @@ services:
     environment:
       VITE_API_URL: "http://128.251.128.84/api"
     ports:
-      - "80:80"
+      - "3001:80"
     depends_on:
       - api
 
