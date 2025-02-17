@@ -18,10 +18,16 @@ export function SignIn() {
     setIsLoading(true);
 
     try {
+      console.log('Attempting login with:', { email });
       await signIn(email, password);
       navigate("/seller");
     } catch (err: any) {
-      setError(err.response?.data?.message || "Failed to sign in");
+      console.error('Login error:', err);
+      setError(
+        err.response?.data?.message || 
+        err.response?.data?.error || 
+        'Failed to sign in. Please check your credentials.'
+      );
     } finally {
       setIsLoading(false);
     }
