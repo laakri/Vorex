@@ -19,6 +19,10 @@ import {
   DollarSign,
   ShoppingCart,
   TrendingUp,
+  BarChart,
+  Clock,
+  Calendar,
+  PieChart,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -28,90 +32,15 @@ import {
   YAxis,
   ResponsiveContainer,
   CartesianGrid,
+  BarChart as RechartsBarChart,
+  Bar,
+  Tooltip,
 } from "recharts";
 import { Progress } from "@/components/ui/progress";
-
-type OrderStatus = 'pending' | 'processing' | 'readyForPickup' | 'inTransit' | 'delivered' | 'cancelled';
-
-type OrderMetrics = {
-  [K in OrderStatus]: number;
-} & {
-  total: number;
-  totalAmount: number;
-};
-
-type ProductMetrics = {
-  totalProducts: number;
-  lowStock: number;
-  outOfStock: number;
-};
-
-type RevenueDataPoint = {
-  date: string;
-  amount: number;
-  orders: number;
-};
-
-type GovernorateRevenue = {
-  governorate: string;
-  amount: number;
-};
-
-type TopProduct = {
-  id: string;
-  name: string;
-  totalSold: number;
-  revenue: number;
-  currentStock: number;
-};
-
-type DashboardData = {
-  orderMetrics: OrderMetrics;
-  productMetrics: ProductMetrics;
-  revenueData: {
-    daily: RevenueDataPoint[];
-    byGovernorate: GovernorateRevenue[];
-  };
-  topProducts: TopProduct[];
-};
-
-// Mock data with proper typing
-const mockData: DashboardData = {
-  orderMetrics: {
-    total: 150,
-    pending: 25,
-    processing: 35,
-    readyForPickup: 15,
-    inTransit: 40,
-    delivered: 30,
-    cancelled: 5,
-    totalAmount: 15000,
-  },
-  productMetrics: {
-    totalProducts: 45,
-    lowStock: 8,
-    outOfStock: 3,
-  },
-  revenueData: {
-    daily: Array.from({ length: 7 }, (_, i) => ({
-      date: new Date(Date.now() - i * 24 * 60 * 60 * 1000).toLocaleDateString(),
-      amount: Math.floor(Math.random() * 5000) + 1000,
-      orders: Math.floor(Math.random() * 30) + 10,
-    })),
-    byGovernorate: [
-      { governorate: "Tunis", amount: 25000 },
-      { governorate: "Sfax", amount: 18000 },
-      { governorate: "Sousse", amount: 15000 },
-    ],
-  },
-  topProducts: Array.from({ length: 5 }, (_, i) => ({
-    id: `prod-${i + 1}`,
-    name: `Product ${i + 1}`,
-    totalSold: Math.floor(Math.random() * 100) + 20,
-    revenue: Math.floor(Math.random() * 10000) + 1000,
-    currentStock: Math.floor(Math.random() * 50) + 5,
-  })),
-};
+import api from "@/lib/axios";
+import { useQuery } from "@tanstack/react-query";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const ordersByStatus = [
   { date: '01/03', pending: 12, processing: 8, delivered: 18 },
@@ -133,45 +62,54 @@ const recentOrders = [
     location: 'Tunis',
     date: new Date().toISOString(),
   },
-  // Add more orders...
 ];
 
-// Updated mock data for financial insights
-const revenueByCategory = [
-  { category: 'Electronics', revenue: 15800, percentage: 35 },
-  { category: 'Fashion', revenue: 12400, percentage: 28 },
-  { category: 'Home', revenue: 8900, percentage: 20 },
-  { category: 'Sports', revenue: 7200, percentage: 17 },
-];
 
-const dailyRevenue = [
-  { time: '00:00', revenue: 1200 },
-  { time: '04:00', revenue: 800 },
-  { time: '08:00', revenue: 2400 },
-  { time: '12:00', revenue: 3800 },
-  { time: '16:00', revenue: 4200 },
-  { time: '20:00', revenue: 3100 },
-];
 
-const monthlyTrends = [
-  { month: 'Jan', revenue: 42000, orders: 380 },
-  { month: 'Feb', revenue: 38000, orders: 320 },
-  { month: 'Mar', revenue: 45000, orders: 400 },
-];
 
 export function SellerDashboard() {
   const [timeRange, setTimeRange] = useState<string>("7d");
 
-  // Simplified mock data for the chart
-  const chartData = [
-    { name: 'Mon', revenue: 4000 },
-    { name: 'Tue', revenue: 3000 },
-    { name: 'Wed', revenue: 2000 },
-    { name: 'Thu', revenue: 2780 },
-    { name: 'Fri', revenue: 1890 },
-    { name: 'Sat', revenue: 2390 },
-    { name: 'Sun', revenue: 3490 },
-  ];
+  const { data: dashboardData, isLoading } = useQuery({
+    queryKey: ['sellerDashboard', timeRange],
+    queryFn: async () => {
+      const response = await api.get(`/sellers/dashboard?timeRange=${timeRange}`);
+      return response.data;
+    }
+  });
+
+  // Loading states for different sections
+  if (isLoading) {
+    return (
+      <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {Array(4).fill(0).map((_, i) => (
+            <Skeleton key={i} className="h-[120px] w-full" />
+          ))}
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+          <Skeleton className="col-span-4 h-[400px]" />
+          <Skeleton className="col-span-3 h-[400px]" />
+        </div>
+      </div>
+    );
+  }
+
+  const {
+    orderMetrics,
+    productMetrics,
+    revenueData,
+    topProducts
+  } = dashboardData || {
+    orderMetrics: { total: 0, totalAmount: 0 },
+    productMetrics: { totalProducts: 0 },
+    revenueData: { daily: [], byGovernorate: [] },
+    topProducts: []
+  };
+
+  const hasOrders = orderMetrics.total > 0;
+  const hasProducts = productMetrics.totalProducts > 0;
+  const hasRevenue = orderMetrics.totalAmount > 0;
 
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
@@ -200,10 +138,9 @@ export function SellerDashboard() {
       </div>
 
       <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3 lg:w-[400px]">
+        <TabsList className="grid w-full grid-cols-2 lg:w-[400px]">
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="orders">Orders</TabsTrigger>
-          <TabsTrigger value="products">Products</TabsTrigger>
+          <TabsTrigger value="orders">Stats</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
@@ -211,22 +148,22 @@ export function SellerDashboard() {
             {[
               {
                 title: "Total Revenue",
-                value: `${mockData.orderMetrics.totalAmount.toLocaleString()} DT`,
+                value: hasRevenue ? `${orderMetrics.totalAmount.toLocaleString()} DT` : "0 DT",
                 icon: DollarSign,
               },
               {
                 title: "Total Orders",
-                value: mockData.orderMetrics.total.toString(),
+                value: orderMetrics.total.toString(),
                 icon: ShoppingCart,
               },
               {
                 title: "Products",
-                value: mockData.productMetrics.totalProducts.toString(),
+                value: productMetrics.totalProducts.toString(),
                 icon: Package,
               },
               {
                 title: "Average Order",
-                value: `${(mockData.orderMetrics.totalAmount / mockData.orderMetrics.total).toFixed(2)} DT`,
+                value: `${(orderMetrics.totalAmount / orderMetrics.total).toFixed(2)} DT`,
                 icon: TrendingUp,
               }
             ].map((metric) => (
@@ -237,8 +174,8 @@ export function SellerDashboard() {
                       <p className="text-sm font-medium text-muted-foreground">{metric.title}</p>
                       <p className="text-2xl font-bold">{metric.value}</p>
                     </div>
-                    <div className={`p-2 rounded-full bg-primary/10`}>
-                      <metric.icon className="h-5 w-5 text-primary" />
+                    <div className={`p-2 rounded-full ${hasRevenue ? 'bg-primary/10' : 'bg-muted'}`}>
+                      <metric.icon className={`h-5 w-5 ${hasRevenue ? 'text-primary' : 'text-muted-foreground'}`} />
                     </div>
                   </div>
                 </CardContent>
@@ -253,33 +190,42 @@ export function SellerDashboard() {
                 <CardDescription>Daily revenue and order count</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={mockData.revenueData.daily}>
-                      <XAxis
-                        dataKey="date"
-                        stroke="#888888"
-                        fontSize={12}
-                        tickLine={false}
-                        axisLine={false}
-                      />
-                      <YAxis
-                        stroke="#888888"
-                        fontSize={12}
-                        tickLine={false}
-                        axisLine={false}
-                        tickFormatter={(value) => `${value} DT`}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="amount"
-                        stroke="hsl(var(--primary))"
-                        strokeWidth={2}
-                        dot={false}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
+                {hasOrders ? (
+                  <div className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={revenueData.daily}>
+                        <XAxis
+                          dataKey="date"
+                          stroke="#888888"
+                          fontSize={12}
+                          tickLine={false}
+                          axisLine={false}
+                        />
+                        <YAxis
+                          stroke="#888888"
+                          fontSize={12}
+                          tickLine={false}
+                          axisLine={false}
+                          tickFormatter={(value) => `${value} DT`}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="amount"
+                          stroke="hsl(var(--primary))"
+                          strokeWidth={2}
+                          dot={false}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <EmptyState
+                    icon={<BarChart />}
+                    title="No Revenue Data"
+                    description="Start making sales to see your revenue trends here"
+                    className="h-[300px]"
+                  />
+                )}
               </CardContent>
             </Card>
 
@@ -289,31 +235,39 @@ export function SellerDashboard() {
                 <CardDescription>Latest customer orders</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-8">
-                  {recentOrders.map((order) => (
-                    <div key={order.id} className="flex items-center">
-                      <div className="space-y-1 flex-1">
-                        <p className="text-sm font-medium leading-none">
-                          {order.customerName}
-                        </p>
-                        <div className="flex items-center text-sm text-muted-foreground gap-2">
-                          <Package className="h-4 w-4" />
-                          <span>{order.items} items</span>
-                          <span>•</span>
-                          <span>{order.location}</span>
+                {hasOrders ? (
+                  <div className="space-y-8">
+                    {recentOrders.map((order) => (
+                      <div key={order.id} className="flex items-center">
+                        <div className="space-y-1 flex-1">
+                          <p className="text-sm font-medium leading-none">
+                            {order.customerName}
+                          </p>
+                          <div className="flex items-center text-sm text-muted-foreground gap-2">
+                            <Package className="h-4 w-4" />
+                            <span>{order.items} items</span>
+                            <span>•</span>
+                            <span>{order.location}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <Badge 
+                            variant={order.status === 'pending' ? 'secondary' : 'default'}
+                          >
+                            {order.status}
+                          </Badge>
+                          <span className="font-bold">{order.amount} DT</span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-4">
-                        <Badge 
-                          variant={order.status === 'pending' ? 'secondary' : 'default'}
-                        >
-                          {order.status}
-                        </Badge>
-                        <span className="font-bold">{order.amount} DT</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <EmptyState
+                    icon={<Package/>}
+                    title="No Orders Yet" 
+                    description="Your recent orders will appear here"
+                  />
+                )}
               </CardContent>
             </Card>
           </div>
@@ -325,43 +279,52 @@ export function SellerDashboard() {
                 <CardDescription>Daily order status distribution</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={ordersByStatus}>
-                      <XAxis 
-                        dataKey="date" 
-                        stroke="#888888"
-                        fontSize={12}
-                        tickLine={false}
-                        axisLine={false}
-                      />
-                      <YAxis
-                        stroke="#888888"
-                        fontSize={12}
-                        tickLine={false}
-                        axisLine={false}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="delivered"
-                        stroke="hsl(var(--primary))"
-                        strokeWidth={2}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="processing"
-                        stroke="hsl(var(--primary)/0.6)"
-                        strokeWidth={2}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="pending"
-                        stroke="hsl(var(--primary)/0.3)"
-                        strokeWidth={2}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
+                {hasOrders ? (
+                  <div className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={ordersByStatus}>
+                        <XAxis 
+                          dataKey="date" 
+                          stroke="#888888"
+                          fontSize={12}
+                          tickLine={false}
+                          axisLine={false}
+                        />
+                        <YAxis
+                          stroke="#888888"
+                          fontSize={12}
+                          tickLine={false}
+                          axisLine={false}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="delivered"
+                          stroke="hsl(var(--primary))"
+                          strokeWidth={2}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="processing"
+                          stroke="hsl(var(--primary)/0.6)"
+                          strokeWidth={2}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="pending"
+                          stroke="hsl(var(--primary)/0.3)"
+                          strokeWidth={2}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <EmptyState
+                    icon={<BarChart/>}
+                    title="No Order Data"
+                    description="Order status trends will appear here"
+                    className="h-[300px]"
+                  />
+                )}
               </CardContent>
             </Card>
 
@@ -371,173 +334,204 @@ export function SellerDashboard() {
                 <CardDescription>Best performing items</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {mockData.topProducts.map((product) => (
-                    <div key={product.id} className="flex items-center justify-between">
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium leading-none">{product.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {product.totalSold} sold
-                        </p>
+                {hasProducts ? (
+                  <div className="space-y-4">
+                    {topProducts.map((product :any) => (
+                      <div key={product.id} className="flex items-center justify-between">
+                        <div className="space-y-1">
+                          <p className="text-sm font-medium leading-none">{product.name}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {product.totalSold} sold
+                          </p>
+                        </div>
+                        <div className="font-bold">
+                          {product.revenue.toLocaleString()} DT
+                        </div>
                       </div>
-                      <div className="font-bold">
-                        {product.revenue.toLocaleString()} DT
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <EmptyState
+                  icon={<Package/>}
+                  title="No Products"
+                    description="Add products to see performance metrics"
+                  />
+                )}
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
-                <CardTitle>Revenue by Category</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <PieChart className="h-4 w-4" />
+                  Revenue by Category
+                </CardTitle>
                 <CardDescription>Distribution of earnings</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {revenueByCategory.map((category) => (
-                    <div key={category.category} className="flex items-center justify-between">
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium leading-none">{category.category}</p>
-                        <div className="flex items-center gap-2">
-                          <Progress value={category.percentage} className="w-[60px]" />
-                          <span className="text-sm text-muted-foreground">
-                            {category.percentage}%
-                          </span>
+                {hasRevenue ? (
+                  <div className="space-y-4">
+                    {revenueData.byCategory.map((category:any) => (
+                      <div key={category.category} className="flex items-center justify-between">
+                        <div className="space-y-1">
+                          <p className="text-sm font-medium leading-none">
+                            {category.category}
+                          </p>
+                          <div className="flex items-center gap-2">
+                            <Progress value={category.percentage} className="w-[60px]" />
+                            <span className="text-sm text-muted-foreground">
+                              {category.percentage}%
+                            </span>
+                          </div>
+                        </div>
+                        <div className="font-bold">
+                          {category.revenue.toLocaleString()} DT
                         </div>
                       </div>
-                      <div className="font-bold">
-                        {category.revenue.toLocaleString()} DT
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <EmptyState
+                    icon={<PieChart />}
+                    title="No Category Data"
+                    description="Add products and make sales to see category distribution"
+                  />
+                )}
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
-                <CardTitle>Daily Revenue Pattern</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  Daily Revenue Pattern
+                </CardTitle>
                 <CardDescription>Revenue distribution by time</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="h-[200px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={dailyRevenue}>
-                      <XAxis 
-                        dataKey="time" 
-                        fontSize={12}
-                        tickLine={false}
-                        axisLine={false}
-                      />
-                      <YAxis
-                        fontSize={12}
-                        tickLine={false}
-                        axisLine={false}
-                        tickFormatter={(value) => `${value} DT`}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="revenue"
-                        stroke="hsl(var(--primary))"
-                        strokeWidth={2}
-                        dot={false}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
+                {hasRevenue ? (
+                  <div className="h-[200px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <RechartsBarChart data={revenueData.dailyPattern}>
+                        <XAxis 
+                          dataKey="time" 
+                          fontSize={12}
+                          tickLine={false}
+                          axisLine={false}
+                        />
+                        <YAxis
+                          fontSize={12}
+                          tickLine={false}
+                          axisLine={false}
+                          tickFormatter={(value) => `${value} DT`}
+                        />
+                        <Bar
+                          dataKey="revenue"
+                          fill="hsl(var(--primary))"
+                          radius={[4, 4, 0, 0]}
+                        />
+                      </RechartsBarChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <EmptyState
+                    icon={<Clock />}
+                    title="No Daily Patterns"
+                    description="Make sales to see daily revenue patterns"
+                  />
+                )}
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
-                <CardTitle>Monthly Performance</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  Monthly Performance
+                </CardTitle>
                 <CardDescription>Revenue vs Orders trend</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="h-[200px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={monthlyTrends}>
-                      <XAxis 
-                        dataKey="month" 
-                        fontSize={12}
-                        tickLine={false}
-                        axisLine={false}
-                      />
-                      <YAxis
-                        yAxisId="left"
-                        fontSize={12}
-                        tickLine={false}
-                        axisLine={false}
-                        tickFormatter={(value) => `${value} DT`}
-                      />
-                      <YAxis
-                        yAxisId="right"
-                        orientation="right"
-                        fontSize={12}
-                        tickLine={false}
-                        axisLine={false}
-                        tickFormatter={(value) => `${value}`}
-                      />
-                      <Line
-                        yAxisId="left"
-                        type="monotone"
-                        dataKey="revenue"
-                        stroke="hsl(var(--primary))"
-                        strokeWidth={2}
-                        dot={false}
-                      />
-                      <Line
-                        yAxisId="right"
-                        type="monotone"
-                        dataKey="orders"
-                        stroke="hsl(var(--primary)/0.3)"
-                        strokeWidth={2}
-                        dot={false}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
+                {hasRevenue ? (
+                  <div className="h-[200px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={revenueData.monthlyPerformance}>
+                        <XAxis 
+                          dataKey="month" 
+                          fontSize={12}
+                          tickLine={false}
+                          axisLine={false}
+                        />
+                        <YAxis
+                          yAxisId="left"
+                          fontSize={12}
+                          tickLine={false}
+                          axisLine={false}
+                        />
+                        <YAxis
+                          yAxisId="right"
+                          orientation="right"
+                          fontSize={12}
+                          tickLine={false}
+                          axisLine={false}
+                        />
+                        <Line
+                          yAxisId="left"
+                          type="monotone"
+                          dataKey="revenue"
+                          stroke="hsl(var(--primary))"
+                          strokeWidth={2}
+                        />
+                        <Line
+                          yAxisId="right"
+                          type="monotone"
+                          dataKey="orders"
+                          stroke="hsl(var(--primary)/0.3)"
+                          strokeWidth={2}
+                        />
+                        <Tooltip
+                          content={({ active, payload }) => {
+                            if (active && payload?.length) {
+                              return (
+                                <div className="rounded-lg border bg-background p-2 shadow-sm">
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <div className="flex flex-col">
+                                      <span className="text-[0.70rem] uppercase text-muted-foreground">
+                                        Revenue
+                                      </span>
+                                      <span className="font-bold text-muted-foreground">
+                                        {payload[0].value} DT
+                                      </span>
+                                    </div>
+                                    <div className="flex flex-col">
+                                      <span className="text-[0.70rem] uppercase text-muted-foreground">
+                                        Orders
+                                      </span>
+                                      <span className="font-bold text-muted-foreground">
+                                        {payload[1].value}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            }
+                            return null;
+                          }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <EmptyState
+                    icon={<Calendar />}
+                    title="No Monthly Data"
+                    description="Make sales to see monthly performance"
+                  />
+                )}
               </CardContent>
             </Card>
           </div>
 
-          {/* Main Revenue Chart - Full Width */}
-          <Card className="col-span-full">
-            <CardHeader>
-              <CardTitle>Revenue Overview</CardTitle>
-              <CardDescription>Daily revenue trend</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="h-[300px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis 
-                      dataKey="name" 
-                      stroke="#888888"
-                    />
-                    <YAxis 
-                      stroke="#888888"
-                      tickFormatter={(value) => `${value} DT`}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="revenue"
-                      stroke="hsl(var(--primary))"
-                      strokeWidth={2}
-                      dot={false}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-
-              <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                {/* ... stats cards remain the same ... */}
-              </div>
-            </CardContent>
-          </Card>
 
           {/* Two Column Layout */}
           <div className="grid gap-4 md:grid-cols-2">
@@ -549,18 +543,18 @@ export function SellerDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {Object.entries(mockData.orderMetrics)
+                  {Object.entries(orderMetrics)
                     .filter(([key]) => key !== 'total' && key !== 'totalAmount')
                     .map(([status, count]) => (
                       <div key={status} className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <Badge variant="outline">
-                            {status.replace(/([A-Z])/g, ' $1').trim()}
+                            {String(status).replace(/([A-Z])/g, ' $1').trim()}
                           </Badge>
-                          <span className="text-sm">{count} orders</span>
+                          <span className="text-sm">{Number(count)} orders</span>
                         </div>
                         <Progress 
-                          value={(count / mockData.orderMetrics.total) * 100} 
+                          value={(Number(count) / orderMetrics.total) * 100} 
                           className="w-[100px]" 
                         />
                       </div>
@@ -577,7 +571,7 @@ export function SellerDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {mockData.topProducts.map(product => (
+                  {topProducts.map((product :any) => (
                     <div key={product.id} className="flex items-center justify-between">
                       <div className="space-y-1">
                         <p className="text-sm font-medium">{product.name}</p>
