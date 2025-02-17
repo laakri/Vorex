@@ -31,7 +31,6 @@ import {
   XAxis,
   YAxis,
   ResponsiveContainer,
-  CartesianGrid,
   BarChart as RechartsBarChart,
   Bar,
   Tooltip,
