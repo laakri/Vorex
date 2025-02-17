@@ -8,6 +8,9 @@ import {
   UseGuards,
   NotFoundException,
   HttpCode,
+  Request,
+  InternalServerErrorException,
+  BadRequestException,
 } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
@@ -74,20 +77,18 @@ export class OrdersController {
 
   @Post()
   @HttpCode(201)
-  async create(
-    @GetUser('id') userId: string,
-    @Body() createOrderDto: CreateOrderDto,
-  ) {
-    console.log('Creating order for user:', userId);
-    const seller = await this.prisma.seller.findUnique({
-      where: { userId }
-    });
-    
-    if (!seller) {
-      throw new NotFoundException('Seller not found');
+  @Roles(Role.SELLER)
+  async create(@Request() req, @Body() createOrderDto: CreateOrderDto) {
+    try {
+      console.log('Creating order for user:', req.user.id);
+      return await this.ordersService.create(req.user.id, createOrderDto);
+    } catch (error) {
+      console.error('Order creation failed:', error);
+      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to create order');
     }
-
-    return this.ordersService.create(seller.id, createOrderDto);
   }
 
   @Get(':id')

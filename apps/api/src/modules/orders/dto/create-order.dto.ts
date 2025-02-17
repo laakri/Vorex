@@ -1,4 +1,4 @@
-import { IsString, IsEmail, IsNumber, IsOptional, IsArray, ValidateNested, Min } from 'class-validator';
+import { IsString, IsEmail, IsNumber, IsOptional, IsArray, ValidateNested, Min, IsBoolean } from 'class-validator';
 import { Type } from 'class-transformer';
 
 class OrderItemDto {
@@ -24,10 +24,10 @@ class OrderItemDto {
   @IsOptional()
   packagingType?: string;
 
-  @IsOptional()
+  @IsBoolean()
   fragile?: boolean;
 
-  @IsOptional()
+  @IsBoolean()
   perishable?: boolean;
 }
 
