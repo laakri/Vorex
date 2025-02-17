@@ -11,6 +11,23 @@ interface DailyStats {
   total_amount: number;
 }
 
+interface CategoryRevenue {
+  category: string;
+  revenue: number;
+  percentage: number;
+}
+
+interface DailyRevenuePattern {
+  time: string;
+  revenue: number;
+}
+
+interface MonthlyPerformance {
+  month: string;
+  revenue: number;
+  orders: number;
+}
+
 @Injectable()
 export class SellersService {
   constructor(private prisma: PrismaService) {}
@@ -128,7 +145,7 @@ export class SellersService {
     startDate.setDate(startDate.getDate() - daysAgo);
 
     const [orders, products, topProducts, ordersByStatus, revenueByGovernorate] = await Promise.all([
-      // Get all orders with orderItems included
+      // Get orders with items
       this.prisma.order.findMany({
         where: {
           sellerId: seller.id,
@@ -139,7 +156,9 @@ export class SellersService {
             include: {
               product: {
                 select: {
-                  category: true
+                  name: true,
+                  category: true,
+                  stock: true
                 }
               }
             }
@@ -147,21 +166,14 @@ export class SellersService {
         }
       }),
 
-      // Get all products
+      // Get products
       this.prisma.product.findMany({
         where: {
           sellerId: seller.id,
-        },
-        select: {
-          id: true,
-          name: true,
-          stock: true,
-          category: true,
-          price: true
         }
       }),
 
-      // Get top products by sales
+      // Get top products
       this.prisma.orderItem.groupBy({
         by: ['productId'],
         where: {
@@ -182,9 +194,9 @@ export class SellersService {
         take: 5
       }),
 
-      // Orders by status over time
+      // Orders by status
       this.prisma.order.groupBy({
-        by: ['status', 'createdAt'],
+        by: ['status'],
         where: {
           sellerId: seller.id,
           createdAt: { gte: startDate }
@@ -194,51 +206,42 @@ export class SellersService {
 
       // Revenue by governorate
       this.prisma.order.groupBy({
-        by: ['governorate'],
+        by: ['governorate'] as const,
         where: {
           sellerId: seller.id,
           createdAt: { gte: startDate }
         },
         _sum: {
           totalAmount: true
+        },
+        orderBy: {
+          _sum: {
+            totalAmount: 'desc'
+          }
         }
       })
     ]);
 
-    // Calculate revenue by category using orderItems
-    const revenueByCategory = orders.reduce((acc, order) => {
-      order.items.forEach(item => {
-        const category = item.product.category;
-        if (!acc[category]) {
-          acc[category] = 0;
-        }
-        acc[category] += item.price * item.quantity;
-      });
-      return acc;
-    }, {} as Record<string, number>);
-
-    // Calculate order metrics
+    // Calculate metrics
     const orderMetrics = {
       total: orders.length,
       totalAmount: orders.reduce((sum, order) => sum + order.totalAmount, 0),
-      pending: orders.filter(o => o.status === OrderStatus.PENDING).length,
-      processing: orders.filter(o => o.status === OrderStatus.PROCESSING).length,
-      readyForPickup: orders.filter(o => o.status === OrderStatus.READY_FOR_PICKUP).length,
-      inTransit: orders.filter(o => o.status === OrderStatus.IN_TRANSIT).length,
-      delivered: orders.filter(o => o.status === OrderStatus.DELIVERED).length,
-      cancelled: orders.filter(o => o.status === OrderStatus.CANCELLED).length,
+      pending: orders.filter(o => o.status === 'PENDING').length,
+      processing: orders.filter(o => o.status === 'PROCESSING').length,
+      readyForPickup: orders.filter(o => o.status === 'READY_FOR_PICKUP').length,
+      inTransit: orders.filter(o => o.status === 'IN_TRANSIT').length,
+      delivered: orders.filter(o => o.status === 'DELIVERED').length,
+      cancelled: orders.filter(o => o.status === 'CANCELLED').length,
     };
 
-    // Calculate product metrics
     const productMetrics = {
       totalProducts: products.length,
       lowStock: products.filter(p => p.stock > 0 && p.stock <= 10).length,
       outOfStock: products.filter(p => p.stock === 0).length,
       categoriesCount: new Set(products.map(p => p.category)).size,
-      averagePrice: products.reduce((sum, p) => sum + p.price, 0) / products.length
     };
 
-    // Calculate daily revenue data
+    // Process daily revenue data
     const dailyData = orders.reduce((acc, order) => {
       const date = order.createdAt.toISOString().split('T')[0];
       if (!acc[date]) {
@@ -249,15 +252,82 @@ export class SellersService {
       return acc;
     }, {} as Record<string, { amount: number; orders: number }>);
 
-    // Transform orders by status over time
-    const orderStatusTimeline = ordersByStatus.reduce((acc, stat) => {
-      const date = stat.createdAt.toISOString().split('T')[0];
-      if (!acc[date]) {
-        acc[date] = {};
-      }
-      acc[date][stat.status] = stat._count;
-      return acc;
-    }, {} as Record<string, Record<string, number>>);
+    const [categoryRevenue, dailyPatterns, monthlyPerformance] = await Promise.all([
+      // Revenue by category
+      this.prisma.orderItem.findMany({
+        where: {
+          order: {
+            sellerId: seller.id,
+            createdAt: { gte: startDate }
+          }
+        },
+        include: {
+          product: {
+            select: {
+              category: true
+            }
+          }
+        }
+      }).then((items) => {
+        // Group by category and calculate revenue
+        const categoryMap = items.reduce((acc, item) => {
+          const category = item.product?.category || 'Uncategorized';
+          if (!acc[category]) {
+            acc[category] = {
+              revenue: 0,
+              count: 0
+            };
+          }
+          acc[category].revenue += item.price;
+          acc[category].count += item.quantity;
+          return acc;
+        }, {} as Record<string, { revenue: number; count: number }>);
+
+        // Calculate total revenue for percentages
+        const totalRevenue = Object.values(categoryMap)
+          .reduce((sum, { revenue }) => sum + revenue, 0);
+
+        // Format the results
+        return Object.entries(categoryMap).map(([category, data]) => ({
+          category,
+          revenue: data.revenue,
+          percentage: totalRevenue > 0 
+            ? Math.round((data.revenue / totalRevenue) * 100) 
+            : 0
+        }));
+      }),
+
+      // Daily patterns with error handling
+      this.prisma.$queryRaw<DailyRevenuePattern[]>`
+        SELECT 
+          TO_CHAR("createdAt", 'HH24:00') as time,
+          COALESCE(SUM("totalAmount"), 0) as revenue
+        FROM "Order"
+        WHERE 
+          "sellerId" = ${seller.id}
+          AND "createdAt" >= ${startDate}
+        GROUP BY 
+          TO_CHAR("createdAt", 'HH24:00')
+        ORDER BY 
+          time
+      `.catch(() => []),
+
+      // Monthly performance with error handling
+      this.prisma.$queryRaw<MonthlyPerformance[]>`
+        SELECT 
+          TO_CHAR("createdAt", 'Mon') as month,
+          COALESCE(SUM("totalAmount"), 0) as revenue,
+          COUNT(*) as orders
+        FROM "Order"
+        WHERE 
+          "sellerId" = ${seller.id}
+          AND "createdAt" >= ${startDate}
+        GROUP BY 
+          TO_CHAR("createdAt", 'Mon')
+        ORDER BY 
+          MIN("createdAt")
+      `.catch(() => [])
+    ]);
 
     return {
       orderMetrics,
@@ -267,30 +337,32 @@ export class SellersService {
           date,
           ...data
         })),
-        byCategory: Object.entries(revenueByCategory).map(([category, amount]) => ({
-          category,
-          amount,
-          percentage: (amount / orderMetrics.totalAmount) * 100
-        })),
         byGovernorate: revenueByGovernorate.map(gov => ({
           governorate: gov.governorate,
           amount: gov._sum.totalAmount || 0
+        })),
+        byCategory: categoryRevenue,
+        dailyPattern: dailyPatterns.map(pattern => ({
+          time: pattern.time,
+          revenue: Number(pattern.revenue)
+        })),
+        monthlyPerformance: monthlyPerformance.map(perf => ({
+          month: perf.month,
+          revenue: Number(perf.revenue),
+          orders: Number(perf.orders)
         }))
       },
-      orderStatusTimeline: Object.entries(orderStatusTimeline).map(([date, statuses]) => ({
-        date,
-        ...statuses
-      })),
       topProducts: await Promise.all(
         topProducts.map(async (product) => {
-          const details = products.find(p => p.id === product.productId);
+          const details = await this.prisma.product.findUnique({
+            where: { id: product.productId }
+          });
           return {
             id: product.productId,
             name: details?.name || 'Unknown Product',
             totalSold: product._sum.quantity || 0,
             revenue: product._sum.price || 0,
-            currentStock: details?.stock || 0,
-            category: details?.category || 'Unknown'
+            currentStock: details?.stock || 0
           };
         })
       )

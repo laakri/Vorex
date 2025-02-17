@@ -19,10 +19,14 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "prisma:generate": "prisma generate",
-    "db:push": "prisma db push"
+    "db:push": "prisma db push",
+    "seed:products": "ts-node prisma/seeds/test-adding-fake-products.ts",
+    "seed:orders": "ts-node prisma/seeds/test-adding-fake-orders.ts",
+    "seed:reset-orders": "ts-node prisma/seeds/reset-and-create-orders.ts"
   },
   "dependencies": {
     "@faker-js/faker": "^9.4.0",
+    "@google/generative-ai": "^0.21.0",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.0",
     "@nestjs/core": "^11.0.1",
@@ -30,6 +34,7 @@
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.0.1",
     "@prisma/client": "^6.3.1",
+    "axios": "^1.7.9",
     "bcrypt": "^5.1.1",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",

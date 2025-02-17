@@ -19,6 +19,9 @@ import {
   TooltipProvider,
 } from "@/components/ui/tooltip";
 import { format } from "date-fns";
+import api from "@/lib/axios";
+import { useMutation } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 
 interface Message {
   id: string;
@@ -29,6 +32,7 @@ interface Message {
 }
 
 export function AiChat() {
+  const { toast } = useToast();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome",
@@ -39,9 +43,39 @@ export function AiChat() {
     },
   ]);
   const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const chatMutation = useMutation({
+    mutationFn: async (question: string) => {
+      const payload = {
+        question,
+        history: messages.map(({ role, content }) => ({
+          role: role as 'user' | 'assistant',
+          content
+        }))
+      };
+      
+      console.log('Sending request with payload:', payload);
+      
+      const response = await api.post("/ai/chat", payload);
+      return response.data;
+    },
+    onError: (error: any) => {
+      console.error('Chat error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        headers: error.response?.headers
+      });
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.response?.data?.message || "Failed to get AI response. Please try again.",
+      });
+      setMessages((prev) => prev.slice(0, -1));
+    },
+  });
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -50,31 +84,32 @@ export function AiChat() {
   }, [messages]);
 
   const handleSend = async () => {
-    if (!input.trim()) return;
+    if (!input.trim() || chatMutation.isPending) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
       role: "user",
-      content: input,
+      content: input.trim(),
       timestamp: new Date(),
     };
 
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
-    setIsLoading(true);
 
-    // Simulate AI response - Replace with actual API call
-    setTimeout(() => {
+    try {
+      const response = await chatMutation.mutateAsync(input.trim());
+      
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content:
-          "Based on your recent sales data, I notice your gaming accessories have a 23% higher margin. Consider creating a bundle deal with your best-selling items to increase average order value.",
+        content: response.content,
         timestamp: new Date(),
       };
+
       setMessages((prev) => [...prev, aiMessage]);
-      setIsLoading(false);
-    }, 1000);
+    } catch (error) {
+      // Error is handled by the mutation
+    }
   };
 
   const togglePin = (messageId: string) => {
@@ -89,6 +124,17 @@ export function AiChat() {
     navigator.clipboard.writeText(content);
     setCopiedId(messageId);
     setTimeout(() => setCopiedId(null), 2000);
+    toast({
+      description: "Message copied to clipboard",
+    });
+  };
+
+  const formatMessage = (content: string) => {
+    // Remove markdown symbols but keep the text structure
+    return content
+      .replace(/\*\*/g, '') // Remove bold markers
+      .replace(/- /g, '• ') // Replace markdown lists with bullet points
+      .trim();
   };
 
   return (
@@ -121,10 +167,20 @@ export function AiChat() {
                 )}
 
                 <div className="flex-1 space-y-1">
-                  <p className="text-sm leading-relaxed">{message.content}</p>
+                  <div className="text-sm leading-relaxed prose prose-sm max-w-none">
+                    {message.role === "assistant" ? (
+                      formatMessage(message.content).split('\n').map((line, i) => (
+                        <p key={i} className="mb-1 last:mb-0">
+                          {line}
+                        </p>
+                      ))
+                    ) : (
+                      <p>{message.content}</p>
+                    )}
+                  </div>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <Clock className="h-3 w-3" />
-                    {format(message.timestamp, "HH:mm")}
+                    {format(new Date(message.timestamp), "HH:mm")}
                   </div>
                 </div>
 
@@ -174,7 +230,7 @@ export function AiChat() {
               </div>
             ))}
 
-            {isLoading && (
+            {chatMutation.isPending && (
               <div className="flex items-center gap-2 text-muted-foreground p-4">
                 <Sparkles className="h-4 w-4 animate-pulse" />
                 <span className="text-sm">AI is thinking...</span>
@@ -184,17 +240,22 @@ export function AiChat() {
         </TooltipProvider>
       </ScrollArea>
 
-      {/* Input Area - Fixed at bottom */}
+      {/* Input Area */}
       <div className="border-t p-4 bg-background">
         <div className="flex gap-2">
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Ask about your business..."
-            onKeyDown={(e) => e.key === "Enter" && handleSend()}
+            onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
+            disabled={chatMutation.isPending}
             className="flex-1"
           />
-          <Button onClick={handleSend} size="icon">
+          <Button 
+            onClick={handleSend} 
+            size="icon"
+            disabled={chatMutation.isPending}
+          >
             <Send className="h-4 w-4" />
           </Button>
         </div>

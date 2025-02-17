@@ -8,6 +8,7 @@ import { UsersModule } from './modules/users/users.module';
 import { SellersModule } from './modules/sellers/sellers.module';
 import { ProductsModule } from './modules/products/products.module';
 import { OrdersModule } from './modules/orders/orders.module';
+import { AiModule } from './modules/ai/ai.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -20,6 +21,7 @@ import { OrdersModule } from './modules/orders/orders.module';
     SellersModule,
     ProductsModule,
     OrdersModule,
+    AiModule,
   ],
   controllers: [AppController],
   providers: [AppService],
