@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, InternalServerErrorException, ConflictException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, InternalServerErrorException, ConflictException } from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { OrderStatus } from '@/common/enums/order-status.enum';
@@ -8,76 +8,35 @@ import { Prisma } from '@prisma/client';
 export class OrdersService {
   constructor(private prisma: PrismaService) {}
 
-  async create(userId: string, dto: CreateOrderDto) {
-    console.log('Creating order for user:', userId);
-
-    // First check if user exists and is a seller
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      include: {
-        seller: true
-      }
-    });
-
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-
-    if (!user.seller) {
-      throw new BadRequestException(
-        'Seller profile not found. Please complete your seller profile first.'
-      );
-    }
-
-    if (!user.seller.isVerified) {
-      throw new BadRequestException(
-        'Your seller account is not verified yet. Please wait for verification.'
-      );
-    }
-
+  async create(userId: string, createOrderDto: CreateOrderDto) {
     try {
-      console.log('Found seller:', user.seller.id);
-      
+      // Get seller ID from user ID
+      const seller = await this.prisma.seller.findUnique({
+        where: { userId }
+      });
+
+      if (!seller) {
+        throw new NotFoundException('Seller not found');
+      }
+
       // Create the order with items in a transaction
-      const order = await this.prisma.$transaction(async (tx) => {
-        // Verify products exist and belong to seller
-        for (const item of dto.items) {
-          const product = await tx.product.findFirst({
-            where: {
-              id: item.productId,
-              sellerId: user.seller!.id
-            }
-          });
-
-          if (!product) {
-            throw new NotFoundException(
-              `Product with ID ${item.productId} not found or doesn't belong to seller`
-            );
-          }
-
-          if (product.stock < item.quantity) {
-            throw new BadRequestException(
-              `Insufficient stock for product ${product.name}`
-            );
-          }
-        }
-
-        // 1. Create the main order
-        const newOrder = await tx.order.create({
+      const order = await this.prisma.$transaction(async (prisma) => {
+        // Create the order
+        const order = await prisma.order.create({
           data: {
-            sellerId: user.seller!.id,
+            sellerId: seller.id,
+            customerName: createOrderDto.customerName,
+            customerEmail: createOrderDto.customerEmail,
+            address: createOrderDto.address,
+            city: createOrderDto.city,
+            governorate: createOrderDto.governorate,
+            postalCode: createOrderDto.postalCode,
+            phone: createOrderDto.phone,
+            notes: createOrderDto.notes,
             status: 'PENDING',
-            totalAmount: dto.totalAmount,
-            address: dto.address,
-            city: dto.city,
-            governorate: dto.governorate,
-            postalCode: dto.postalCode,
-            phone: dto.phone,
-            customerName: dto.customerName,
-            customerEmail: dto.customerEmail,
-            notes: dto.notes,
+            totalAmount: createOrderDto.totalAmount,
             items: {
-              create: dto.items.map(item => ({
+              create: createOrderDto.items.map(item => ({
                 productId: item.productId,
                 quantity: item.quantity,
                 price: item.price,
@@ -85,22 +44,27 @@ export class OrdersService {
                 dimensions: item.dimensions,
                 packagingType: item.packagingType,
                 fragile: item.fragile,
-                perishable: item.perishable,
+                perishable: item.perishable
               }))
             }
           },
           include: {
             items: {
               include: {
-                product: true
+                product: {
+                  select: {
+                    name: true,
+                    stock: true
+                  }
+                }
               }
             }
           }
         });
 
-        // 2. Update product stock
-        for (const item of dto.items) {
-          await tx.product.update({
+        // Update product stock
+        for (const item of order.items) {
+          await prisma.product.update({
             where: { id: item.productId },
             data: {
               stock: {
@@ -110,14 +74,18 @@ export class OrdersService {
           });
         }
 
-        console.log('Order created successfully:', newOrder.id);
-        return newOrder;
+        return order;
       });
 
       return order;
     } catch (error) {
       console.error('Error creating order:', error);
-      throw error;
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2002') {
+          throw new ConflictException('Order already exists');
+        }
+      }
+      throw new InternalServerErrorException('Could not create order');
     }
   }
 
@@ -140,12 +108,16 @@ export class OrdersService {
             }
           }
         },
-        orderBy: {
-          createdAt: 'desc'
-        }
+        orderBy: [
+          {
+            status: 'asc', // PENDING will come first
+          },
+          {
+            createdAt: 'desc'
+          }
+        ]
       });
 
-      console.log(`Found ${orders.length} orders`);
       return orders;
     } catch (error) {
       console.error('Error finding orders:', error);
