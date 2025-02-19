@@ -105,6 +105,7 @@ model User {
   password         String
   role             Role
   isVerifiedSeller Boolean   @default(false)
+  isVerifiedDriver Boolean   @default(false)
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
