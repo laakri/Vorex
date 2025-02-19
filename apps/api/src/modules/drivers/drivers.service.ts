@@ -48,31 +48,30 @@ export class DriversService {
         }
       });
 
-      // Update user role
-      const updatedUser = await prisma.user.update({
-        where: { id: userId },
-        data: {
-          role: Role.DRIVER
-        }
-      });
-
+      // Create driver profile
       const driver = await prisma.driver.create({
         data: {
           userId,
           licenseNumber: createDriverDto.licenseNumber,
           licenseType: createDriverDto.licenseType,
           licenseExpiry: createDriverDto.licenseExpiry,
+          vehicleId: vehicle.id,
           address: createDriverDto.address,
           city: createDriverDto.city,
           postalCode: createDriverDto.postalCode,
           governorate: createDriverDto.governorate,
           phone: createDriverDto.phone,
           emergencyContact: createDriverDto.emergencyContact,
-          deliveryZones: createDriverDto.deliveryZones,
           availabilityStatus: DriverStatus.OFF_DUTY,
-          vehicleId: vehicle.id,
-          rating: 0,
-          totalDeliveries: 0
+          deliveryZones: createDriverDto.deliveryZones,
+        }
+      });
+
+      // Update user role to DRIVER
+      const updatedUser = await prisma.user.update({
+        where: { id: userId },
+        data: {
+          role: Role.DRIVER
         }
       });
 

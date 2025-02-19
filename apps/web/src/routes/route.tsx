@@ -23,6 +23,7 @@ import OrderPage from "@/pages/seller/orders/order-page";
 import { ProtectedRoute } from "./protected-route";
 import { SellerGuard } from "./seller-guard";
 import { StoreSettingsPage } from "@/pages/seller/settings/store-settings";
+import { DriverApplication } from "@/pages/driver/driver-application";
 
 
 export function AppRoutes() {
@@ -37,6 +38,8 @@ export function AppRoutes() {
         <Route path="track" element={<MainTrack />} />
         <Route path="contact" element={<MainContact />} />
         <Route path="order/:orderId" element={<OrderPage />} />
+        <Route path="apply" element={<DriverApplication />} />
+
       </Route>
 
       {/* Auth Platform */}

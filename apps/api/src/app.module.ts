@@ -9,6 +9,7 @@ import { SellersModule } from './modules/sellers/sellers.module';
 import { ProductsModule } from './modules/products/products.module';
 import { OrdersModule } from './modules/orders/orders.module';
 import { AiModule } from './modules/ai/ai.module';
+import { DriversModule } from './modules/drivers/drivers.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -19,6 +20,7 @@ import { AiModule } from './modules/ai/ai.module';
     AuthModule,
     UsersModule,
     SellersModule,
+    DriversModule,
     ProductsModule,
     OrdersModule,
     AiModule,

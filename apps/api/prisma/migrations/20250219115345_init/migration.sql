@@ -39,6 +39,9 @@ CREATE TABLE "User" (
     "password" TEXT NOT NULL,
     "role" "Role" NOT NULL,
     "isVerifiedSeller" BOOLEAN NOT NULL DEFAULT false,
+    "isVerifiedDriver" BOOLEAN NOT NULL DEFAULT false,
+    "isVerifiedAdmin" BOOLEAN NOT NULL DEFAULT false,
+    "isVerifiedWarehouse" BOOLEAN NOT NULL DEFAULT false,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
