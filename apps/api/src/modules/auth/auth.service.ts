@@ -55,54 +55,57 @@ export class AuthService {
   }
 
   async login(dto: LoginDto) {
-    console.log('Login attempt for email:', dto.email);
-    
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email },
       select: {
         id: true,
         email: true,
         fullName: true,
-        role: true,
         password: true,
+        role: true,
         isVerifiedSeller: true,
+        isVerifiedDriver: true,
+        isVerifiedAdmin: true,
+        isVerifiedWarehouse: true,  
       },
     });
-
-    console.log('User found:', user ? 'yes' : 'no');
 
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
     const isPasswordValid = await bcrypt.compare(dto.password, user.password);
-    console.log('Password valid:', isPasswordValid);
-
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const token = this.generateToken(user);
+    // Get all verified roles
+    const verifiedRoles: Role[] = [];
+    if (user.isVerifiedSeller) verifiedRoles.push(Role.SELLER);
+    if (user.isVerifiedDriver) verifiedRoles.push(Role.DRIVER);
+    if (user.isVerifiedAdmin) verifiedRoles.push(Role.ADMIN);
+    if (user.isVerifiedWarehouse) verifiedRoles.push(Role.WAREHOUSE_MANAGER);
+
+    const token = this.generateToken({
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      verifiedRoles,
+    });
+
+    const { password: _, ...userWithoutPassword } = user;
 
     return {
       user: {
-        id: user.id,
-        email: user.email,
-        fullName: user.fullName,
-        role: user.role,
-        isVerifiedSeller: user.isVerifiedSeller,
+        ...userWithoutPassword,
+        verifiedRoles,
+        hasMultipleRoles: verifiedRoles.length > 1,
       },
       token,
     };
   }
 
-  private generateToken(user: any) {
-    const payload = {
-      sub: user.id,
-      email: user.email,
-      role: user.role,
-    };
-
+  private generateToken(payload: any) {
     return this.jwtService.sign(payload);
   }
 

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      font-family: Arial, sans-serif;
+    }
+    .header {
+      background: #dc2626;
+      color: white;
+      padding: 20px;
+      text-align: center;
+      border-radius: 8px 8px 0 0;
+    }
+    .content {
+      background: #ffffff;
+      padding: 20px;
+      border: 1px solid #e5e7eb;
+      border-radius: 0 0 8px 8px;
+    }
+    .reason-box {
+      background: #fee2e2;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 4px;
+      border-left: 4px solid #dc2626;
+    }
+    .footer {
+      text-align: center;
+      margin-top: 20px;
+      color: #6b7280;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Driver Registration Update</h1>
+    </div>
+    
+    <div class="content">
+      <h2>Hello {{driverName}},</h2>
+      
+      <p>We regret to inform you that your driver registration application has not been approved at this time.</p>
+      
+      <div class="reason-box">
+        <h3>Reason:</h3>
+        <p>{{reason}}</p>
+      </div>
+
+      <p>You may submit a new application after addressing the issues mentioned above.</p>
+      
+      <p>If you believe this was a mistake or need further clarification, please contact our support team.</p>
+    </div>
+
+    <div class="footer">
+      <p>© {{currentYear}} Vorex Delivery. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html> 

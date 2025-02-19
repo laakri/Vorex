@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      font-family: Arial, sans-serif;
+    }
+    .header {
+      background: #0891b2;
+      color: white;
+      padding: 20px;
+      text-align: center;
+      border-radius: 8px 8px 0 0;
+    }
+    .content {
+      background: #ffffff;
+      padding: 20px;
+      border: 1px solid #e5e7eb;
+      border-radius: 0 0 8px 8px;
+    }
+    .driver-info {
+      background: #f0f9ff;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 4px;
+    }
+    .vehicle-info {
+      background: #f0fdf4;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 4px;
+    }
+    .action-buttons {
+      margin-top: 20px;
+      text-align: center;
+    }
+    .button {
+      display: inline-block;
+      padding: 10px 20px;
+      margin: 0 10px;
+      border-radius: 4px;
+      text-decoration: none;
+      font-weight: bold;
+    }
+    .approve {
+      background: #22c55e;
+      color: white;
+    }
+    .reject {
+      background: #dc2626;
+      color: white;
+    }
+    .footer {
+      text-align: center;
+      margin-top: 20px;
+      color: #6b7280;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>New Driver Registration</h1>
+    </div>
+    
+    <div class="content">
+      <h2>Hello {{adminName}},</h2>
+      
+      <p>A new driver has registered and requires your review.</p>
+      
+      <div class="driver-info">
+        <h3>Driver Information</h3>
+        <p><strong>Name:</strong> {{driver.name}}</p>
+        <p><strong>License Number:</strong> {{driver.license}}</p>
+      </div>
+
+      <div class="vehicle-info">
+        <h3>Vehicle Information</h3>
+        <p><strong>Make:</strong> {{driver.vehicle.make}}</p>
+        <p><strong>Model:</strong> {{driver.vehicle.model}}</p>
+        <p><strong>Year:</strong> {{driver.vehicle.year}}</p>
+        <p><strong>Plate Number:</strong> {{driver.vehicle.plateNumber}}</p>
+        <p><strong>Type:</strong> {{driver.vehicle.type}}</p>
+      </div>
+
+      <div class="action-buttons">
+        <a href="{{approveUrl}}" class="button approve">Approve Driver</a>
+        <a href="{{rejectUrl}}" class="button reject">Reject Driver</a>
+      </div>
+    </div>
+
+    <div class="footer">
+      <p>© {{currentYear}} Vorex Delivery. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html> 
