@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      font-family: Arial, sans-serif;
+    }
+    .header {
+      background: #f8f9fa;
+      padding: 20px;
+      text-align: center;
+    }
+    .content {
+      padding: 20px;
+    }
+    .order-details {
+      margin: 20px 0;
+      padding: 15px;
+      border: 1px solid #dee2e6;
+      border-radius: 4px;
+    }
+    .button {
+      display: inline-block;
+      padding: 10px 20px;
+      background: #007bff;
+      color: white;
+      text-decoration: none;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Order Confirmation</h1>
+    </div>
+    <div class="content">
+      <p>Hello {{customerName}},</p>
+      <p>Your order has been successfully created!</p>
+      
+      <div class="order-details">
+        <h3>Order Details</h3>
+        <p>Order ID: {{orderId}}</p>
+        <p>Total Amount: {{totalAmount}} DT</p>
+        <p>Status: {{status}}</p>
+        
+        <h4>Items:</h4>
+        <ul>
+          {{#each items}}
+            <li>{{this.quantity}}x {{this.name}} - {{this.price}} DT</li>
+          {{/each}}
+        </ul>
+      </div>
+
+      <a href="{{trackingUrl}}" class="button">Track Your Order</a>
+    </div>
+  </div>
+</body>
+</html> 
