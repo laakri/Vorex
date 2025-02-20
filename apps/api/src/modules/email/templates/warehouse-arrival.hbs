@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    .container {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .header {
+      text-align: center;
+      padding: 20px 0;
+      border-bottom: 2px solid #eee;
+    }
+    .content {
+      padding: 20px 0;
+      line-height: 1.6;
+    }
+    .status {
+      font-weight: bold;
+      color: #2563eb;
+    }
+    .warehouse-info {
+      background-color: #f8fafc;
+      border-radius: 8px;
+      padding: 15px;
+      margin: 20px 0;
+    }
+    .info-label {
+      font-weight: bold;
+      color: #475569;
+    }
+    .tracking-button {
+      display: inline-block;
+      background-color: #2563eb;
+      color: white;
+      padding: 12px 24px;
+      text-decoration: none;
+      border-radius: 6px;
+      margin: 20px 0;
+    }
+    .footer {
+      text-align: center;
+      padding: 20px 0;
+      color: #666;
+      font-size: 14px;
+      border-top: 1px solid #eee;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Package Arrived at Warehouse</h1>
+    </div>
+    
+    <div class="content">
+      <p>Dear {{customerName}},</p>
+      
+      <p>Your package for order #{{orderId}} has arrived at our warehouse.</p>
+      
+      <div class="warehouse-info">
+        <p><span class="info-label">Warehouse Location:</span> {{warehouseName}}</p>
+        <p><span class="info-label">Arrival Time:</span> {{arrivalTime}}</p>
+        <p><span class="info-label">Next Step:</span> {{nextStep}}</p>
+        
+        {{#if estimatedDeparture}}
+        <p><span class="info-label">Estimated Departure:</span> {{estimatedDeparture}}</p>
+        {{/if}}
+        
+        {{#if additionalInfo}}
+        <p><span class="info-label">Additional Information:</span> {{additionalInfo}}</p>
+        {{/if}}
+      </div>
+      
+      <p>Track your package:</p>
+      <a href="{{trackingUrl}}" class="tracking-button">Track Package</a>
+      
+      <p>If you have any questions about your delivery, our support team is available 24/7:</p>
+      <p>Support: {{supportPhone}}</p>
+    </div>
+    
+    <div class="footer">
+      <p>Thank you for choosing Vorex Delivery</p>
+      <small>This is an automated message, please do not reply.</small>
+    </div>
+  </div>
+</body>
+</html> 

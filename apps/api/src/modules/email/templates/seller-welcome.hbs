@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    .container {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .header {
+      text-align: center;
+      padding: 20px 0;
+      border-bottom: 2px solid #eee;
+    }
+    .content {
+      padding: 20px 0;
+      line-height: 1.6;
+    }
+    .welcome-box {
+      background-color: #f8fafc;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    .next-steps {
+      background-color: #f0f9ff;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    .button {
+      display: inline-block;
+      background-color: #2563eb;
+      color: white;
+      padding: 12px 24px;
+      text-decoration: none;
+      border-radius: 6px;
+      margin: 20px 0;
+    }
+    .footer {
+      text-align: center;
+      padding: 20px 0;
+      color: #666;
+      font-size: 14px;
+      border-top: 1px solid #eee;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Welcome to Vorex Delivery!</h1>
+    </div>
+    
+    <div class="content">
+      <p>Dear {{sellerName}},</p>
+      
+      <div class="welcome-box">
+        <h2>Thank you for joining Vorex Delivery!</h2>
+        <p>Your seller account has been successfully created. We're excited to help you grow your business with our reliable delivery services.</p>
+        
+        <p>Your Account Details:</p>
+        <ul>
+          <li>Business Name: {{businessName}}</li>
+          <li>Account ID: {{sellerId}}</li>
+          {{#if businessType}}
+          <li>Business Type: {{businessType}}</li>
+          {{/if}}
+        </ul>
+      </div>
+      
+      <div class="next-steps">
+        <h3>Next Steps:</h3>
+        <ol>
+          <li>Complete your seller profile</li>
+          <li>Add your products</li>
+          <li>Set up your delivery preferences</li>
+          <li>Start accepting orders</li>
+        </ol>
+      </div>
+      
+      <p>Get started by accessing your seller dashboard:</p>
+      <a href="{{dashboardUrl}}" class="button">Access Dashboard</a>
+      
+      <p>Need help getting started?</p>
+      <ul>
+        <li>Check out our <a href="{{guideUrl}}">Seller Guide</a></li>
+        <li>Contact our seller support team: {{supportEmail}}</li>
+        <li>Call us: {{supportPhone}}</li>
+      </ul>
+    </div>
+    
+    <div class="footer">
+      <p>Welcome to the Vorex Delivery family!</p>
+      <small>This is an automated message, please do not reply.</small>
+    </div>
+  </div>
+</body>
+</html> 
