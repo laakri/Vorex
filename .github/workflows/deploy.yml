@@ -33,11 +33,11 @@ jobs:
         echo "JWT_EXPIRES_IN=7d" >> apps/api/.env
         echo "PORT=3000" >> apps/api/.env
         echo "NODE_ENV=production" >> apps/api/.env
-        echo "ALLOWED_ORIGINS=http://128.251.128.84,http://128.251.128.84:80" >> apps/api/.env
+        echo "ALLOWED_ORIGINS=http://40.67.192.108,http://40.67.192.108:80" >> apps/api/.env
         echo "CORS_ENABLED=true" >> apps/api/.env
         
         # Web Environment Variables
-        echo "VITE_API_URL=http://128.251.128.84/api" > apps/web/.env
+        echo "VITE_API_URL=http://40.67.192.108/api" > apps/web/.env
         echo "VITE_APP_NAME=Vorex" >> apps/web/.env
         
     - name: Set up Docker Buildx
