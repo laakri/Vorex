@@ -31,10 +31,10 @@ services:
       PORT: 3000
       ALLOWED_ORIGINS: "http://40.67.192.108,http://40.67.192.108:80,http://localhost:80"
       CORS_ENABLED: "true"
-      EMAIL_HOST=smtp.gmail.com
+      EMAIL_HOST: "smtp.gmail.com"
       EMAIL_PORT: 587
-      EMAIL_USER: glassisaif@gmail.com
-      EMAIL_PASSWORD: pofdmdrpyihzpdvt
+      EMAIL_USER: "glassisaif@gmail.com"
+      EMAIL_PASSWORD: "pofdmdrpyihzpdvt"
     ports:
       - "3000:3000"
     depends_on:
