@@ -134,7 +134,7 @@ export function DriverApplication() {
                 <FormItem>
                   <FormLabel>Phone</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter your phonee number" {...field} />
+                    <Input placeholder="Enter your phone number" {...field} />
                   </FormControl>
                   <FormMessage>{fieldState.error?.message}</FormMessage>
                 </FormItem>
