@@ -33,4 +33,8 @@ export class AuthController {
   getProfile(@Request() req) {
     return req.user;
   }
+  @Get('health')
+  health() {
+    return { status: 'ok' };
+  }
 }
