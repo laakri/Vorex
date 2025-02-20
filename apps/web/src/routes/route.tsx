@@ -38,7 +38,6 @@ export function AppRoutes() {
         <Route path="track" element={<MainTrack />} />
         <Route path="contact" element={<MainContact />} />
         <Route path="order/:orderId" element={<OrderPage />} />
-        <Route path="apply" element={<DriverApplication />} />
 
       </Route>
 
@@ -111,7 +110,10 @@ export function AppRoutes() {
         <Route index element={<div>Delivery Dashboard</div>} />
         <Route path="routes" element={<div>Routes Management</div>} />
         <Route path="drivers" element={<div>Drivers Management</div>} />
+        
       </Route>
+    <Route path="driver/application" element={<DriverApplication />} />
+
     </Routes>
   );
 }
