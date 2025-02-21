@@ -16,6 +16,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useState } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { AiChat } from "@/pages/seller/ai-chat";
+import { useAuthStore } from "@/stores/auth.store";
 
 const menuItems = [
   {
@@ -47,6 +48,7 @@ const menuItems = [
 
 export function SellerLayout() {
   const location = useLocation();
+  const { logout } = useAuthStore();
   const [collapsed, setCollapsed] = useState(false);
 
   return (
@@ -126,7 +128,9 @@ export function SellerLayout() {
                   <p className="text-sm font-medium leading-none">Sarah Doe</p>
                   <p className="text-xs text-muted-foreground mt-1">Seller</p>
                 </div>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
+                  logout();
+                }}>
                   <LogOut className="h-4 w-4" />
                 </Button>
               </>
@@ -152,7 +156,7 @@ export function SellerLayout() {
           <SheetTrigger asChild>
             <Button
               size="icon"
-              className="fixed bottom-6 right-6 h-12 w-12 rounded-full shadow-lg"
+              className="fixed bottom-14 right-6 h-12 w-12 rounded-full shadow-lg"
             >
               <Brain className="h-6 w-6" />
             </Button>

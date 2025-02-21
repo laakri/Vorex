@@ -80,7 +80,7 @@ const generateProduct = (sellerId: string) => {
 
 async function main() {
   try {
-    const SELLER_USER_ID = 'cm796s9mh0000dak1id8obabj';
+    const SELLER_USER_ID = 'cm7buv9we0000datlye1m063z';
 
     // Get the existing seller
     const seller = await prisma.seller.findUnique({

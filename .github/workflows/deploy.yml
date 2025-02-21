@@ -15,6 +15,23 @@ jobs:
       with:
         fetch-depth: 0
     
+    - name: Cleanup Docker
+      run: |
+        # Stop all containers
+        docker compose down
+        
+        # Remove all buildx builders
+        docker buildx rm -f $(docker buildx ls -q) || true
+        
+        # Remove all unused volumes (except postgres_data)
+        docker volume ls -q | grep -v postgres_data | xargs -r docker volume rm || true
+        
+        # Prune system
+        docker system prune -af --volumes
+        
+        # Create new builder
+        docker buildx create --use --name fresh-builder
+    
     - name: Install Dependencies
       run: |
         sudo apt-get update
@@ -40,27 +57,22 @@ jobs:
         echo "VITE_API_URL=http://40.67.192.108/api" > apps/web/.env
         echo "VITE_APP_NAME=Vorex" >> apps/web/.env
         
-    - name: Set up Docker Buildx
-      run: |
-        docker buildx create --use
-        
     - name: Deploy with Docker Compose
       env:
         DOCKER_BUILDKIT: 1
         COMPOSE_DOCKER_CLI_BUILD: 1
       run: |
-        # Stop existing containers
-        docker compose down || true
+        # Build with no-cache to ensure fresh builds
+        docker compose build --no-cache --parallel
         
-        # Remove unused images and volumes
-        docker system prune -af
-        
-        # Build and start containers with BuildKit
-        docker compose build --parallel
+        # Start containers
         docker compose up -d
         
-        # Wait for containers to start
+        # Wait for containers
         sleep 30
+        
+        # Cleanup after successful deployment
+        docker system prune -af --filter "until=24h"
         
         # Check container status
         docker ps

@@ -58,7 +58,7 @@ const generateOrder = async (sellerId: string, products: any[]) => {
 
 async function main() {
   try {
-    const SELLER_USER_ID = 'cm796s9mh0000dak1id8obabj'; // Same as products seed
+    const SELLER_USER_ID = 'cm7buv9we0000datlye1m063z'; // Same as products seed
 
     // Get the seller
     const seller = await prisma.seller.findUnique({
