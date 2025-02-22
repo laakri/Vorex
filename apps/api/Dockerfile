@@ -14,7 +14,7 @@ FROM node:18-alpine as prisma-builder
 WORKDIR /app
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/prisma ./prisma
-RUN bun x prisma generate
+RUN bunx prisma generate
 
 # Final stage
 FROM oven/bun:latest
