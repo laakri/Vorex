@@ -118,4 +118,27 @@ export class AuthService {
 
     return null;
   }
+
+  async googleLogin(user: any) {
+    if (!user) {
+      throw new UnauthorizedException('No user from Google');
+    }
+
+    // Use same token generation as regular login
+    const token = this.jwtService.sign({
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+    });
+
+    return {
+      user: {
+        id: user.id,
+        email: user.email,
+        fullName: user.fullName,
+        role: user.role,
+      },
+      token,
+    };
+  }
 }
