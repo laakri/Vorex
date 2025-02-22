@@ -24,6 +24,7 @@ import { ProtectedRoute } from "./protected-route";
 import { SellerGuard } from "./seller-guard";
 import { StoreSettingsPage } from "@/pages/seller/settings/store-settings";
 import { DriverApplication } from "@/pages/driver/driver-application";
+import { GoogleCallback } from "@/pages/auth/google-callback";
 
 
 export function AppRoutes() {
@@ -45,6 +46,7 @@ export function AppRoutes() {
       <Route path="/auth" element={<AuthLayout />}>
         <Route path="sign-in" element={<SignIn />} />
         <Route path="sign-up" element={<SignUp />} />
+        <Route path="google-callback" element={<GoogleCallback />} />
       </Route>
 
       {/* Seller Platform */}
@@ -113,7 +115,6 @@ export function AppRoutes() {
         
       </Route>
     <Route path="driver/application" element={<DriverApplication />} />
-
     </Routes>
   );
 }

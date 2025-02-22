@@ -24,6 +24,8 @@ interface AuthState {
   }) => Promise<void>;
   logout: () => void;
   setVerifiedSeller: (status: boolean) => void;
+  signInWithGoogle: () => void;
+  handleGoogleCallback: (token: string) => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -75,6 +77,23 @@ export const useAuthStore = create<AuthState>()(
           isVerifiedSeller: false,
         });
         delete api.defaults.headers.common["Authorization"];
+      },
+
+      signInWithGoogle: () => {
+        window.location.href = `${import.meta.env.VITE_API_URL}/auth/google`;
+      },
+
+      handleGoogleCallback: async (token: string) => {
+        const response = await api.get('/auth/me', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        set({
+          token,
+          user: response.data,
+          isAuthenticated: true,
+          isVerifiedSeller: response.data.isVerifiedSeller || false,
+        });
+        api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
       },
     }),
     {
