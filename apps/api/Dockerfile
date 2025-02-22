@@ -27,5 +27,5 @@ ENV PORT=3000
 # Expose port
 EXPOSE 3000
 
-# Start the application
-CMD ["bun", "src/main.ts"]
+# Add migration command before starting the app
+CMD ["/bin/sh", "-c", "bunx prisma migrate deploy && bun src/main.ts"]
