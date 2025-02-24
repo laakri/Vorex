@@ -131,6 +131,8 @@ model Seller {
   isVerified      Boolean  @default(false)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+  latitude        Float?
+  longitude       Float?
 
   // Relations
   user      User       @relation(fields: [userId], references: [id])
@@ -174,6 +176,11 @@ model Order {
   notes         String?
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
+  pickupLatitude   Float?
+  pickupLongitude  Float?
+  dropLatitude     Float?
+  dropLongitude    Float?
+  isLocalDelivery  Boolean   @default(false)
 
   // Relations
   seller     Seller       @relation(fields: [sellerId], references: [id])
@@ -235,6 +242,9 @@ model Warehouse {
   currentLoad Float
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  latitude    Float
+  longitude   Float
+  coverageRadius Float    // Coverage radius in kilometers
 
   // Relations
   managers        WarehouseManager[]

@@ -46,7 +46,7 @@ export function AppRoutes() {
       <Route path="/auth" element={<AuthLayout />}>
         <Route path="sign-in" element={<SignIn />} />
         <Route path="sign-up" element={<SignUp />} />
-        <Route path="google-callback" element={<GoogleCallback />} />
+        <Route path="google/callback" element={<GoogleCallback />} />
       </Route>
 
       {/* Seller Platform */}

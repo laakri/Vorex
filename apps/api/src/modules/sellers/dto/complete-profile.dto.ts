@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, MinLength } from 'class-validator';
+import { IsString, IsNotEmpty, MinLength, IsOptional, IsNumber } from 'class-validator';
 
 export class CompleteProfileDto {
   @IsString()
@@ -11,9 +11,9 @@ export class CompleteProfileDto {
   businessType: string;
 
   @IsString()
-  @IsNotEmpty()
+  @IsOptional()
   @MinLength(10)
-  description: string;
+  description?: string;
 
   @IsString()
   @IsNotEmpty()
@@ -42,4 +42,10 @@ export class CompleteProfileDto {
   @IsString()
   @IsNotEmpty()
   taxId: string;
+
+  @IsNumber()
+  latitude: number;
+
+  @IsNumber()
+  longitude: number;
 }

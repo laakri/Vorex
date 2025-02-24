@@ -15,6 +15,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { businessTypes, TUNISIA_GOVERNORATES, BusinessType, Governorate } from "@/config/constants";
 import api from "@/lib/axios";
+import MapPicker from '@/components/map-picker';
 
 interface OnboardingFormData {
   businessName: string;
@@ -27,6 +28,8 @@ interface OnboardingFormData {
   phone: string;
   registrationNo: string;
   taxId: string;
+  latitude: number;
+  longitude: number;
 }
 
 const steps = [
@@ -60,6 +63,8 @@ export function SellerOnboarding() {
     phone: "",
     registrationNo: "",
     taxId: "",
+    latitude: 36.8065, // Tunisia's center latitude
+    longitude: 10.1815, // Tunisia's center longitude
   });
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -82,6 +87,7 @@ export function SellerOnboarding() {
       [field]: value,
     }));
   };
+
 
   const validateStep = () => {
     const currentFields = steps[currentStep].fields;
@@ -204,6 +210,20 @@ export function SellerOnboarding() {
               onChange={handleChange}
               required
             />
+            
+            <MapPicker
+              initialPosition={[formData.latitude, formData.longitude]}
+              onLocationSelect={(lat, lng) => {
+                setFormData(prev => ({
+                  ...prev,
+                  latitude: lat,
+                  longitude: lng
+                }));
+              }}
+            />
+            <p className="text-sm text-muted-foreground text-center">
+              Click on the map to set your business location
+            </p>
           </div>
         );
 

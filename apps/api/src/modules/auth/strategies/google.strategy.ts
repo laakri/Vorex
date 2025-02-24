@@ -34,21 +34,45 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     const firstName = profile.name?.givenName || '';
     const lastName = profile.name?.familyName || '';
     
+    // Find existing user by email
     let user = await this.prisma.user.findUnique({
-      where: { email }
+      where: { email },
+      include: {
+        seller: true // Include seller info if exists
+      }
     });
 
-    if (!user) {
+    if (user) {
+      // Update existing user with Google info if needed
+      user = await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          fullName: user.fullName || `${firstName} ${lastName}`.trim(),
+          // Don't override existing password if user has one
+          password: user.password || ''
+        },
+        include: {
+          seller: true
+        }
+      });
+    } else {
+      // Create new user if doesn't exist
       user = await this.prisma.user.create({
         data: {
           email,
           fullName: `${firstName} ${lastName}`.trim(),
           password: '', // Google users don't need password
           role: Role.SELLER,
+        },
+        include: {
+          seller: true
         }
       });
     }
 
-    return user;
+    return {
+      ...user,
+      isVerifiedSeller: !!user.seller
+    };
   }
 } 

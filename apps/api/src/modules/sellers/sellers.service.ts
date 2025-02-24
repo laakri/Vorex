@@ -57,6 +57,8 @@ export class SellersService {
           registrationNo: dto.registrationNo,
           taxId: dto.taxId,
           isVerified: true,
+          latitude: dto.latitude,
+          longitude: dto.longitude,
         },
       }),
       this.prisma.user.update({
