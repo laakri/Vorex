@@ -39,13 +39,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { BusinessType, businessTypes, TUNISIA_GOVERNORATES, Governorate } from "@/config/constants";
+import { BusinessType, BUSINESS_TYPES, TUNISIA_GOVERNORATES, Governorate } from "@/config/constants";
 import api from "@/lib/axios";
 import { Badge } from "@/components/ui/badge";
+import MapPicker from '@/components/map-picker';
 
 const storeSettingsSchema = z.object({
   businessName: z.string().min(2, "Business name must be at least 2 characters"),
-  businessType: z.enum(businessTypes, {
+  businessType: z.enum(BUSINESS_TYPES, {
     required_error: "Please select a business type",
   }),
   description: z.string().min(10, "Description must be at least 10 characters"),
@@ -60,6 +61,8 @@ const storeSettingsSchema = z.object({
     .regex(/^[2-9]\d{7}$/, "Invalid Tunisian phone number format"),
   registrationNo: z.string().optional(),
   taxId: z.string().optional(),
+  latitude: z.number(),
+  longitude: z.number(),
 });
 
 type StoreSettingsValues = z.infer<typeof storeSettingsSchema>;
@@ -80,10 +83,13 @@ interface StoreSettings {
   isVerified: boolean;
   createdAt: string;
   updatedAt: string;
+  latitude: number;
+  longitude: number;
   user: {
     email: string;
     fullName: string;
   };
+
 }
 
 export function StoreSettingsPage() {
@@ -99,7 +105,24 @@ export function StoreSettingsPage() {
     },
   });
 
-  // Reset form when storeSettings data is loaded
+  const form = useForm<StoreSettingsValues>({
+    resolver: zodResolver(storeSettingsSchema),
+    defaultValues: {
+      businessName: "",
+      businessType: BUSINESS_TYPES[0],
+      description: "",
+      address: "",
+      city: "",
+      governorate: TUNISIA_GOVERNORATES[0],
+      postalCode: "",
+      phone: "",
+      registrationNo: "",
+      taxId: "",
+      latitude: 36.8065,
+      longitude: 10.1815,
+    },
+  });
+
   useEffect(() => {
     if (storeSettings) {
       form.reset({
@@ -113,25 +136,11 @@ export function StoreSettingsPage() {
         phone: storeSettings.phone || "",
         registrationNo: storeSettings.registrationNo || "",
         taxId: storeSettings.taxId || "",
+        latitude: storeSettings.latitude || 36.8065,
+        longitude: storeSettings.longitude || 10.1815,
       });
     }
   }, [storeSettings]);
-
-  const form = useForm<StoreSettingsValues>({
-    resolver: zodResolver(storeSettingsSchema),
-    defaultValues: {
-      businessName: "",
-      businessType: businessTypes[0],
-      description: "",
-      address: "",
-      city: "",
-      governorate: TUNISIA_GOVERNORATES[0],
-      postalCode: "",
-      phone: "",
-      registrationNo: "",
-      taxId: "",
-    },
-  });
 
   const mutation = useMutation({
     mutationFn: (values: StoreSettingsValues) =>
@@ -251,7 +260,7 @@ export function StoreSettingsPage() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {businessTypes.map((type) => (
+                            {BUSINESS_TYPES.map((type: BusinessType) => (
                               <SelectItem key={type} value={type}>
                                 {type}
                               </SelectItem>
@@ -364,6 +373,22 @@ export function StoreSettingsPage() {
                         </FormItem>
                       )}
                     />
+                  </div>
+                  <div className="space-y-2">
+                    <FormLabel>Business Location</FormLabel>
+                    <MapPicker
+                      initialPosition={[
+                        storeSettings?.latitude || 36.8065,
+                        storeSettings?.longitude || 10.1815
+                      ]}
+                      onLocationSelect={(lat, lng) => {
+                        form.setValue('latitude', lat);
+                        form.setValue('longitude', lng);
+                      }}
+                    />
+                    <FormDescription>
+                      Click on the map to set your business location
+                    </FormDescription>
                   </div>
                   <FormField
                     control={form.control}

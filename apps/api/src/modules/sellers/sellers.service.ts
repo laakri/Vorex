@@ -129,6 +129,8 @@ export class SellersService {
         phone: dto.phone,
         registrationNo: dto.registrationNo,
         taxId: dto.taxId,
+        latitude: dto.latitude,
+        longitude: dto.longitude,
       }
     });
   }

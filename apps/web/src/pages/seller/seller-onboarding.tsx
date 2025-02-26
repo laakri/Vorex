@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { businessTypes, TUNISIA_GOVERNORATES, BusinessType, Governorate } from "@/config/constants";
+import {  TUNISIA_GOVERNORATES, BusinessType, Governorate, BUSINESS_TYPES } from "@/config/constants";
 import api from "@/lib/axios";
 import MapPicker from '@/components/map-picker';
 
@@ -141,7 +141,7 @@ export function SellerOnboarding() {
                 <SelectValue placeholder="Select Business Type" />
               </SelectTrigger>
               <SelectContent>
-                {businessTypes.map((type) => (
+                {BUSINESS_TYPES.map((type: BusinessType) => (
                   <SelectItem key={type} value={type}>
                     {type}
                   </SelectItem>

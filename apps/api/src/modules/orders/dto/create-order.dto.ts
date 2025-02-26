@@ -1,7 +1,8 @@
-import { IsString, IsEmail, IsNumber, IsOptional, IsArray, ValidateNested, Min, IsBoolean } from 'class-validator';
+import { IsString, IsEmail, IsNumber, IsBoolean, IsOptional, IsArray, ValidateNested, Min } from 'class-validator';
 import { Type } from 'class-transformer';
+import { Governorate } from '@/config/constants';
 
-class OrderItemDto {
+export class OrderItemDto {
   @IsString()
   productId: string;
 
@@ -10,11 +11,9 @@ class OrderItemDto {
   quantity: number;
 
   @IsNumber()
-  @Min(0)
   price: number;
 
   @IsNumber()
-  @Min(0)
   weight: number;
 
   @IsString()
@@ -25,9 +24,11 @@ class OrderItemDto {
   packagingType?: string;
 
   @IsBoolean()
+  @IsOptional()
   fragile?: boolean;
 
   @IsBoolean()
+  @IsOptional()
   perishable?: boolean;
 }
 
@@ -60,8 +61,14 @@ export class CreateOrderDto {
   @IsNumber()
   totalAmount: number;
 
+  @IsNumber()
+  dropLatitude: number;
+
+  @IsNumber()
+  dropLongitude: number;
+
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => OrderItemDto)
   items: OrderItemDto[];
-} 
+}

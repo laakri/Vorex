@@ -1,4 +1,4 @@
-import { IsString, IsOptional, MinLength } from 'class-validator';
+import { IsString, IsOptional, MinLength, IsNumber } from 'class-validator';
 
 export class UpdateStoreSettingsDto {
   @IsString()
@@ -40,4 +40,12 @@ export class UpdateStoreSettingsDto {
   @IsString()
   @IsOptional()
   taxId?: string;
+
+  @IsNumber()
+  @IsOptional()
+  latitude?: number;
+
+  @IsNumber()
+  @IsOptional()
+  longitude?: number;
 } 

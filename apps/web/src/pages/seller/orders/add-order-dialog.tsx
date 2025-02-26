@@ -19,6 +19,7 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -31,6 +32,11 @@ import { Trash2 } from "lucide-react";
 import api from "@/lib/axios";
 import { cn } from "@/lib/utils";
 import { Search } from "lucide-react";
+import MapPicker from '@/components/map-picker';
+import { useState } from "react";
+import { toast } from "@/hooks/use-toast";
+import { Label } from "@/components/ui/label";
+import { Governorate, isLocalDelivery, TUNISIA_GOVERNORATES } from '@/config/constants';
 
 interface Product {
   id: string;
@@ -52,10 +58,12 @@ const orderSchema = z.object({
   customerEmail: z.string().email("Invalid email address"),
   address: z.string().min(1, "Address is required"),
   city: z.string().min(1, "City is required"),
-  governorate: z.string().min(1, "Governorate is required"),
+  governorate: z.enum(TUNISIA_GOVERNORATES),
   postalCode: z.string().min(1, "Postal code is required"),
   phone: z.string().min(8, "Phone number must be at least 8 digits"),
   notes: z.string().optional(),
+  dropLatitude: z.number(),
+  dropLongitude: z.number(),
   items: z.array(z.object({
     productId: z.string().min(1, "Product is required"),
     quantity: z.number().min(1, "Quantity must be at least 1"),
@@ -78,7 +86,7 @@ export function AddOrderDialog({ open, onOpenChange, onOrderAdded }: AddOrderDia
       customerEmail: "",
       address: "",
       city: "",
-      governorate: "",
+      governorate: "Tunis" as Governorate,
       postalCode: "",
       phone: "",
       notes: "",
@@ -162,13 +170,31 @@ export function AddOrderDialog({ open, onOpenChange, onOrderAdded }: AddOrderDia
     );
   };
 
+  const [location, setLocation] = useState<{lat: number; lng: number} | null>(null);
+
   const onSubmit = async (data: OrderFormValues) => {
+    if (!location) {
+      toast({
+        title: "Error",
+        description: "Please select a delivery location on the map",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const orderData = {
+      ...data,
+      dropLatitude: Number(location.lat),
+      dropLongitude: Number(location.lng),
+      totalAmount: calculateTotalAmount(data.items)
+    };
+
     try {
       // Validate required fields
       const requiredFields = {
-        governorate: data.governorate,
-        phone: data.phone,
-        postalCode: data.postalCode
+        governorate: orderData.governorate,
+        phone: orderData.phone,
+        postalCode: orderData.postalCode
       };
 
       const emptyFields = Object.entries(requiredFields)
@@ -176,8 +202,6 @@ export function AddOrderDialog({ open, onOpenChange, onOrderAdded }: AddOrderDia
         .map(([key]) => key);
 
       if (emptyFields.length > 0) {
-        console.error("Missing required fields:", emptyFields);
-        // Set errors manually for empty fields
         emptyFields.forEach(field => {
           form.setError(field as any, {
             type: "required",
@@ -188,65 +212,29 @@ export function AddOrderDialog({ open, onOpenChange, onOrderAdded }: AddOrderDia
       }
 
       console.log("All required fields present, proceeding with submission");
+      console.log("Sending order data: ", orderData);
+
+      await api.post("/sellers/orders", orderData);
       
-      if (!productsResponse?.data) {
-        console.error("No products data available");
-        return;
-      }
-
-      const items = data.items.map(item => {
-        const product = productsResponse.data.find((p:Product) => p.id === item.productId);
-        if (!product) {
-          console.error(`Product not found for ID: ${item.productId}`);
-          return null;
-        }
-        return {
-          productId: item.productId,
-          quantity: item.quantity,
-          price: product.price,
-          weight: product.weight,
-          dimensions: product.dimensions,
-          packagingType: 'standard',
-          fragile: false,
-          perishable: false
-        };
-      }).filter(Boolean);
-
-      const totalAmount = items.reduce((total, item) => {
-        return total + (item!.price * item!.quantity);
-      }, 0);
-
-      const orderData = {
-        customerName: data.customerName,
-        customerEmail: data.customerEmail,
-        address: data.address,
-        city: data.city,
-        governorate: data.governorate,
-        postalCode: data.postalCode,
-        phone: data.phone,
-        notes: data.notes || "",
-        totalAmount,
-        items
-      };
-
-      console.log("Sending order data:", orderData);
-
-      const response = await api.post('/sellers/orders', orderData);
-      console.log("Order creation response:", response);
-
-      if (response.data) {
-        console.log("Order created successfully!");
-        await onOrderAdded();
-        form.reset();
-        onOpenChange(false);
-      }
+      onOrderAdded?.();
+      onOpenChange(false);
+      toast({
+        title: "Success",
+        description: "Order created successfully",
+      });
     } catch (error: any) {
-      console.error("Error creating order:", {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status
+      console.error("Error creating order: ", error);
+      toast({
+        title: "Error",
+        description: error.response?.data?.message?.[0] || "Failed to create order",
+        variant: "destructive",
       });
     }
+  };
+
+  // Helper function to calculate total amount
+  const calculateTotalAmount = (items: OrderFormValues['items']) => {
+    return items.reduce((total, item) => total + (item.price * item.quantity), 0);
   };
 
   return (
@@ -333,32 +321,7 @@ export function AddOrderDialog({ open, onOpenChange, onOrderAdded }: AddOrderDia
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {[
-                          "Tunis",
-                          "Ariana",
-                          "Ben Arous",
-                          "Manouba",
-                          "Nabeul",
-                          "Zaghouan",
-                          "Bizerte",
-                          "Béja",
-                          "Jendouba",
-                          "Kef",
-                          "Siliana",
-                          "Sousse",
-                          "Monastir",
-                          "Mahdia",
-                          "Sfax",
-                          "Kairouan",
-                          "Kasserine",
-                          "Sidi Bouzid",
-                          "Gabès",
-                          "Medenine",
-                          "Tataouine",
-                          "Gafsa",
-                          "Tozeur",
-                          "Kebili",
-                        ].map((gov) => (
+                        {TUNISIA_GOVERNORATES.map((gov) => (
                           <SelectItem key={gov} value={gov}>
                             {gov}
                           </SelectItem>
@@ -514,6 +477,21 @@ export function AddOrderDialog({ open, onOpenChange, onOrderAdded }: AddOrderDia
               <Button type="button" variant="outline" onClick={addItem}>
                 Add Item
               </Button>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Delivery Location</Label>
+              <MapPicker
+                initialPosition={[36.8065, 10.1815]}
+                onLocationSelect={(lat, lng) => {
+                  setLocation({ lat, lng });
+                  form.setValue('dropLatitude', lat);
+                  form.setValue('dropLongitude', lng);
+                }}
+              />
+              <FormDescription>
+                Click on the map to set the delivery location
+              </FormDescription>
             </div>
 
             <div className="space-y-4">

@@ -3,25 +3,47 @@ import { PrismaService } from 'prisma/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { OrderStatus } from '@/common/enums/order-status.enum';
 import { Prisma } from '@prisma/client';
+import { WAREHOUSE_COVERAGE, Governorate } from '@/config/constants';
 
 @Injectable()
 export class OrdersService {
   constructor(private prisma: PrismaService) {}
 
+  private isLocalDelivery(sellerGovernorate: string, buyerGovernorate: string): boolean {
+    const sellerWarehouse = Object.values(WAREHOUSE_COVERAGE).find(warehouse => 
+      warehouse.covers.includes(sellerGovernorate as Governorate)
+    );
+
+    const buyerWarehouse = Object.values(WAREHOUSE_COVERAGE).find(warehouse => 
+      warehouse.covers.includes(buyerGovernorate as Governorate)
+    );
+
+    return sellerWarehouse === buyerWarehouse;
+  }
+
   async create(userId: string, createOrderDto: CreateOrderDto) {
     try {
-      // Get seller ID from user ID
       const seller = await this.prisma.seller.findUnique({
-        where: { userId }
+        where: { userId },
+        select: {
+          id: true,
+          latitude: true,
+          longitude: true,
+          governorate: true
+        }
       });
 
       if (!seller) {
         throw new NotFoundException('Seller not found');
       }
 
+      const isLocal = this.isLocalDelivery(
+        seller.governorate,
+        createOrderDto.governorate
+      );
+
       // Create the order with items in a transaction
       const order = await this.prisma.$transaction(async (prisma) => {
-        // Create the order
         const order = await prisma.order.create({
           data: {
             sellerId: seller.id,
@@ -35,6 +57,11 @@ export class OrdersService {
             notes: createOrderDto.notes,
             status: 'PENDING',
             totalAmount: createOrderDto.totalAmount,
+            pickupLatitude: seller.latitude,
+            pickupLongitude: seller.longitude,
+            dropLatitude: createOrderDto.dropLatitude,
+            dropLongitude: createOrderDto.dropLongitude,
+            isLocalDelivery: isLocal,
             items: {
               create: createOrderDto.items.map(item => ({
                 productId: item.productId,
