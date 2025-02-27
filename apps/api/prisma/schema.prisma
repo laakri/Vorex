@@ -97,6 +97,19 @@ enum RefundStatus {
   REJECTED
 }
 
+enum BatchType {
+  LOCAL
+  INTERCITY
+}
+
+enum BatchStatus {
+  COLLECTING
+  READY
+  PROCESSING
+  COMPLETED
+  CANCELLED
+}
+
 // Models
 model User {
   id               String    @id @default(cuid())
@@ -181,6 +194,7 @@ model Order {
   dropLatitude     Float?
   dropLongitude    Float?
   isLocalDelivery  Boolean   @default(false)
+  batchId        String?
 
   // Relations
   seller     Seller       @relation(fields: [sellerId], references: [id])
@@ -189,6 +203,7 @@ model Order {
   delivery   Delivery?
   rating     Rating?
   refund     Refund?
+  batch      Batch?        @relation(fields: [batchId], references: [id])
 }
 
 model OrderItem {
@@ -251,6 +266,7 @@ model Warehouse {
   sections        WarehouseSection[]
   orders          Order[]
   outgoingRoutes  DeliveryRoute[]    @relation("FromWarehouse")
+  batches         Batch[]            // Add this relation
 }
 
 model WarehouseSection {
@@ -300,7 +316,7 @@ model Driver {
   availabilityStatus DriverStatus
   deliveryZones    String[]
   rating           Float        @default(0)
-  totalDeliveries  Int          @default(0)
+  totalDeliveries  Int         @default(0)
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
 
@@ -310,6 +326,7 @@ model Driver {
   deliveries Delivery[]
   documents  DriverDocument[]
   routes     DeliveryRoute[]
+  batches    Batch[]         // Add this relation
 }
 
 model Vehicle {
@@ -414,6 +431,7 @@ model DeliveryRoute {
   driver        Driver     @relation(fields: [driverId], references: [id])
   fromWarehouse Warehouse  @relation("FromWarehouse", fields: [fromWarehouseId], references: [id])
   deliveries    Delivery[]
+  batch         Batch?     // One-to-one relation with Batch
 }
 
 model InventoryAudit {
@@ -468,4 +486,27 @@ model Refund {
 
   // Relations
   order Order @relation(fields: [orderId], references: [id])
+}
+
+model Batch {
+  id              String      @id @default(cuid())
+  type            BatchType
+  status          BatchStatus @default(COLLECTING)
+  warehouseId     String      // Reference to warehouse handling this batch
+  driverId        String?     // Optional until driver is assigned
+  routeId         String?     @unique  // Add @unique here for one-to-one relation
+  totalWeight     Float       // Total weight of all orders
+  totalVolume     Float       // Total volume of all orders
+  orderCount      Int         // Number of orders in batch
+  zone            String      // Delivery zone identifier
+  scheduledTime   DateTime?   // When the batch is scheduled for delivery
+  completedTime   DateTime?   // When all deliveries are completed
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  // Relations
+  warehouse       Warehouse        @relation(fields: [warehouseId], references: [id])
+  driver          Driver?          @relation(fields: [driverId], references: [id])
+  route           DeliveryRoute?   @relation(fields: [routeId], references: [id])
+  orders          Order[]
 }

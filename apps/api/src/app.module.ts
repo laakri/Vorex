@@ -10,6 +10,7 @@ import { ProductsModule } from './modules/products/products.module';
 import { OrdersModule } from './modules/orders/orders.module';
 import { AiModule } from './modules/ai/ai.module';
 import { DriversModule } from './modules/drivers/drivers.module';
+import { BatchModule } from './modules/batches/batch.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -24,6 +25,7 @@ import { DriversModule } from './modules/drivers/drivers.module';
     ProductsModule,
     OrdersModule,
     AiModule,
+    BatchModule,
   ],
   controllers: [AppController],
   providers: [AppService],
