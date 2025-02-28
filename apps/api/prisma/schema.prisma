@@ -67,11 +67,13 @@ enum VehicleStatus {
 }
 
 enum OrderStatus {
-  PENDING
-  PROCESSING
-  READY_FOR_PICKUP
-  IN_TRANSIT
-  DELIVERED
+  PENDING           // Initial state
+  ASSIGNED_TO_BATCH // Order is assigned to a pickup batch
+  PICKUP_COMPLETE   // Order has been picked up and is at source warehouse
+  IN_TRANSIT       // Order is in transit between warehouses
+  AT_DESTINATION_WH // Order has arrived at destination warehouse
+  OUT_FOR_DELIVERY  // Order is in a local delivery batch
+  DELIVERED        
   CANCELLED
 }
 
@@ -98,8 +100,9 @@ enum RefundStatus {
 }
 
 enum BatchType {
-  LOCAL
-  INTERCITY
+  LOCAL_PICKUP     // For collecting from sellers to warehouse
+  LOCAL_DELIVERY   // For delivering from warehouse to customers
+  INTERCITY        // For warehouse to warehouse transfers
 }
 
 enum BatchStatus {
@@ -246,27 +249,27 @@ model WarehouseManager {
 }
 
 model Warehouse {
-  id          String   @id @default(cuid())
-  name        String
-  address     String
-  city        String
-  governorate String
-  postalCode  String
-  phone       String
-  capacity    Float
-  currentLoad Float
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  latitude    Float
-  longitude   Float
-  coverageRadius Float    // Coverage radius in kilometers
+  id                String   @id @default(cuid())
+  name              String
+  address           String
+  city              String
+  governorate       String
+  postalCode        String
+  phone             String
+  capacity          Float
+  currentLoad       Float
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  latitude          Float
+  longitude         Float
+  coverageGovernorate String[] // Only keep this for governorate coverage
 
   // Relations
   managers        WarehouseManager[]
   sections        WarehouseSection[]
   orders          Order[]
   outgoingRoutes  DeliveryRoute[]    @relation("FromWarehouse")
-  batches         Batch[]            // Add this relation
+  batches         Batch[]
 }
 
 model WarehouseSection {
@@ -414,7 +417,7 @@ model Delivery {
 
 model DeliveryRoute {
   id              String      @id @default(cuid())
-  driverId        String
+  driverId        String?     // Make driverId optional
   fromWarehouseId String
   toAddress       String
   toCity          String
@@ -428,7 +431,7 @@ model DeliveryRoute {
   updatedAt       DateTime    @updatedAt
 
   // Relations
-  driver        Driver     @relation(fields: [driverId], references: [id])
+  driver        Driver?    @relation(fields: [driverId], references: [id])  // Make relation optional
   fromWarehouse Warehouse  @relation("FromWarehouse", fields: [fromWarehouseId], references: [id])
   deliveries    Delivery[]
   batch         Batch?     // One-to-one relation with Batch
@@ -492,15 +495,15 @@ model Batch {
   id              String      @id @default(cuid())
   type            BatchType
   status          BatchStatus @default(COLLECTING)
-  warehouseId     String      // Reference to warehouse handling this batch
-  driverId        String?     // Optional until driver is assigned
-  routeId         String?     @unique  // Add @unique here for one-to-one relation
-  totalWeight     Float       // Total weight of all orders
-  totalVolume     Float       // Total volume of all orders
-  orderCount      Int         // Number of orders in batch
-  zone            String      // Delivery zone identifier
-  scheduledTime   DateTime?   // When the batch is scheduled for delivery
-  completedTime   DateTime?   // When all deliveries are completed
+  warehouseId     String
+  driverId        String?
+  routeId         String?     @unique
+  totalWeight     Float
+  totalVolume     Float
+  orderCount      Int
+  vehicleType     VehicleType // Required vehicle type for this batch
+  scheduledTime   DateTime?
+  completedTime   DateTime?
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 

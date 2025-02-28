@@ -6,30 +6,31 @@ import {
   BatchType, 
   OrderStatus, 
   RouteStatus, 
-  DeliveryStatus,
   Order,
   OrderItem,
-  Prisma 
+  DeliveryStatus,
+  VehicleType,
 } from '@prisma/client';
 
-// Define the type for Order with included OrderItems
 type OrderWithItems = Order & {
-  orderItems: Pick<OrderItem, 'quantity' | 'weight' | 'dimensions'>[];
+  items: Pick<OrderItem, 'quantity' | 'weight' | 'dimensions'>[];
 };
 
 interface BatchConfig {
   maxOrdersPerBatch: number;
+  minOrdersForBatch: number;
   maxWeightPerBatch: number;
   maxVolumePerBatch: number;
-  maxDistanceRadius: number;
   timeWindow: number;
+  maxWaitTime: number;
+  vehicleTypeThresholds: Record<VehicleType, { maxWeight: number; maxVolume: number }>;
 }
 
 interface BatchGroup {
   orders: OrderWithItems[];
   totalWeight: number;
   totalVolume: number;
-  zone: string;
+  warehouseId: string;
 }
 
 @Injectable()
@@ -37,10 +38,18 @@ export class BatchService {
   private readonly logger = new Logger(BatchService.name);
   private readonly batchConfig: BatchConfig = {
     maxOrdersPerBatch: 15,
+    minOrdersForBatch: 3,
     maxWeightPerBatch: 500,
     maxVolumePerBatch: 3000,
-    maxDistanceRadius: 5,
     timeWindow: 120,
+    maxWaitTime: 180,
+    vehicleTypeThresholds: {
+      MOTORCYCLE: { maxWeight: 50, maxVolume: 100 },
+      CAR: { maxWeight: 200, maxVolume: 400 },
+      VAN: { maxWeight: 800, maxVolume: 1500 },
+      SMALL_TRUCK: { maxWeight: 2000, maxVolume: 4000 },
+      LARGE_TRUCK: { maxWeight: 5000, maxVolume: 10000 }
+    }
   };
 
   constructor(private prisma: PrismaService) {}
@@ -48,117 +57,115 @@ export class BatchService {
   @Cron('*/30 * * * *')
   async processBatches() {
     this.logger.log('Starting batch processing...');
-
     try {
-      const pendingOrders = await this.getPendingOrders();
-      
-      if (pendingOrders.length === 0) {
-        this.logger.log('No pending orders to process');
-        return;
-      }
-
-      const ordersByWarehouse = this.groupOrdersByWarehouse(pendingOrders);
-
-      for (const [warehouseId, orders] of Object.entries(ordersByWarehouse)) {
-        await this.processBatchesForWarehouse(warehouseId, orders as OrderWithItems[]);
-      }
+      await this.processLocalPickups();
+      await this.processIntercityTransfers();
+      await this.processLocalDeliveries();
     } catch (error) {
-      this.logger.error('Error in batch processing:', error);
+      this.logger.error('Error processing batches:', error);
     }
   }
 
-  private async getPendingOrders(): Promise<OrderWithItems[]> {
-    const orders = await this.prisma.order.findMany({
+  private async processLocalPickups() {
+    const pendingOrders = await this.prisma.order.findMany({
       where: {
         status: OrderStatus.PENDING,
         batchId: null,
-        isLocalDelivery: false,
-        warehouseId: { not: null },
+        isLocalDelivery: true
       },
       include: {
-        items: {
-          select: {
-            quantity: true,
-            weight: true, 
-            dimensions: true
-          }
-        }
+        items: true
       },
+      orderBy: {
+        createdAt: 'asc'
+      }
     });
 
-    // Transform the result to match OrderWithItems type
-    return orders.map(order => ({
-      ...order,
-      orderItems: order.items.map(item => ({
-        quantity: item.quantity,
-        weight: item.weight,
-        dimensions: item.dimensions,
-      }))
-    }));
+    const ordersByWarehouse = this.groupOrdersByNearestWarehouse(pendingOrders);
+    await this.createBatchesForOrders(ordersByWarehouse, BatchType.LOCAL_PICKUP);
   }
 
-  private groupOrdersByWarehouse(orders: OrderWithItems[]): Record<string, OrderWithItems[]> {
-    return orders.reduce((acc, order) => {
-      if (order.warehouseId) {
-        if (!acc[order.warehouseId]) {
-          acc[order.warehouseId] = [];
-        }
-        acc[order.warehouseId].push(order);
+  private async processIntercityTransfers() {
+    const readyForTransferOrders = await this.prisma.order.findMany({
+      where: {
+        status: OrderStatus.PICKUP_COMPLETE,
+        batchId: null,
+        isLocalDelivery: false
+      },
+      include: {
+        items: true
+      },
+      orderBy: {
+        createdAt: 'asc'
       }
-      return acc;
-    }, {} as Record<string, OrderWithItems[]>);
+    });
+
+    const ordersByWarehouse = this.groupOrdersBySourceWarehouse(readyForTransferOrders);
+    await this.createBatchesForOrders(ordersByWarehouse, BatchType.INTERCITY);
   }
 
-  private async processBatchesForWarehouse(warehouseId: string, orders: OrderWithItems[]) {
-    const ordersByZone = this.groupOrdersByDeliveryZone(orders);
+  private async processLocalDeliveries() {
+    const readyForDeliveryOrders = await this.prisma.order.findMany({
+      where: {
+        status: OrderStatus.AT_DESTINATION_WH,
+        batchId: null
+      },
+      include: {
+        items: true
+      },
+      orderBy: {
+        createdAt: 'asc'
+      }
+    });
 
-    for (const [zone, zoneOrders] of Object.entries(ordersByZone)) {
-      const batches = this.createOptimalBatches(zoneOrders);
-      await this.assignBatchesToDrivers(warehouseId, zone, batches);
+    const ordersByWarehouse = this.groupOrdersByDestinationWarehouse(readyForDeliveryOrders);
+    await this.createBatchesForOrders(ordersByWarehouse, BatchType.LOCAL_DELIVERY);
+  }
+
+  private async createBatchesForOrders(
+    ordersByWarehouse: Record<string, OrderWithItems[]>,
+    batchType: BatchType
+  ) {
+    for (const [warehouseId, orders] of Object.entries(ordersByWarehouse)) {
+      if (orders.length >= this.batchConfig.minOrdersForBatch || 
+          this.hasAnyExceededWaitTime(orders)) {
+        const batches = this.createOptimalBatches(orders, warehouseId);
+        for (const batch of batches) {
+          await this.createBatch(batch, batchType);
+        }
+      }
     }
   }
 
-  private groupOrdersByDeliveryZone(orders: OrderWithItems[]): Record<string, OrderWithItems[]> {
-    return orders.reduce((acc, order) => {
-      const zone = this.determineDeliveryZone(order);
-      if (!acc[zone]) {
-        acc[zone] = [];
-      }
-      acc[zone].push(order);
-      return acc;
-    }, {} as Record<string, OrderWithItems[]>);
-  }
-
-  private determineDeliveryZone(order: OrderWithItems): string {
-    return `${order.governorate}-${order.city}`;
-  }
-
-  private createOptimalBatches(orders: OrderWithItems[]): BatchGroup[] {
+  private createOptimalBatches(
+    orders: OrderWithItems[], 
+    warehouseId: string
+  ): BatchGroup[] {
     const batches: BatchGroup[] = [];
     let currentBatch: BatchGroup = {
       orders: [],
       totalWeight: 0,
       totalVolume: 0,
-      zone: '',
+      warehouseId
     };
 
-    const sortedOrders = this.sortOrdersByPriority(orders);
+    for (const order of orders) {
+      const orderWeight = this.calculateOrderWeight(order);
+      const orderVolume = this.calculateOrderVolume(order);
 
-    for (const order of sortedOrders) {
-      if (this.canAddOrderToBatch(currentBatch, order)) {
+      if (this.canAddToBatch(currentBatch, orderWeight, orderVolume)) {
         currentBatch.orders.push(order);
-        currentBatch.totalWeight += this.calculateOrderWeight(order);
-        currentBatch.totalVolume += this.calculateOrderVolume(order);
-        currentBatch.zone = this.determineDeliveryZone(order);
+        currentBatch.totalWeight += orderWeight;
+        currentBatch.totalVolume += orderVolume;
       } else {
         if (currentBatch.orders.length > 0) {
           batches.push(currentBatch);
         }
         currentBatch = {
           orders: [order],
-          totalWeight: this.calculateOrderWeight(order),
-          totalVolume: this.calculateOrderVolume(order),
-          zone: this.determineDeliveryZone(order),
+          totalWeight: orderWeight,
+          totalVolume: orderVolume,
+          warehouseId
         };
       }
     }
@@ -170,134 +177,117 @@ export class BatchService {
     return batches;
   }
 
-  private async assignBatchesToDrivers(warehouseId: string, zone: string, batches: BatchGroup[]) {
-    for (const batch of batches) {
-      const driver = await this.findAvailableDriver(warehouseId, zone);
-      
-      if (driver) {
-        await this.createBatch(warehouseId, batch.orders, zone, BatchType.INTERCITY, driver.id);
-      } else {
-        this.logger.warn(`No available driver found for zone ${zone}`);
+  private async createBatch(batch: BatchGroup, type: BatchType) {
+    const vehicleType = this.determineVehicleType(batch.totalWeight, batch.totalVolume);
+
+    const createdBatch = await this.prisma.batch.create({
+      data: {
+        warehouseId: batch.warehouseId,
+        type,
+        status: BatchStatus.COLLECTING,
+        totalWeight: batch.totalWeight,
+        totalVolume: batch.totalVolume,
+        orderCount: batch.orders.length,
+        vehicleType,
+        orders: {
+          connect: batch.orders.map(order => ({ id: order.id }))
+        }
       }
+    });
+
+    // Update order statuses
+    const newStatus = this.getNewOrderStatus(type);
+    await this.prisma.order.updateMany({
+      where: {
+        id: { in: batch.orders.map(o => o.id) }
+      },
+      data: { 
+        status: newStatus,
+        batchId: createdBatch.id
+      }
+    });
+  }
+
+  private getNewOrderStatus(batchType: BatchType): OrderStatus {
+    switch (batchType) {
+      case BatchType.LOCAL_PICKUP:
+        return OrderStatus.ASSIGNED_TO_BATCH;
+      case BatchType.INTERCITY:
+        return OrderStatus.IN_TRANSIT;
+      case BatchType.LOCAL_DELIVERY:
+        return OrderStatus.OUT_FOR_DELIVERY;
+      default:
+        throw new Error(`Invalid batch type: ${batchType}`);
     }
   }
 
-  private async findAvailableDriver(warehouseId: string, zone: string) {
-    return this.prisma.driver.findFirst({
-      where: {
-        availabilityStatus: 'AVAILABLE',
-        deliveryZones: {
-          has: zone,
-        },
-      },
-    });
+  // Helper methods
+  private hasExceededWaitTime(createdAt: Date): boolean {
+    return (Date.now() - createdAt.getTime()) >= this.batchConfig.maxWaitTime * 60 * 1000;
   }
 
-  private async createBatch(
-    warehouseId: string,
-    orders: OrderWithItems[],
-    zone: string,
-    type: BatchType,
-    driverId: string
-  ) {
-    const totalWeight = orders.reduce((sum, order) => 
-      sum + this.calculateOrderWeight(order), 0
-    );
-    
-    const totalVolume = orders.reduce((sum, order) => 
-      sum + this.calculateOrderVolume(order), 0
-    );
-
-    const batch = await this.prisma.batch.create({
-      data: {
-        warehouseId,
-        driverId,
-        type,
-        status: BatchStatus.COLLECTING,
-        zone,
-        totalWeight,
-        totalVolume,
-        orderCount: orders.length,
-        orders: {
-          connect: orders.map(order => ({ id: order.id }))
-        }
-      }
-    });
-
-    // Create delivery route for the batch
-    const route = await this.prisma.deliveryRoute.create({
-      data: {
-        driverId,
-        fromWarehouseId: warehouseId,
-        status: RouteStatus.PENDING,
-        toCity: orders[0].city,
-        toGovernorate: orders[0].governorate,
-        toAddress: orders[0].address,
-        distance: 0, // Calculate this based on your requirements
-        estimatedTime: 0, // Calculate this based on your requirements
-        batch: {
-          connect: {
-            id: batch.id
-          }
-        }
-      }
-    });
-
-    // Update batch with route
-    await this.prisma.batch.update({
-      where: { id: batch.id },
-      data: { routeId: route.id }
-    });
-
-    // Update orders status
-    await this.prisma.order.updateMany({
-      where: {
-        id: {
-          in: orders.map(o => o.id)
-        }
-      },
-      data: {
-        status: OrderStatus.PROCESSING
-      }
-    });
-  }
-
-  private sortOrdersByPriority(orders: OrderWithItems[]): OrderWithItems[] {
-    return [...orders].sort((a, b) => 
-      new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-    );
-  }
-
-  private canAddOrderToBatch(batch: BatchGroup, order: OrderWithItems): boolean {
-    const newWeight = batch.totalWeight + this.calculateOrderWeight(order);
-    const newVolume = batch.totalVolume + this.calculateOrderVolume(order);
-
-    return (
-      batch.orders.length < this.batchConfig.maxOrdersPerBatch &&
-      newWeight <= this.batchConfig.maxWeightPerBatch &&
-      newVolume <= this.batchConfig.maxVolumePerBatch &&
-      this.isWithinDeliveryRadius(batch.orders[0], order)
-    );
+  private hasAnyExceededWaitTime(orders: OrderWithItems[]): boolean {
+    return orders.some(order => this.hasExceededWaitTime(order.createdAt));
   }
 
   private calculateOrderWeight(order: OrderWithItems): number {
-    return order.orderItems.reduce(
-      (total, item) => total + (item.weight ?? 0) * item.quantity,
-      0
-    );
+    return order.items.reduce((total, item) => total + (item.weight * item.quantity), 0);
   }
 
   private calculateOrderVolume(order: OrderWithItems): number {
-    return order.orderItems.reduce((total, item) => {
-      if (!item.dimensions) return total;
+    return order.items.reduce((total, item) => {
       const [length, width, height] = item.dimensions.split('x').map(Number);
       return total + (length * width * height * item.quantity);
     }, 0);
   }
 
-  private isWithinDeliveryRadius(order1: OrderWithItems, order2: OrderWithItems): boolean {
-    // Implement distance calculation between two delivery points
-    // Could use external geocoding service or pre-calculated distance matrices
-    return true; // Placeholder implementation
+  private canAddToBatch(batch: BatchGroup, weight: number, volume: number): boolean {
+    const newWeight = batch.totalWeight + weight;
+    const newVolume = batch.totalVolume + volume;
+    const newCount = batch.orders.length + 1;
+
+    return newWeight <= this.batchConfig.maxWeightPerBatch &&
+           newVolume <= this.batchConfig.maxVolumePerBatch &&
+           newCount <= this.batchConfig.maxOrdersPerBatch;
+  }
+
+  private determineVehicleType(weight: number, volume: number): VehicleType {
+    const thresholds = this.batchConfig.vehicleTypeThresholds;
+    
+    if (weight <= thresholds.MOTORCYCLE.maxWeight && volume <= thresholds.MOTORCYCLE.maxVolume) {
+      return VehicleType.MOTORCYCLE;
+    }
+    if (weight <= thresholds.CAR.maxWeight && volume <= thresholds.CAR.maxVolume) {
+      return VehicleType.CAR;
+    }
+    if (weight <= thresholds.VAN.maxWeight && volume <= thresholds.VAN.maxVolume) {
+      return VehicleType.VAN;
+    }
+    if (weight <= thresholds.SMALL_TRUCK.maxWeight && volume <= thresholds.SMALL_TRUCK.maxVolume) {
+      return VehicleType.SMALL_TRUCK;
+    }
+    return VehicleType.LARGE_TRUCK;
+  }
+
+  private groupOrdersByNearestWarehouse(orders: OrderWithItems[]): Record<string, OrderWithItems[]> {
+    // Implementation depends on your warehouse coverage logic
+    // For now, returning empty to avoid TypeScript errors
+    return {};
+  }
+
+  private groupOrdersBySourceWarehouse(orders: OrderWithItems[]): Record<string, OrderWithItems[]> {
+    return orders.reduce((groups, order) => {
+      const warehouseId = order.warehouseId!;
+      if (!groups[warehouseId]) {
+        groups[warehouseId] = [];
+      }
+      groups[warehouseId].push(order);
+      return groups;
+    }, {} as Record<string, OrderWithItems[]>);
+  }
+
+  private groupOrdersByDestinationWarehouse(orders: OrderWithItems[]): Record<string, OrderWithItems[]> {
+    // Similar to groupOrdersBySourceWarehouse but using destination warehouse
+    return {};
   }
 } 
