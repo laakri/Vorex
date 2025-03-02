@@ -17,27 +17,28 @@ import { LICENSE_TYPE_DETAILS, VEHICLE_TYPE_DETAILS } from "@/types/driver"
 import ImageToText from '@/components/ImageToText'
 
 interface DriverFormData {
-  fullName: string
-  email: string
-  phone: string
-  emergencyContact: string
-  address: string
-  city: string
-  governorate: string
-  postalCode: string
-  licenseNumber: string
-  licenseType: string
-  licenseExpiry: string
-  deliveryZones: string[]
-  vehicleType: string
-  make: string
-  model: string
-  year: number
-  plateNumber: string
-  capacity: number
-  maxWeight: number
+  fullName: string;
+  email: string;
+  phone: string;
+  emergencyContact: string;
+  address: string;
+  city: string;
+  governorate: string;
+  postalCode: string;
+  licenseNumber: string;
+  licenseType: string;
+  licenseExpiry: string;
+  vehicleType: "MOTORCYCLE" | "CAR" | "VAN" | "SMALL_TRUCK" | "LARGE_TRUCK";
+  make: string;
+  model: string;
+  year: number; // Ensure this is a number
+  plateNumber: string; // Ensure this is a string
+  capacity: number; // Ensure this is a number
+  maxWeight: number; // Ensure this is a number
+  currentStatus: "ACTIVE" | "MAINTENANCE" | "REPAIR" | "OUT_OF_SERVICE";
+  lastMaintenance: Date;
+  nextMaintenance: Date;
 }
-
 const steps = [
   {
     title: "Personal Information",
@@ -62,7 +63,7 @@ const steps = [
   {
     title: "Vehicle Specifications",
     description: "Technical details of your vehicle",
-    fields: ["capacity", "maxWeight"],
+    fields: ["capacity", "maxWeight", "currentStatus", "lastMaintenance", "nextMaintenance"],
   },
   {
     title: "Driver's License",
@@ -83,16 +84,18 @@ export function DriverApplication() {
     governorate: "",
     postalCode: "",
     licenseNumber: "",
-    licenseType: "",
-    licenseExpiry: "",
-    deliveryZones: [],
-    vehicleType: "",
+    licenseType: "B",
+    licenseExpiry: new Date().toISOString().split('T')[0],
+    vehicleType: "CAR",
     make: "",
     model: "",
     year: new Date().getFullYear(),
     plateNumber: "",
     capacity: 0,
     maxWeight: 0,
+    currentStatus: "ACTIVE",
+    lastMaintenance: new Date(),
+    nextMaintenance: new Date(),
   })
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
@@ -100,15 +103,24 @@ export function DriverApplication() {
   const navigate = useNavigate()
   const [extractedText, setExtractedText] = useState<string>("")
   const [isTextValid, setIsTextValid] = useState<boolean>(false)
-  const [image, setImage] = useState<File | null>(null)
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
-    setFormData((prev) => ({
-      ...prev,
-      [e.target.name]: e.target.value,
-    }))
+    const { name, value } = e.target;
+
+    // Convert capacity and maxWeight to numbers if the field is one of them
+    if (name === "capacity" || name === "maxWeight") {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: parseFloat(value), // Convert to number
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value,
+      }));
+    }
   }
 
   const handleSelectChange = (field: keyof DriverFormData) => (value: string) => {
@@ -119,33 +131,101 @@ export function DriverApplication() {
   }
 
   const validateStep = () => {
-    const currentFields = steps[currentStep].fields
-    const emptyFields = currentFields.filter(
-      (field) => !formData[field as keyof DriverFormData]
-    )
+    const currentFields = steps[currentStep].fields;
+    let isValid = true;
+    let errorMessage = "";
 
-    if (emptyFields.length > 0) {
-      setError(`Please fill in all fields`)
-      return false
+    currentFields.forEach((field) => {
+      switch (field) {
+        case "plateNumber":
+          if (typeof formData.plateNumber !== 'string' || formData.plateNumber.trim() === '') {
+            errorMessage = "Plate number must be a non-empty string";
+            isValid = false;
+          }
+          break;
+        case "vehicleType":
+          if (!["MOTORCYCLE", "CAR", "VAN", "SMALL_TRUCK", "LARGE_TRUCK"].includes(formData.vehicleType)) {
+            errorMessage = "Vehicle type must be one of the following: MOTORCYCLE, CAR, VAN, SMALL_TRUCK, LARGE_TRUCK";
+            isValid = false;
+          }
+          break;
+        case "make":
+          if (typeof formData.make !== 'string' || formData.make.trim() === "") {
+            errorMessage = "Make must be a non-empty string";
+            isValid = false;
+          }
+          break;
+        case "model":
+          if (typeof formData.model !== 'string' || formData.model.trim() === "") {
+            errorMessage = "Model must be a non-empty string";
+            isValid = false;
+          }
+          break;
+        case "year":
+          if (typeof formData.year !== 'number' || formData.year < 2015 || formData.year > new Date().getFullYear()) {
+            errorMessage = "Year must be a number between 2015 and the current year";
+            isValid = false;
+          }
+          break;
+        case "capacity":
+          if (typeof formData.capacity !== 'number' || formData.capacity <= 0) {
+            errorMessage = "Capacity must be a positive number";
+            isValid = false;
+          }
+          break;
+        case "maxWeight":
+          if (typeof formData.maxWeight !== 'number' || formData.maxWeight <= 0) {
+            errorMessage = "Max weight must be a positive number";
+            isValid = false;
+          }
+          break;
+        case "currentStatus":
+          if (!["ACTIVE", "MAINTENANCE", "REPAIR", "OUT_OF_SERVICE"].includes(formData.currentStatus)) {
+            errorMessage = "Current status must be one of the following: ACTIVE, MAINTENANCE, REPAIR, OUT_OF_SERVICE";
+            isValid = false;
+          }
+          break;
+        case "lastMaintenance":
+          if (!(formData.lastMaintenance instanceof Date) || isNaN(formData.lastMaintenance.getTime())) {
+            errorMessage = "Last maintenance must be a valid date";
+            isValid = false;
+          }
+          break;
+        case "nextMaintenance":
+          if (!(formData.nextMaintenance instanceof Date) || isNaN(formData.nextMaintenance.getTime())) {
+            errorMessage = "Next maintenance must be a valid date";
+            isValid = false;
+          }
+          break;
+        default:
+          break;
+      }
+    });
+
+    if (!isValid) {
+      setError(errorMessage);
+    } else {
+      setError("");
     }
 
-    setError("")
-    return true
-  }
+    return isValid;
+  };
 
   const handleComplete = async () => {
-    if (!validateStep()) return
+    if (!validateStep()) return;
 
-    setIsLoading(true)
+    // Proceed with the API call if all validations pass
+    setIsLoading(true);
     try {
-      await api.post("/drivers/register", formData)
-      navigate("/auth/sign-in")
+      console.log(formData);
+      await api.post("/drivers/register", formData);
+      navigate("/auth/sign-in");
     } catch (err: any) {
-      setError(err.response?.data?.message || "Failed to submit application")
+      setError(err.response?.data?.message || "Failed to submit application");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   const handleTextExtracted = (text: string) => {
     setExtractedText(text)
@@ -351,30 +431,7 @@ export function DriverApplication() {
               </p>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Delivery Zones</label>
-              <Select
-                value={formData.deliveryZones[0]}
-                onValueChange={(value) => setFormData(prev => ({
-                  ...prev,
-                  deliveryZones: [value]
-                }))}
-              >
-                <SelectTrigger className="h-12 bg-muted/50">
-                  <SelectValue placeholder="Select your preferred delivery zone" />
-                </SelectTrigger>
-                <SelectContent>
-                  {TUNISIA_GOVERNORATES.map((zone) => (
-                    <SelectItem key={zone} value={zone}>
-                      {zone}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                Choose the area where you prefer to make deliveries
-              </p>
-            </div>
+           
           </div>
         )
       case 3:
@@ -514,7 +571,7 @@ export function DriverApplication() {
             <div className="mt-4">
               
               <ImageToText onTextExtracted={handleTextExtracted} />
-              
+
               
             </div>
           )

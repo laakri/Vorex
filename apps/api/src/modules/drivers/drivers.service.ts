@@ -122,7 +122,6 @@ export class DriversService {
       context: {
         driverName: result.user.fullName,
         licenseType: result.licenseType,
-        deliveryZones: result.deliveryZones
       }
     });
 

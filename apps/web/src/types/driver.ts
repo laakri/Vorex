@@ -27,10 +27,10 @@ export interface DriverFormData {
   vehicleType: string;
   make: string;
   model: string;
-  year: number;
+  year: string;
   plateNumber: string;
-  capacity: number;
-  maxWeight: number;
+  capacity: string;
+  maxWeight: string;
   currentStatus: VehicleStatus;
   lastMaintenance: Date;
   nextMaintenance: Date;
