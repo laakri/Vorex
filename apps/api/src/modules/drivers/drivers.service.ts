@@ -63,7 +63,6 @@ export class DriversService {
           phone: createDriverDto.phone,
           emergencyContact: createDriverDto.emergencyContact,
           availabilityStatus: DriverStatus.OFF_DUTY,
-          deliveryZones: createDriverDto.deliveryZones,
         }
       });
 

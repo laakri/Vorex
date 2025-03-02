@@ -6,33 +6,34 @@ export type VehicleType = 'MOTORCYCLE' | 'CAR' | 'VAN' | 'SMALL_TRUCK' | 'LARGE_
 export type VehicleStatus = 'ACTIVE' | 'MAINTENANCE' | 'REPAIR' | 'OUT_OF_SERVICE'
 
 export interface DriverFormData {
-  // Personal Info
-  fullName: string
-  phone: string
-  address: string
-  city: string
-  governorate: string
-  postalCode: string
-  emergencyContact: string
-  email: string
+  // Personal Information
+  fullName: string;
+  email: string;
+  phone: string;
+  emergencyContact: string;
 
-  // License Info
-  licenseNumber: string
-  licenseType: LicenseType
-  licenseExpiry: Date | undefined
-  deliveryZones: string[]
-  
-  // Vehicle Info
-  vehicleType: VehicleType
-  make: string
-  model: string
-  year: number
-  plateNumber: string
-  capacity: number
-  maxWeight: number
-  currentStatus: VehicleStatus
-  lastMaintenance?: Date
-  nextMaintenance?: Date
+  // Address Information
+  address: string;
+  city: string;
+  governorate: string;
+  postalCode: string;
+
+  // License Information
+  licenseNumber: string;
+  licenseType: string;
+  licenseExpiry: string;
+
+  // Vehicle Information
+  vehicleType: string;
+  make: string;
+  model: string;
+  year: number;
+  plateNumber: string;
+  capacity: number;
+  maxWeight: number;
+  currentStatus: VehicleStatus;
+  lastMaintenance: Date;
+  nextMaintenance: Date;
 }
 
 export const VEHICLE_TYPE_DETAILS = {
@@ -103,50 +104,30 @@ export const LICENSE_TYPE_DETAILS = {
 
 export const DRIVER_ONBOARDING_STEPS = [
   {
-    id: 1,
-    title: "Basic Information",
-    description: "Let's start with your personal details"
+    title: "Personal Information",
+    description: "Tell us about yourself",
+    fields: ["fullName", "email", "phone", "emergencyContact"],
   },
   {
-    id: 2,
-    title: "Contact Information",
-    description: "How can we reach you?"
+    title: "Address Details",
+    description: "Where are you located?",
+    fields: ["address", "city", "governorate", "postalCode"],
   },
   {
-    id: 3,
-    title: "Identity Verification",
-    description: "Upload your ID documents"
+    title: "License Information",
+    description: "Your driving credentials",
+    fields: ["licenseNumber", "licenseType", "licenseExpiry"],
   },
   {
-    id: 4,
-    title: "Driver's License",
-    description: "Your driving credentials"
+    title: "Vehicle Details",
+    description: "Information about your vehicle",
+    fields: ["vehicleType", "make", "model", "year", "plateNumber"],
   },
   {
-    id: 5,
-    title: "Vehicle Information",
-    description: "Tell us about your vehicle"
+    title: "Vehicle Specifications",
+    description: "Technical details of your vehicle",
+    fields: ["capacity", "maxWeight", "currentStatus", "lastMaintenance", "nextMaintenance"],
   },
-  {
-    id: 6,
-    title: "Vehicle Documentation",
-    description: "Upload vehicle papers"
-  },
-  {
-    id: 7,
-    title: "Delivery Preferences",
-    description: "Choose your delivery zones"
-  },
-  {
-    id: 8,
-    title: "Background Check",
-    description: "Security verification"
-  },
-  {
-    id: 9,
-    title: "Final Review",
-    description: "Review your application"
-  }
-] as const
+] as const;
 
-export type StepId = typeof DRIVER_ONBOARDING_STEPS[number]['id'] 
+export type StepId = typeof DRIVER_ONBOARDING_STEPS[number]['title'];

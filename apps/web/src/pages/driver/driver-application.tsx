@@ -1,437 +1,583 @@
 import { useState } from "react"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { motion, AnimatePresence } from "framer-motion"
-import { z } from "zod"
 import { Button } from "@/components/ui/button"
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
+import { Card } from "@/components/ui/card"
+import { Progress } from "@/components/ui/progress"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Logo } from "@/components/logo"
-import { useToast } from "@/hooks/use-toast"
-import { DRIVER_ONBOARDING_STEPS, VEHICLE_TYPE_DETAILS, type DriverFormData, LICENSE_TYPE_DETAILS } from "@/types/driver"
+import { useNavigate } from "react-router-dom"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { TUNISIA_GOVERNORATES } from "@/config/constants"
+import api from "@/lib/axios"
+import { LICENSE_TYPE_DETAILS, VEHICLE_TYPE_DETAILS } from "@/types/driver"
+import ImageToText from '@/components/ImageToText'
 
-const formSchema = z.object({
-  fullName: z.string().min(3, "Name must be at least 3 characters"),
-  email: z.string().email("Invalid email address"),
-  phone: z.string().regex(/^[0-9]{8}$/, "Phone number must be 8 digits"),
-  address: z.string().min(5, "Address is required"),
-  city: z.string().min(2, "City is required"),
-  governorate: z.string().min(2, "Governorate is required"),
-  postalCode: z.string().regex(/^[0-9]{4}$/, "Postal code must be 4 digits"),
-  emergencyContact: z.string().regex(/^[0-9]{8}$/, "Emergency contact must be 8 digits"),
-  licenseNumber: z.string().min(5, "License number is required"),
-  licenseType: z.enum(["A", "B", "C", "D", "E"]),
-  licenseExpiry: z.date().optional(),
-  deliveryZones: z.array(z.string()).min(1, "At least one delivery zone is required"),
-  vehicleType: z.enum(["MOTORCYCLE", "CAR", "VAN", "SMALL_TRUCK", "LARGE_TRUCK"]),
-  make: z.string().min(2, "Vehicle make is required"),
-  model: z.string().min(2, "Vehicle model is required"),
-  year: z.number().min(2015, "Vehicle must be 2015 or newer"),
-  plateNumber: z.string().regex(/^[0-9]{1,3}TUN[0-9]{1,4}$/, "Invalid plate number format"),
-  capacity: z.number().min(0, "Capacity must be 0 or more"),
-  maxWeight: z.number().min(0, "Max weight must be 0 or more"),
-  currentStatus: z.enum(["ACTIVE", "MAINTENANCE", "REPAIR", "OUT_OF_SERVICE"]),
-})
+interface DriverFormData {
+  fullName: string
+  email: string
+  phone: string
+  emergencyContact: string
+  address: string
+  city: string
+  governorate: string
+  postalCode: string
+  licenseNumber: string
+  licenseType: string
+  licenseExpiry: string
+  deliveryZones: string[]
+  vehicleType: string
+  make: string
+  model: string
+  year: number
+  plateNumber: string
+  capacity: number
+  maxWeight: number
+}
+
+const steps = [
+  {
+    title: "Personal Information",
+    description: "Tell us about yourself",
+    fields: ["fullName", "email", "phone", "emergencyContact"],
+  },
+  {
+    title: "Address Details",
+    description: "Where can we reach you?",
+    fields: ["address", "city", "governorate", "postalCode"],
+  },
+  {
+    title: "License Information",
+    description: "Your driving credentials",
+    fields: ["licenseNumber", "licenseType", "licenseExpiry", "deliveryZones"],
+  },
+  {
+    title: "Vehicle Information",
+    description: "Tell us about your vehicle",
+    fields: ["vehicleType", "make", "model", "year", "plateNumber"],
+  },
+  {
+    title: "Vehicle Specifications",
+    description: "Technical details of your vehicle",
+    fields: ["capacity", "maxWeight"],
+  },
+  {
+    title: "Driver's License",
+    description: "Upload your driver's license",
+    fields: ["licenseImage"],
+  }
+] as const
 
 export function DriverApplication() {
   const [currentStep, setCurrentStep] = useState(0)
-  const { toast } = useToast()
-  const [isSubmitting, setIsSubmitting] = useState(false)
-
-  const form = useForm<DriverFormData>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      fullName: "",
-      email: "",
-      phone: "",
-      address: "",
-      city: "",
-      governorate: "",
-      postalCode: "",
-      emergencyContact: "",
-      licenseNumber: "",
-      licenseType: undefined,
-      licenseExpiry: undefined,
-      deliveryZones: [],
-      vehicleType: undefined,
-      make: "",
-      model: "",
-      year: new Date().getFullYear(),
-      plateNumber: "",
-      capacity: 0,
-      maxWeight: 0,
-      currentStatus: "ACTIVE",
-    }
+  const [formData, setFormData] = useState<DriverFormData>({
+    fullName: "",
+    email: "",
+    phone: "",
+    emergencyContact: "",
+    address: "",
+    city: "",
+    governorate: "",
+    postalCode: "",
+    licenseNumber: "",
+    licenseType: "",
+    licenseExpiry: "",
+    deliveryZones: [],
+    vehicleType: "",
+    make: "",
+    model: "",
+    year: new Date().getFullYear(),
+    plateNumber: "",
+    capacity: 0,
+    maxWeight: 0,
   })
+  const [error, setError] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
+  const progress = ((currentStep + 1) / steps.length) * 100
+  const navigate = useNavigate()
+  const [extractedText, setExtractedText] = useState<string>("")
+  const [isTextValid, setIsTextValid] = useState<boolean>(false)
+  const [image, setImage] = useState<File | null>(null)
 
-  const onSubmit = async (data: DriverFormData) => {
-    setIsSubmitting(true)
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    setFormData((prev) => ({
+      ...prev,
+      [e.target.name]: e.target.value,
+    }))
+  }
+
+  const handleSelectChange = (field: keyof DriverFormData) => (value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      [field]: value,
+    }))
+  }
+
+  const validateStep = () => {
+    const currentFields = steps[currentStep].fields
+    const emptyFields = currentFields.filter(
+      (field) => !formData[field as keyof DriverFormData]
+    )
+
+    if (emptyFields.length > 0) {
+      setError(`Please fill in all fields`)
+      return false
+    }
+
+    setError("")
+    return true
+  }
+
+  const handleComplete = async () => {
+    if (!validateStep()) return
+
+    setIsLoading(true)
     try {
-      const response = await fetch('/api/drivers/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to submit application');
-      }
-
-      toast({
-        title: "Application submitted",
-        description: "We'll review your application and get back to you soon."
-      })
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Something went wrong. Please try again.",
-        variant: "destructive"
-      })
+      await api.post("/drivers/register", formData)
+      navigate("/auth/sign-in")
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Failed to submit application")
     } finally {
-      setIsSubmitting(false)
+      setIsLoading(false)
     }
   }
 
-  const renderFormStep = () => {
+  const handleTextExtracted = (text: string) => {
+    setExtractedText(text)
+    const isValid = validateLicenseText(text)
+    setIsTextValid(isValid)
+  }
+
+  const validateLicenseText = (text: string): boolean => {
+    const hasValidKeywords = text.includes("PERMIS DE CONDUIRE") || text.includes("REPUBLIQUE TUNISIENNE");
+    const datePattern = /\b\d{2}-\d{2}-\d{4}\b/g;
+    const dates = text.match(datePattern);
+    const hasValidDates = Array.isArray(dates) && dates.length >= 2;
+
+    return hasValidKeywords && hasValidDates !== undefined; 
+  }
+
+  const renderFormFields = () => {
     switch (currentStep) {
       case 0:
         return (
           <div className="space-y-4">
-            <h2 className="text-xl font-bold">Basic Information</h2>
-            <FormField
-              control={form.control}
-              name="fullName"
-              render={({ field, fieldState }) => (
-                <FormItem>
-                  <FormLabel>Full Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter your full name" {...field} />
-                  </FormControl>
-                  <FormMessage>{fieldState.error?.message}</FormMessage>
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field, fieldState }) => (
-                <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter your email" {...field} />
-                  </FormControl>
-                  <FormMessage>{fieldState.error?.message}</FormMessage>
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="phone"
-              render={({ field, fieldState }) => (
-                <FormItem>
-                  <FormLabel>Phone</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter your phone number" {...field} />
-                  </FormControl>
-                  <FormMessage>{fieldState.error?.message}</FormMessage>
-                </FormItem>
-              )}
-            />
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Full Name</label>
+              <Input
+                name="fullName"
+                placeholder="Enter your full name as it appears on your ID"
+                className="h-12 bg-muted/50"
+                value={formData.fullName}
+                onChange={handleChange}
+                required
+              />
+              <p className="text-xs text-muted-foreground">
+                This should match your official identification documents
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Email Address</label>
+              <Input
+                name="email"
+                type="email"
+                placeholder="your.email@example.com"
+                className="h-12 bg-muted/50"
+                value={formData.email}
+                onChange={handleChange}
+                required
+              />
+              <p className="text-xs text-muted-foreground">
+                We'll use this email for all communications
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Phone Number</label>
+              <Input
+                name="phone"
+                placeholder="Enter your 8-digit phone number"
+                className="h-12 bg-muted/50"
+                value={formData.phone}
+                onChange={handleChange}
+                required
+              />
+              <p className="text-xs text-muted-foreground">
+                Active phone number where we can reach you
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Emergency Contact</label>
+              <Input
+                name="emergencyContact"
+                placeholder="Emergency contact phone number"
+                className="h-12 bg-muted/50"
+                value={formData.emergencyContact}
+                onChange={handleChange}
+                required
+              />
+              <p className="text-xs text-muted-foreground">
+                Phone number of someone we can contact in case of emergency
+              </p>
+            </div>
           </div>
         )
+     
       case 1:
         return (
           <div className="space-y-4">
-            <h2 className="text-xl font-bold">Contact Information</h2>
-            <FormField
-              control={form.control}
-              name="address"
-              render={({ field, fieldState }) => (
-                <FormItem>
-                  <FormLabel>Address</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter your address" {...field} />
-                  </FormControl>
-                  <FormMessage>{fieldState.error?.message}</FormMessage>
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="city"
-              render={({ field, fieldState }) => (
-                <FormItem>
-                  <FormLabel>City</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter your city" {...field} />
-                  </FormControl>
-                  <FormMessage>{fieldState.error?.message}</FormMessage>
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="governorate"
-              render={({ field, fieldState }) => (
-                <FormItem>
-                  <FormLabel>Governorate</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter your governorate" {...field} />
-                  </FormControl>
-                  <FormMessage>{fieldState.error?.message}</FormMessage>
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="postalCode"
-              render={({ field, fieldState }) => (
-                <FormItem>
-                  <FormLabel>Postal Code</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter your postal code" {...field} />
-                  </FormControl>
-                  <FormMessage>{fieldState.error?.message}</FormMessage>
-                </FormItem>
-              )}
-            />
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Street Address</label>
+              <Input
+                name="address"
+                placeholder="Enter your complete street address"
+                className="h-12 bg-muted/50"
+                value={formData.address}
+                onChange={handleChange}
+                required
+              />
+              <p className="text-xs text-muted-foreground">
+                Your current residential address
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">City</label>
+              <Input
+                name="city"
+                placeholder="Enter your city name"
+                className="h-12 bg-muted/50"
+                value={formData.city}
+                onChange={handleChange}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Governorate</label>
+              <Select
+                value={formData.governorate}
+                onValueChange={handleSelectChange("governorate")}
+              >
+                <SelectTrigger className="h-12 bg-muted/50">
+                  <SelectValue placeholder="Select your governorate" />
+                </SelectTrigger>
+                <SelectContent>
+                  {TUNISIA_GOVERNORATES.map((governorate) => (
+                    <SelectItem key={governorate} value={governorate}>
+                      {governorate}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Postal Code</label>
+              <Input
+                name="postalCode"
+                placeholder="Enter your 4-digit postal code"
+                className="h-12 bg-muted/50"
+                value={formData.postalCode}
+                onChange={handleChange}
+                required
+              />
+              <p className="text-xs text-muted-foreground">
+                Standard 4-digit Tunisia postal code
+              </p>
+            </div>
           </div>
         )
       case 2:
         return (
           <div className="space-y-4">
-            <h2 className="text-xl font-bold">License Information</h2>
-            <FormField
-              control={form.control}
-              name="licenseNumber"
-              render={({ field, fieldState }) => (
-                <FormItem>
-                  <FormLabel>License Number</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter your license number" {...field} />
-                  </FormControl>
-                  <FormMessage>{fieldState.error?.message}</FormMessage>
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="licenseType"
-              render={({ field, fieldState }) => (
-                <FormItem>
-                  <FormLabel>License Type</FormLabel>
-                  <FormControl>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select license type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.entries(LICENSE_TYPE_DETAILS).map(([key, { label }]) => (
-                          <SelectItem key={key} value={key}>
-                            {label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </FormControl>
-                  <FormMessage>{fieldState.error?.message}</FormMessage>
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="licenseExpiry"
-              render={({ field, fieldState }) => (
-                <FormItem>
-                  <FormLabel>License Expiry</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="date" 
-                      {...field}
-                      value={field.value ? new Date(field.value).toISOString().split('T')[0] : ''}
-                    />
-                  </FormControl>
-                  <FormMessage>{fieldState.error?.message}</FormMessage>
-                </FormItem>
-              )}
-            />
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Driver's License Number</label>
+              <Input
+                name="licenseNumber"
+                placeholder="Enter your driver's license number"
+                className="h-12 bg-muted/50"
+                value={formData.licenseNumber}
+                onChange={handleChange}
+                required
+              />
+              <p className="text-xs text-muted-foreground">
+                The number on your valid driver's license
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">License Type</label>
+              <Select
+                value={formData.licenseType}
+                onValueChange={handleSelectChange("licenseType")}
+              >
+                <SelectTrigger className="h-12 bg-muted/50">
+                  <SelectValue placeholder="Select your license type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(LICENSE_TYPE_DETAILS).map(([key, { label, icon }]) => (
+                    <SelectItem key={key} value={key}>
+                      {icon} {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Choose the type of license you currently hold
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">License Expiry Date</label>
+              <Input
+                name="licenseExpiry"
+                type="date"
+                className="h-12 bg-muted/50"
+                value={formData.licenseExpiry}
+                onChange={handleChange}
+                min={new Date().toISOString().split('T')[0]}
+                required
+              />
+              <p className="text-xs text-muted-foreground">
+                Your license must be valid for at least 6 months
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Delivery Zones</label>
+              <Select
+                value={formData.deliveryZones[0]}
+                onValueChange={(value) => setFormData(prev => ({
+                  ...prev,
+                  deliveryZones: [value]
+                }))}
+              >
+                <SelectTrigger className="h-12 bg-muted/50">
+                  <SelectValue placeholder="Select your preferred delivery zone" />
+                </SelectTrigger>
+                <SelectContent>
+                  {TUNISIA_GOVERNORATES.map((zone) => (
+                    <SelectItem key={zone} value={zone}>
+                      {zone}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Choose the area where you prefer to make deliveries
+              </p>
+            </div>
           </div>
         )
       case 3:
         return (
           <div className="space-y-4">
-            <h2 className="text-xl font-bold">Vehicle Information</h2>
-            <FormField
-              control={form.control}
-              name="vehicleType"
-              render={({ field, fieldState }) => (
-                <FormItem>
-                  <FormLabel>Vehicle Type</FormLabel>
-                  <FormControl>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select vehicle type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.entries(VEHICLE_TYPE_DETAILS).map(([key, { label }]) => (
-                          <SelectItem key={key} value={key}>
-                            {label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </FormControl>
-                  <FormMessage>{fieldState.error?.message}</FormMessage>
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="make"
-              render={({ field, fieldState }) => (
-                <FormItem>
-                  <FormLabel>Make</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter vehicle make" {...field} />
-                  </FormControl>
-                  <FormMessage>{fieldState.error?.message}</FormMessage>
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="model"
-              render={({ field, fieldState }) => (
-                <FormItem>
-                  <FormLabel>Model</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter vehicle model" {...field} />
-                  </FormControl>
-                  <FormMessage>{fieldState.error?.message}</FormMessage>
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="year"
-              render={({ field, fieldState }) => (
-                <FormItem>
-                  <FormLabel>Year</FormLabel>
-                  <FormControl>
-                    <Input type="number" placeholder="Enter vehicle year" {...field} />
-                  </FormControl>
-                  <FormMessage>{fieldState.error?.message}</FormMessage>
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="plateNumber"
-              render={({ field, fieldState }) => (
-                <FormItem>
-                  <FormLabel>Plate Number</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter plate number" {...field} />
-                  </FormControl>
-                  <FormMessage>{fieldState.error?.message}</FormMessage>
-                </FormItem>
-              )}
-            />
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Vehicle Type</label>
+              <Select
+                value={formData.vehicleType}
+                onValueChange={handleSelectChange("vehicleType")}
+              >
+                <SelectTrigger className="h-12 bg-muted/50">
+                  <SelectValue placeholder="What type of vehicle do you have?" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(VEHICLE_TYPE_DETAILS).map(([key, { label, description }]) => (
+                    <SelectItem key={key} value={key}>
+                      <div>
+                        <div>{label}</div>
+                        <div className="text-xs text-muted-foreground">{description}</div>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Choose the type of vehicle you'll use for deliveries
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Vehicle Brand</label>
+              <Input
+                name="make"
+                placeholder="Vehicle Manufacturer (e.g., Peugeot, Toyota)"
+                className="h-12 bg-muted/50"
+                value={formData.make}
+                onChange={handleChange}
+                required
+              />
+              <p className="text-xs text-muted-foreground">
+                Enter the manufacturer/brand of your vehicle
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Vehicle Model</label>
+              <Input
+                name="model"
+                placeholder="Vehicle Model (e.g., 208, Hilux)"
+                className="h-12 bg-muted/50"
+                value={formData.model}
+                onChange={handleChange}
+                required
+              />
+              <p className="text-xs text-muted-foreground">
+                Enter the specific model of your vehicle
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Manufacturing Year</label>
+              <Input
+                name="year"
+                type="number"
+                min={2015}
+                max={new Date().getFullYear()}
+                placeholder="Enter vehicle manufacturing year"
+                className="h-12 bg-muted/50"
+                value={formData.year}
+                onChange={handleChange}
+                required
+              />
+              <p className="text-xs text-muted-foreground">
+                Vehicle must be from 2015 or newer
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">License Plate Number</label>
+              <Input
+                name="plateNumber"
+                placeholder="Format: 123TUN4567"
+                className="h-12 bg-muted/50"
+                value={formData.plateNumber}
+                onChange={handleChange}
+                required
+              />
+              <p className="text-xs text-muted-foreground">
+                Enter your vehicle's registration number
+              </p>
+            </div>
           </div>
         )
       case 4:
         return (
           <div className="space-y-4">
-            <h2 className="text-xl font-bold">Confirmation</h2>
-            <p>Please review your information before submitting:</p>
-            <ul className="list-disc pl-5">
-              <li><strong>Full Name:</strong> {form.getValues("fullName")}</li>
-              <li><strong>Email:</strong> {form.getValues("email")}</li>
-              <li><strong>Phone:</strong> {form.getValues("phone")}</li>
-              <li><strong>Address:</strong> {form.getValues("address")}</li>
-              <li><strong>City:</strong> {form.getValues("city")}</li>
-              <li><strong>Governorate:</strong> {form.getValues("governorate")}</li>
-              <li><strong>Postal Code:</strong> {form.getValues("postalCode")}</li>
-              <li><strong>License Number:</strong> {form.getValues("licenseNumber")}</li>
-              <li><strong>License Type:</strong> {form.getValues("licenseType")}</li>
-              <li><strong>License Expiry:</strong> {form.getValues("licenseExpiry")?.toLocaleDateString()}</li>
-              <li><strong>Vehicle Type:</strong> {form.getValues("vehicleType")}</li>
-              <li><strong>Make:</strong> {form.getValues("make")}</li>
-              <li><strong>Model:</strong> {form.getValues("model")}</li>
-              <li><strong>Year:</strong> {form.getValues("year")}</li>
-              <li><strong>Plate Number:</strong> {form.getValues("plateNumber")}</li>
-            </ul>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Cargo Capacity</label>
+              <Input
+                name="capacity"
+                type="number"
+                min="0"
+                step="0.1"
+                placeholder="Enter cargo capacity in cubic meters (m³)"
+                className="h-12 bg-muted/50"
+                value={formData.capacity}
+                onChange={handleChange}
+                required
+              />
+              <p className="text-xs text-muted-foreground">
+                The maximum volume your vehicle can carry in cubic meters (m³)
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Maximum Load Weight</label>
+              <Input
+                name="maxWeight"
+                type="number"
+                min="0"
+                step="10"
+                placeholder="Enter maximum weight capacity in kilograms (kg)"
+                className="h-12 bg-muted/50"
+                value={formData.maxWeight}
+                onChange={handleChange}
+                required
+              />
+              <p className="text-xs text-muted-foreground">
+                The maximum weight your vehicle can safely carry in kilograms (kg)
+              </p>
+            </div>
           </div>
         )
+        case 5:
+          return (
+            <div className="mt-4">
+              
+              <ImageToText onTextExtracted={handleTextExtracted} />
+              
+              
+            </div>
+          )
       default:
         return null
     }
   }
 
-  const handleNextStep = async () => {
-    const isValid = await form.trigger()
-    console.log("Validation result:", isValid)
-    if (!isValid) {
-      console.log("Errors:", form.formState.errors)
-    }
-    if (isValid) {
-      setCurrentStep(prev => prev + 1)
-    } else {
-      console.log("Validation failed for step:", currentStep)
-    }
-  }
-
   return (
-    <div className="min-h-screen flex items-center justify-center relative">
-      <Logo className="absolute top-4 left-4" size="lg" />
-      <div className="w-full max-w-2xl p-4">
-        <AnimatePresence mode="wait">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="relative"
-          >
-            <div className="p-8">
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                  {renderFormStep()}
-                </form>
-              </Form>
+    <div className="  mt-10">
+      <div className="container max-w-3xl py-16">
+        <div className="space-y-8">
+          <div className="space-y-2">
+            <h1 className="text-3xl font-bold">{steps[currentStep].title}</h1>
+            <p className="text-muted-foreground">
+              {steps[currentStep].description}
+            </p>
+          </div>
 
-              <div className="flex justify-between mt-8 pt-6">
-                {currentStep > 0 && (
-                  <Button
-                    variant="ghost"
-                    onClick={() => setCurrentStep(prev => prev - 1)}
-                    disabled={isSubmitting}
-                  >
-                    Back
-                  </Button>
-                )}
-                <Button
-                  onClick={() => {
-                    if (currentStep < DRIVER_ONBOARDING_STEPS.length - 1) {
-                      handleNextStep()
-                    } else {
-                      form.handleSubmit(onSubmit)()
-                    }
-                  }}
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting
-                    ? "Processing..."
-                    : currentStep === DRIVER_ONBOARDING_STEPS.length - 1
-                    ? "Submit Application"
-                    : "Continue"}
-                </Button>
-              </div>
+          <div className="space-y-2">
+            <Progress value={progress} className="h-2" />
+            <div className="text-sm text-muted-foreground">
+              Step {currentStep + 1} of {steps.length}
             </div>
-          </motion.div>
-        </AnimatePresence>
+          </div>
+
+          <Card className="p-6">
+            {renderFormFields()}
+            {error && (
+              <p className="mt-4 text-sm text-destructive text-center">
+                {error}
+              </p>
+            )}
+          </Card>
+
+          <div className="flex justify-between">
+            <Button
+              variant="outline"
+              onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
+              disabled={currentStep === 0 || isLoading}
+            >
+              Previous
+            </Button>
+            <Button
+              onClick={() => {
+                if (validateStep()) {
+                  if (currentStep < steps.length - 1) {
+                    setCurrentStep(currentStep + 1)
+                  } else {
+                    handleComplete()
+                  }
+                }
+              }}
+              disabled={isLoading}
+            >
+              {isLoading
+                ? "Submitting..."
+                : currentStep === steps.length - 1
+                ? "Submit Application"
+                : "Next"}
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   )

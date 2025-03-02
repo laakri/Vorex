@@ -154,7 +154,6 @@ model Seller {
   user      User       @relation(fields: [userId], references: [id])
   products  Product[]
   orders    Order[]
-  documents Document[]
 }
 
 model Product {
@@ -316,8 +315,6 @@ model Driver {
   governorate      String
   phone            String
   emergencyContact String
-  availabilityStatus DriverStatus
-  deliveryZones    String[]
   rating           Float        @default(0)
   totalDeliveries  Int         @default(0)
   createdAt        DateTime     @default(now())
@@ -327,9 +324,8 @@ model Driver {
   user       User             @relation(fields: [userId], references: [id])
   vehicle    Vehicle?         @relation(fields: [vehicleId], references: [id])
   deliveries Delivery[]
-  documents  DriverDocument[]
   routes     DeliveryRoute[]
-  batches    Batch[]         // Add this relation
+  batches    Batch[]
 }
 
 model Vehicle {
@@ -367,31 +363,7 @@ model InsuranceInfo {
   vehicle Vehicle @relation(fields: [vehicleId], references: [id])
 }
 
-model DriverDocument {
-  id         String    @id @default(cuid())
-  driverId   String
-  type       String
-  url        String
-  verified   Boolean   @default(false)
-  expiryDate DateTime?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
 
-  // Relations
-  driver Driver @relation(fields: [driverId], references: [id])
-}
-
-model Document {
-  id        String   @id @default(cuid())
-  sellerId  String
-  type      String
-  url       String
-  verified  Boolean  @default(false)
-  createdAt DateTime @default(now())
-
-  // Relations
-  seller Seller @relation(fields: [sellerId], references: [id])
-}
 
 model Delivery {
   id              String         @id @default(cuid())

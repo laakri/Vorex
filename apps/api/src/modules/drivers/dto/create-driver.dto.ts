@@ -34,10 +34,6 @@ export class CreateDriverDto {
   @IsString()
   emergencyContact: string;
 
-  @IsArray()
-  @IsString({ each: true })
-  deliveryZones: string[];
-
   @IsOptional()
   @IsString()
   vehicleId?: string;
