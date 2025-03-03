@@ -28,7 +28,6 @@ import { ProtectedRoute } from "./protected-route";
 import { SellerGuard } from "./seller-guard";
 import { GoogleCallback } from "@/pages/auth/google-callback";
 import { RoleSelectionPage } from "@/pages/auth/RoleSelectionPage";
-import WelcomePage from "@/pages/seller/WelcomePage";
 
 
 export function AppRoutes() {
@@ -109,12 +108,7 @@ export function AppRoutes() {
                 <StoreSettingsPage />
               </SellerGuard>
             </ProtectedRoute>} />
-        <Route path="welcome" element={
-          <ProtectedRoute>
-           <SellerGuard>
-              <WelcomePage />
-           </SellerGuard>
-           </ProtectedRoute>} />
+       
       </Route>
 
       {/* Unauthorized Route */}

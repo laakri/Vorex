@@ -50,11 +50,7 @@ const menuItems = [
     icon: Store,
     href: "/seller/settings",
   },
-  {
-    title: "Welcome",
-    icon: Info,
-    href: "/seller/welcome",
-  }
+  
  
 ];
 
@@ -148,7 +144,7 @@ export function SellerLayout() {
         {showInfoCard && (
           <div className="px-3 py-2">
             <Card className="p-4 bg-card shadow-md relative">
-              <h2 className="text-lg font-semibold">Did you know?</h2>
+              <h2 className="text-md font-semibold">Did you know?</h2>
               <p className="text-sm text-muted-foreground mb-2">
                 You can also be a driver! Switch to the driver platform to manage your deliveries.
               </p>
@@ -157,10 +153,11 @@ export function SellerLayout() {
                 className="absolute top-2 right-2"
                 onClick={() => setShowInfoCard(false)}
                 title="Close"
+                size="icon"
               >
                 <X className="h-4 w-4" />
               </Button>
-              <Button onClick={() => handlePlatformChange("driver")} className="mt-2">
+              <Button onClick={() => handlePlatformChange("driver")} className="mt-2 text-md " size="sm">
                 Switch to Driver
               </Button>
             </Card>
