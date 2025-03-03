@@ -11,19 +11,21 @@ import { MainContact } from "@/pages/main/main-contact";
 import { AuthLayout } from "@/layers/auth-layout";
 import { SignIn } from "@/pages/auth/sign-in";
 import { SignUp } from "@/pages/auth/sign-up";
+import Unauthorized from "@/pages/auth/Unauthorized";
 // Seller layers
 import { SellerLayout } from "@/layers/seller-layout";
 import { SellerOnboarding } from "@/pages/seller/seller-onboarding";
 import { SellerDashboard } from "@/pages/seller/seller-dashboard";
 import { ProductsPage } from "@/pages/seller/products/products";
 import { OrdersPage } from "@/pages/seller/orders/orders";
+import { StoreSettingsPage } from "@/pages/seller/settings/store-settings";
 import OrderPage from "@/pages/seller/orders/order-page";
-
+// Driver layers
+import { DriverLayout } from "@/layers/driver-layout";
+import { DriverApplication } from "@/pages/driver/driver-application";
 // Protected route
 import { ProtectedRoute } from "./protected-route";
 import { SellerGuard } from "./seller-guard";
-import { StoreSettingsPage } from "@/pages/seller/settings/store-settings";
-import { DriverApplication } from "@/pages/driver/driver-application";
 import { GoogleCallback } from "@/pages/auth/google-callback";
 
 
@@ -39,9 +41,7 @@ export function AppRoutes() {
         <Route path="track" element={<MainTrack />} />
         <Route path="contact" element={<MainContact />} />
         <Route path="order/:orderId" element={<OrderPage />} />
-        <Route path="driver/application" element={<DriverApplication />} />
-
-
+       
       </Route>
 
       {/* Auth Platform */}
@@ -73,7 +73,13 @@ export function AppRoutes() {
             </ProtectedRoute>
           }
         />
-        <Route path="onboarding" element={<SellerOnboarding />} />
+        <Route path="onboarding" element={
+          <ProtectedRoute>
+            <SellerGuard>
+              <SellerOnboarding />
+            </SellerGuard>
+          </ProtectedRoute>
+          } />
         <Route
           path="products"
           element={
@@ -101,6 +107,8 @@ export function AppRoutes() {
             </ProtectedRoute>} />
       </Route>
 
+      {/* Unauthorized Route */}
+      <Route path="/unauthorized" element={<Unauthorized />} />
 
       {/* Warehouse Platform */}
       <Route path="warehouse">
@@ -109,9 +117,17 @@ export function AppRoutes() {
         <Route path="sections" element={<div>Sections Management</div>} />
       </Route>
 
-      {/* Delivery Platform */}
-      <Route path="delivery">
-        <Route index element={<div>Delivery Dashboard</div>} />
+      {/* Driver Platform */}
+      <Route path="/driver" element={<DriverLayout />}>
+      <Route
+          path="application"
+          element={
+            <ProtectedRoute>
+              <DriverApplication />
+            </ProtectedRoute>
+          }
+        />
+        <Route index element={<div>Driver Dashboard</div>} />
         <Route path="routes" element={<div>Routes Management</div>} />
         <Route path="drivers" element={<div>Drivers Management</div>} />
         

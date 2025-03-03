@@ -15,7 +15,7 @@ export function ProtectedRoute({ children, roles }: ProtectedRouteProps) {
     if (!isAuthenticated) {
       console.log("Not authenticated");
       navigate("/auth/sign-in");
-    } else if (roles && !roles.includes(user?.role || "")) {
+    } else if (roles && !roles.some(role => user?.role.includes(role as any))) {
       navigate("/");
       console.log("Not authorized");
     }

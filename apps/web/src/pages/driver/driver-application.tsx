@@ -15,6 +15,7 @@ import { TUNISIA_GOVERNORATES } from "@/config/constants"
 import api from "@/lib/axios"
 import { LICENSE_TYPE_DETAILS, VEHICLE_TYPE_DETAILS } from "@/types/driver"
 import ImageToText from '@/components/ImageToText'
+import { useAuthStore } from "@/stores/auth.store"
 
 interface DriverFormData {
   fullName: string;
@@ -35,7 +36,6 @@ interface DriverFormData {
   plateNumber: string; // Ensure this is a string
   capacity: number; // Ensure this is a number
   maxWeight: number; // Ensure this is a number
-  currentStatus: "ACTIVE" | "MAINTENANCE" | "REPAIR" | "OUT_OF_SERVICE";
   lastMaintenance: Date;
   nextMaintenance: Date;
 }
@@ -63,7 +63,7 @@ const steps = [
   {
     title: "Vehicle Specifications",
     description: "Technical details of your vehicle",
-    fields: ["capacity", "maxWeight", "currentStatus", "lastMaintenance", "nextMaintenance"],
+    fields: ["capacity", "maxWeight",  "lastMaintenance", "nextMaintenance"],
   },
   {
     title: "Driver's License",
@@ -91,9 +91,8 @@ export function DriverApplication() {
     model: "",
     year: new Date().getFullYear(),
     plateNumber: "",
-    capacity: 0,
-    maxWeight: 0,
-    currentStatus: "ACTIVE",
+    capacity: 1,
+    maxWeight: 1,
     lastMaintenance: new Date(),
     nextMaintenance: new Date(),
   })
@@ -104,24 +103,18 @@ export function DriverApplication() {
   const [extractedText, setExtractedText] = useState<string>("")
   const [isTextValid, setIsTextValid] = useState<boolean>(false)
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
 
-    // Convert capacity and maxWeight to numbers if the field is one of them
-    if (name === "capacity" || name === "maxWeight") {
-      setFormData((prev) => ({
-        ...prev,
-        [name]: parseFloat(value), // Convert to number
-      }));
+    // Convert numeric fields to numbers
+    if (name === "year" || name === "capacity" || name === "maxWeight") {
+      setFormData((prev) => ({ ...prev, [name]: parseFloat(value) })); // Convert to number
+    } else if (name === "lastMaintenance" || name === "nextMaintenance") {
+      setFormData((prev) => ({ ...prev, [name]: new Date(value) })); // Convert to Date
     } else {
-      setFormData((prev) => ({
-        ...prev,
-        [name]: value,
-      }));
+      setFormData((prev) => ({ ...prev, [name]: value }));
     }
-  }
+  };
 
   const handleSelectChange = (field: keyof DriverFormData) => (value: string) => {
     setFormData((prev) => ({
@@ -131,76 +124,107 @@ export function DriverApplication() {
   }
 
   const validateStep = () => {
-    const currentFields = steps[currentStep].fields;
     let isValid = true;
     let errorMessage = "";
 
-    currentFields.forEach((field) => {
-      switch (field) {
-        case "plateNumber":
-          if (typeof formData.plateNumber !== 'string' || formData.plateNumber.trim() === '') {
-            errorMessage = "Plate number must be a non-empty string";
-            isValid = false;
-          }
-          break;
-        case "vehicleType":
-          if (!["MOTORCYCLE", "CAR", "VAN", "SMALL_TRUCK", "LARGE_TRUCK"].includes(formData.vehicleType)) {
-            errorMessage = "Vehicle type must be one of the following: MOTORCYCLE, CAR, VAN, SMALL_TRUCK, LARGE_TRUCK";
-            isValid = false;
-          }
-          break;
-        case "make":
-          if (typeof formData.make !== 'string' || formData.make.trim() === "") {
-            errorMessage = "Make must be a non-empty string";
-            isValid = false;
-          }
-          break;
-        case "model":
-          if (typeof formData.model !== 'string' || formData.model.trim() === "") {
-            errorMessage = "Model must be a non-empty string";
-            isValid = false;
-          }
-          break;
-        case "year":
-          if (typeof formData.year !== 'number' || formData.year < 2015 || formData.year > new Date().getFullYear()) {
-            errorMessage = "Year must be a number between 2015 and the current year";
-            isValid = false;
-          }
-          break;
-        case "capacity":
-          if (typeof formData.capacity !== 'number' || formData.capacity <= 0) {
-            errorMessage = "Capacity must be a positive number";
-            isValid = false;
-          }
-          break;
-        case "maxWeight":
-          if (typeof formData.maxWeight !== 'number' || formData.maxWeight <= 0) {
-            errorMessage = "Max weight must be a positive number";
-            isValid = false;
-          }
-          break;
-        case "currentStatus":
-          if (!["ACTIVE", "MAINTENANCE", "REPAIR", "OUT_OF_SERVICE"].includes(formData.currentStatus)) {
-            errorMessage = "Current status must be one of the following: ACTIVE, MAINTENANCE, REPAIR, OUT_OF_SERVICE";
-            isValid = false;
-          }
-          break;
-        case "lastMaintenance":
-          if (!(formData.lastMaintenance instanceof Date) || isNaN(formData.lastMaintenance.getTime())) {
-            errorMessage = "Last maintenance must be a valid date";
-            isValid = false;
-          }
-          break;
-        case "nextMaintenance":
-          if (!(formData.nextMaintenance instanceof Date) || isNaN(formData.nextMaintenance.getTime())) {
-            errorMessage = "Next maintenance must be a valid date";
-            isValid = false;
-          }
-          break;
-        default:
-          break;
-      }
-    });
+    switch (currentStep) {
+      case 0: // Personal Information
+        if (!formData.fullName) {
+          errorMessage = "Full name is required.";
+          isValid = false;
+        }
+        if (!formData.email) {
+          errorMessage = "Email is required.";
+          isValid = false;
+        }
+        if (!formData.phone) {
+          errorMessage = "Phone number is required.";
+          isValid = false;
+        }
+        if (!formData.emergencyContact) {
+          errorMessage = "Emergency contact is required.";
+          isValid = false;
+        }
+        break;
+
+      case 1: // Address Details
+        if (!formData.address) {
+          errorMessage = "Address is required.";
+          isValid = false;
+        }
+        if (!formData.city) {
+          errorMessage = "City is required.";
+          isValid = false;
+        }
+        if (!formData.governorate) {
+          errorMessage = "Governorate is required.";
+          isValid = false;
+        }
+        if (!formData.postalCode) {
+          errorMessage = "Postal code is required.";
+          isValid = false;
+        }
+        break;
+
+      case 2: // License Information
+        if (!formData.licenseNumber) {
+          errorMessage = "License number is required.";
+          isValid = false;
+        }
+        if (!formData.licenseType) {
+          errorMessage = "License type is required.";
+          isValid = false;
+        }
+        if (!formData.licenseExpiry) {
+          errorMessage = "License expiry date is required.";
+          isValid = false;
+        }
+        break;
+
+      case 3: // Vehicle Information
+        if (!formData.vehicleType) {
+          errorMessage = "Vehicle type is required.";
+          isValid = false;
+        }
+        if (!formData.make) {
+          errorMessage = "Make is required.";
+          isValid = false;
+        }
+        if (!formData.model) {
+          errorMessage = "Model is required.";
+          isValid = false;
+        }
+        if (!formData.year) {
+          errorMessage = "Year is required.";
+          isValid = false;
+        }
+        if (!formData.plateNumber) {
+          errorMessage = "Plate number is required.";
+          isValid = false;
+        }
+        break;
+
+      case 4: // Vehicle Specifications
+        if (formData.capacity <= 0) {
+          errorMessage = "Capacity must be a positive number.";
+          isValid = false;
+        }
+        if (formData.maxWeight <= 0) {
+          errorMessage = "Max weight must be a positive number.";
+          isValid = false;
+        }
+        if (!(formData.lastMaintenance instanceof Date) || isNaN(formData.lastMaintenance.getTime())) {
+          errorMessage = "Last maintenance must be a valid date.";
+          isValid = false;
+        }
+        if (!(formData.nextMaintenance instanceof Date) || isNaN(formData.nextMaintenance.getTime())) {
+          errorMessage = "Next maintenance must be a valid date.";
+          isValid = false;
+        }
+        break;
+
+      // Add additional cases for other steps as needed
+    }
 
     if (!isValid) {
       setError(errorMessage);
@@ -212,18 +236,43 @@ export function DriverApplication() {
   };
 
   const handleComplete = async () => {
-    if (!validateStep()) return;
-
-    // Proceed with the API call if all validations pass
-    setIsLoading(true);
     try {
-      console.log(formData);
-      await api.post("/drivers/register", formData);
-      navigate("/auth/sign-in");
-    } catch (err: any) {
-      setError(err.response?.data?.message || "Failed to submit application");
-    } finally {
-      setIsLoading(false);
+      const response = await api.post('/drivers/register', {
+        driver: {
+          licenseNumber: formData.licenseNumber,
+          licenseType: formData.licenseType,
+          licenseExpiry: formData.licenseExpiry,
+          address: formData.address,
+          city: formData.city,
+          postalCode: formData.postalCode,
+          governorate: formData.governorate,
+          phone: formData.phone,
+          emergencyContact: formData.emergencyContact,
+        },
+        vehicle: {
+          plateNumber: formData.plateNumber,
+          type: formData.vehicleType,
+          make: formData.make,
+          model: formData.model,
+          year: formData.year,
+          capacity: formData.capacity,
+          maxWeight: formData.maxWeight,
+          lastMaintenance: formData.lastMaintenance.toISOString().split('T')[0],
+          nextMaintenance: formData.nextMaintenance.toISOString().split('T')[0],
+        },
+      });
+
+      // Set verified driver status if registration is successful
+      if (response.data) {
+        const { user } = useAuthStore.getState();
+        if (user && user.role.includes("DRIVER") && !user.isVerifiedDriver) {
+          useAuthStore.getState().setVerifiedDriver(true);
+        }
+      }
+
+      console.log('Driver registered successfully:', response.data);
+    } catch (error: any) {
+      console.error('Error registering driver:', error.response.data);
     }
   };
 
@@ -251,46 +300,37 @@ export function DriverApplication() {
               <label className="text-sm font-medium">Full Name</label>
               <Input
                 name="fullName"
-                placeholder="Enter your full name as it appears on your ID"
+                placeholder="Enter your full name"
                 className="h-12 bg-muted/50"
                 value={formData.fullName}
                 onChange={handleChange}
                 required
               />
-              <p className="text-xs text-muted-foreground">
-                This should match your official identification documents
-              </p>
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Email Address</label>
+              <label className="text-sm font-medium">Email</label>
               <Input
                 name="email"
                 type="email"
-                placeholder="your.email@example.com"
+                placeholder="Enter your email"
                 className="h-12 bg-muted/50"
                 value={formData.email}
                 onChange={handleChange}
                 required
               />
-              <p className="text-xs text-muted-foreground">
-                We'll use this email for all communications
-              </p>
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Phone Number</label>
+              <label className="text-sm font-medium">Phone</label>
               <Input
                 name="phone"
-                placeholder="Enter your 8-digit phone number"
+                placeholder="Enter your phone number"
                 className="h-12 bg-muted/50"
                 value={formData.phone}
                 onChange={handleChange}
                 required
               />
-              <p className="text-xs text-muted-foreground">
-                Active phone number where we can reach you
-              </p>
             </div>
 
             <div className="space-y-2">
@@ -630,7 +670,7 @@ export function DriverApplication() {
               {isLoading
                 ? "Submitting..."
                 : currentStep === steps.length - 1
-                ? "Submit Application"
+                ? "Apply"
                 : "Next"}
             </Button>
           </div>
