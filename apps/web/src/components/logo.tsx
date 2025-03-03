@@ -18,10 +18,10 @@ export function Logo({ className, size = "md" }: LogoProps) {
       <div className="relative">
         {/* Background shape */}
         <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-primary/10 rounded-lg " />
-        <div className="relative bg-background rounded-lg p-1.5 bg-yellow-600">
+        <div className="relative bg-background rounded-lg p-1.5 bg-red-600">
           <div className="relative">
             {/* Base box */}
-            <Box className="h-4 w-4 text-white" strokeWidth={2.5} />
+            <Box className="h-4 w-4 text-white" strokeWidth={5.5} />
             {/* Overlay search icon */}
             <PackageSearch
               className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-4 w-4 text-primary"

@@ -21,12 +21,14 @@ import { OrdersPage } from "@/pages/seller/orders/orders";
 import { StoreSettingsPage } from "@/pages/seller/settings/store-settings";
 import OrderPage from "@/pages/seller/orders/order-page";
 // Driver layers
-import { DriverLayout } from "@/layers/driver-layout";
+import  {DriverLayout}  from "@/layers/driver-layout";
 import { DriverApplication } from "@/pages/driver/driver-application";
 // Protected route
 import { ProtectedRoute } from "./protected-route";
 import { SellerGuard } from "./seller-guard";
 import { GoogleCallback } from "@/pages/auth/google-callback";
+import { RoleSelectionPage } from "@/pages/auth/RoleSelectionPage";
+import WelcomePage from "@/pages/seller/WelcomePage";
 
 
 export function AppRoutes() {
@@ -50,6 +52,7 @@ export function AppRoutes() {
         <Route path="sign-up" element={<SignUp />} />
         <Route path="google/callback" element={<GoogleCallback />} />
       </Route>
+      <Route path="role-selection" element={<RoleSelectionPage />} />
 
       {/* Seller Platform */}
       <Route path="/seller" element={<SellerLayout />}>
@@ -100,11 +103,18 @@ export function AppRoutes() {
             </ProtectedRoute>
           }
         />
-        <Route path="settings" element={<ProtectedRoute>
+        <Route path="settings" element={
+          <ProtectedRoute>
               <SellerGuard>
                 <StoreSettingsPage />
               </SellerGuard>
             </ProtectedRoute>} />
+        <Route path="welcome" element={
+          <ProtectedRoute>
+           <SellerGuard>
+              <WelcomePage />
+           </SellerGuard>
+           </ProtectedRoute>} />
       </Route>
 
       {/* Unauthorized Route */}
@@ -119,14 +129,14 @@ export function AppRoutes() {
 
       {/* Driver Platform */}
       <Route path="/driver" element={<DriverLayout />}>
-      <Route
-          path="application"
-          element={
-            <ProtectedRoute>
-              <DriverApplication />
-            </ProtectedRoute>
-          }
-        />
+        <Route
+            path="application"
+            element={
+              <ProtectedRoute>
+                <DriverApplication />
+              </ProtectedRoute>
+            }
+          />
         <Route index element={<div>Driver Dashboard</div>} />
         <Route path="routes" element={<div>Routes Management</div>} />
         <Route path="drivers" element={<div>Drivers Management</div>} />
