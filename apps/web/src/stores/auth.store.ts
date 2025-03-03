@@ -6,8 +6,9 @@ interface User {
   id: string;
   email: string;
   fullName: string;
-  role: "ADMIN" | "SELLER" | "WAREHOUSE_MANAGER" | "DRIVER";
+  role: ("ADMIN" | "SELLER" | "WAREHOUSE_MANAGER" | "DRIVER")[];
   isVerifiedSeller?: boolean;
+  isVerifiedDriver?: boolean;
 }
 
 interface AuthState {
@@ -15,6 +16,7 @@ interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
   isVerifiedSeller: boolean;
+  isVerifiedDriver: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (data: {
     firstName: string;
@@ -24,6 +26,7 @@ interface AuthState {
   }) => Promise<void>;
   logout: () => void;
   setVerifiedSeller: (status: boolean) => void;
+  setVerifiedDriver: (status: boolean) => void;
   signInWithGoogle: () => void;
   handleGoogleCallback: (token: string) => Promise<void>;
 }
@@ -35,6 +38,7 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       isAuthenticated: false,
       isVerifiedSeller: false,
+      isVerifiedDriver: false,
 
       setVerifiedSeller: (status: boolean) => {
         set((state) => ({
@@ -43,13 +47,24 @@ export const useAuthStore = create<AuthState>()(
         }));
       },
 
+      setVerifiedDriver: (status: boolean) => {
+        set((state) => ({
+          isVerifiedDriver: status,
+          user: state.user ? { ...state.user, isVerifiedDriver: status } : null,
+        }));
+      },
+
       signIn: async (email: string, password: string) => {
         const response = await api.post("/auth/login", { email, password });
         set({
           token: response.data.token,
-          user: response.data.user,
+          user: {
+            ...response.data.user,
+            role: response.data.user.role || [],
+          },
           isAuthenticated: true,
           isVerifiedSeller: response.data.user.isVerifiedSeller || false,
+          isVerifiedDriver: response.data.user.isVerifiedDriver || false,
         });
         api.defaults.headers.common["Authorization"] = `Bearer ${response.data.token}`;
       },
@@ -65,6 +80,7 @@ export const useAuthStore = create<AuthState>()(
           user: response.data.user,
           isAuthenticated: true,
           isVerifiedSeller: false,
+          isVerifiedDriver: false,
         });
         api.defaults.headers.common["Authorization"] = `Bearer ${response.data.token}`;
       },
@@ -75,6 +91,7 @@ export const useAuthStore = create<AuthState>()(
           user: null,
           isAuthenticated: false,
           isVerifiedSeller: false,
+          isVerifiedDriver: false,
         });
         delete api.defaults.headers.common["Authorization"];
       },
@@ -92,6 +109,7 @@ export const useAuthStore = create<AuthState>()(
           user: response.data,
           isAuthenticated: true,
           isVerifiedSeller: response.data.isVerifiedSeller || false,
+          isVerifiedDriver: response.data.isVerifiedDriver || false,
         });
         api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
       },

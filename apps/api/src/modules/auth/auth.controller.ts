@@ -17,6 +17,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { AuthGuard } from '@nestjs/passport';
 import type { Response } from 'express';
 import { ConfigService } from '@nestjs/config';
+import { UserDto } from './dto/user.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -38,8 +39,9 @@ export class AuthController {
 
   @UseGuards(JwtAuthGuard)
   @Get('me')
-  getProfile(@Request() req) {
-    return req.user;
+  getProfile(@Request() req): UserDto {
+    const { password, ...user } = req.user;
+    return user;
   }
 
   @Get('health')

@@ -20,17 +20,17 @@ export interface DriverFormData {
 
   // License Information
   licenseNumber: string;
-  licenseType: string;
+  licenseType: LicenseType;
   licenseExpiry: string;
 
   // Vehicle Information
-  vehicleType: string;
+  vehicleType: VehicleType;
   make: string;
   model: string;
-  year: string;
+  year: number;
   plateNumber: string;
-  capacity: string;
-  maxWeight: string;
+  capacity: number;
+  maxWeight: number;
   currentStatus: VehicleStatus;
   lastMaintenance: Date;
   nextMaintenance: Date;

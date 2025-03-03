@@ -64,7 +64,7 @@ export class SellersService {
       this.prisma.user.update({
         where: { id: userId },
         data: { 
-          role: Role.SELLER,
+          role: [Role.SELLER],
           isVerifiedSeller: true,
         },
       }),
@@ -230,12 +230,12 @@ export class SellersService {
     const orderMetrics = {
       total: orders.length,
       totalAmount: orders.reduce((sum, order) => sum + order.totalAmount, 0),
-      pending: orders.filter(o => o.status === 'PENDING').length,
-      processing: orders.filter(o => o.status === 'PROCESSING').length,
-      readyForPickup: orders.filter(o => o.status === 'READY_FOR_PICKUP').length,
-      inTransit: orders.filter(o => o.status === 'IN_TRANSIT').length,
-      delivered: orders.filter(o => o.status === 'DELIVERED').length,
-      cancelled: orders.filter(o => o.status === 'CANCELLED').length,
+      pending: orders.filter(o => o.status === OrderStatus.PENDING).length,
+      processing: orders.filter(o => o.status === OrderStatus.ASSIGNED_TO_BATCH).length,
+      readyForPickup: orders.filter(o => o.status === OrderStatus.PICKUP_COMPLETE).length,
+      inTransit: orders.filter(o => o.status === OrderStatus.IN_TRANSIT).length,
+      delivered: orders.filter(o => o.status === OrderStatus.DELIVERED).length,
+      cancelled: orders.filter(o => o.status === OrderStatus.CANCELLED).length,
     };
 
     const productMetrics = {

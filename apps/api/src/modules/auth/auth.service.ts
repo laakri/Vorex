@@ -33,8 +33,9 @@ export class AuthService {
         email: dto.email,
         password: hashedPassword,
         fullName: dto.fullName,
-        role: Role.SELLER,
+        role: [Role.SELLER],
         isVerifiedSeller: false,
+        isVerifiedDriver: false,
       },
       select: {
         id: true,
@@ -66,6 +67,7 @@ export class AuthService {
         role: true,
         password: true,
         isVerifiedSeller: true,
+        isVerifiedDriver: true,
       },
     });
 

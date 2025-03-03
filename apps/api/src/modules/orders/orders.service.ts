@@ -188,7 +188,7 @@ export class OrdersService {
 
     return this.prisma.order.update({
       where: { id },
-      data: { status },
+      data: { status }, 
       include: {
         items: {
           include: {

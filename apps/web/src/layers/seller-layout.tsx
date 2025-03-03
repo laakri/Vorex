@@ -11,13 +11,11 @@ import {
   ChevronLeft,
   Brain,
 } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useState } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { AiChat } from "@/pages/seller/ai-chat";
 import { useAuthStore } from "@/stores/auth.store";
-import { useQuery } from "@tanstack/react-query";
-import api from "@/lib/axios";
 import { Badge } from "@/components/ui/badge";
 
 const menuItems = [
@@ -43,26 +41,10 @@ const menuItems = [
   },
 ];
 
-interface UserData {
-  id: string;
-  fullName: string;
-  email: string;
-  avatar?: string;
-  role: 'SELLER' | 'ADMIN' | 'WAREHOUSE_MANAGER' | 'DRIVER';
-}
-
 export function SellerLayout() {
   const location = useLocation();
-  const { logout } = useAuthStore();
+  const { logout, user } = useAuthStore();
   const [collapsed, setCollapsed] = useState(false);
-
-  const { data: userData } = useQuery<UserData>({
-    queryKey: ["userData"],
-    queryFn: async () => {
-      const response = await api.get("/users/me");
-      return response.data;
-    },
-  });
 
   const getInitials = (name?: string) => {
     if (!name) return "U";
@@ -135,32 +117,26 @@ export function SellerLayout() {
 
         {/* User Profile - Fixed height */}
         <div className="border-t shrink-0">
-          <div
-            className={cn(
-              "flex items-center gap-3 p-4",
-              collapsed && "justify-center"
-            )}
-          >
-            {!collapsed && (
+          <div className={cn("flex items-center gap-3 p-4", collapsed && "justify-center")}>
+            {!collapsed && user && (
               <>
                 <Avatar className="h-9 w-9 shrink-0">
-                  <AvatarImage src={userData?.avatar} />
-                  <AvatarFallback>{getInitials(userData?.fullName)}</AvatarFallback>
+                  <AvatarFallback>{getInitials(user.fullName)}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1 overflow-hidden">
                   <div className="flex items-center gap-2">
                     <p className="text-sm font-medium leading-none truncate">
-                      {userData?.fullName || "Loading..."}
+                      {user.fullName || "Loading..."}
                     </p>
                     <Badge 
                       variant="outline"
                       className="px-1 h-4 text-[10px] font-medium border-primary/20 text-primary"
                     >
-                      {userData?.role?.split('_').join(' ').toLowerCase()}
+                      {user.role ? (Array.isArray(user.role) ? user.role.join(", ") : user.role).toLowerCase() : "Loading..."}
                     </Badge>
                   </div>
                   <p className="text-xs text-muted-foreground mt-1 truncate">
-                    {userData?.email || "Loading..."}
+                    {user.email || "Loading..."}
                   </p>
                 </div>
                 <Button
@@ -179,15 +155,14 @@ export function SellerLayout() {
             {collapsed && (
               <div className="group relative">
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src={userData?.avatar} />
-                  <AvatarFallback>{getInitials(userData?.fullName)}</AvatarFallback>
+                  <AvatarFallback>{getInitials(user?.fullName)}</AvatarFallback>
                 </Avatar>
                 <div className="absolute left-full ml-2 pl-1 invisible group-hover:visible">
                   <Badge 
                     variant="outline"
                     className="whitespace-nowrap px-1 h-4 text-[10px] font-medium border-primary/20 text-primary"
                   >
-                    {userData?.role?.split('_').join(' ').toLowerCase()}
+                    {user?.role ? (Array.isArray(user.role) ? user.role.join(", ") : user.role).toLowerCase() : "Loading..."}
                   </Badge>
                 </div>
               </div>

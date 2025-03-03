@@ -20,7 +20,7 @@ CREATE TYPE "VehicleType" AS ENUM ('MOTORCYCLE', 'CAR', 'VAN', 'SMALL_TRUCK', 'L
 CREATE TYPE "VehicleStatus" AS ENUM ('ACTIVE', 'MAINTENANCE', 'REPAIR', 'OUT_OF_SERVICE');
 
 -- CreateEnum
-CREATE TYPE "OrderStatus" AS ENUM ('PENDING', 'PROCESSING', 'READY_FOR_PICKUP', 'IN_TRANSIT', 'DELIVERED', 'CANCELLED');
+CREATE TYPE "OrderStatus" AS ENUM ('PENDING', 'ASSIGNED_TO_BATCH', 'PICKUP_COMPLETE', 'IN_TRANSIT', 'AT_DESTINATION_WH', 'OUT_FOR_DELIVERY', 'DELIVERED', 'CANCELLED');
 
 -- CreateEnum
 CREATE TYPE "DeliveryStatus" AS ENUM ('PENDING', 'PICKED_UP', 'IN_TRANSIT', 'DELIVERED', 'FAILED', 'CANCELLED');
@@ -31,17 +31,20 @@ CREATE TYPE "RouteStatus" AS ENUM ('PENDING', 'IN_PROGRESS', 'COMPLETED', 'CANCE
 -- CreateEnum
 CREATE TYPE "RefundStatus" AS ENUM ('PENDING', 'APPROVED', 'REJECTED');
 
+-- CreateEnum
+CREATE TYPE "BatchType" AS ENUM ('LOCAL_PICKUP', 'LOCAL_DELIVERY', 'INTERCITY');
+
+-- CreateEnum
+CREATE TYPE "BatchStatus" AS ENUM ('COLLECTING', 'READY', 'PROCESSING', 'COMPLETED', 'CANCELLED');
+
 -- CreateTable
 CREATE TABLE "User" (
     "id" TEXT NOT NULL,
     "fullName" TEXT NOT NULL,
     "email" TEXT NOT NULL,
     "password" TEXT NOT NULL,
-    "role" "Role" NOT NULL,
+    "role" "Role"[],
     "isVerifiedSeller" BOOLEAN NOT NULL DEFAULT false,
-    "isVerifiedDriver" BOOLEAN NOT NULL DEFAULT false,
-    "isVerifiedAdmin" BOOLEAN NOT NULL DEFAULT false,
-    "isVerifiedWarehouse" BOOLEAN NOT NULL DEFAULT false,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -66,6 +69,8 @@ CREATE TABLE "Seller" (
     "isVerified" BOOLEAN NOT NULL DEFAULT false,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
+    "latitude" DOUBLE PRECISION,
+    "longitude" DOUBLE PRECISION,
 
     CONSTRAINT "Seller_pkey" PRIMARY KEY ("id")
 );
@@ -105,6 +110,12 @@ CREATE TABLE "Order" (
     "notes" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
+    "pickupLatitude" DOUBLE PRECISION,
+    "pickupLongitude" DOUBLE PRECISION,
+    "dropLatitude" DOUBLE PRECISION,
+    "dropLongitude" DOUBLE PRECISION,
+    "isLocalDelivery" BOOLEAN NOT NULL DEFAULT false,
+    "batchId" TEXT,
 
     CONSTRAINT "Order_pkey" PRIMARY KEY ("id")
 );
@@ -157,6 +168,9 @@ CREATE TABLE "Warehouse" (
     "currentLoad" DOUBLE PRECISION NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
+    "latitude" DOUBLE PRECISION NOT NULL,
+    "longitude" DOUBLE PRECISION NOT NULL,
+    "coverageGovernorate" TEXT[],
 
     CONSTRAINT "Warehouse_pkey" PRIMARY KEY ("id")
 );
@@ -205,8 +219,6 @@ CREATE TABLE "Driver" (
     "governorate" TEXT NOT NULL,
     "phone" TEXT NOT NULL,
     "emergencyContact" TEXT NOT NULL,
-    "availabilityStatus" "DriverStatus" NOT NULL,
-    "deliveryZones" TEXT[],
     "rating" DOUBLE PRECISION NOT NULL DEFAULT 0,
     "totalDeliveries" INTEGER NOT NULL DEFAULT 0,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -250,32 +262,6 @@ CREATE TABLE "InsuranceInfo" (
 );
 
 -- CreateTable
-CREATE TABLE "DriverDocument" (
-    "id" TEXT NOT NULL,
-    "driverId" TEXT NOT NULL,
-    "type" TEXT NOT NULL,
-    "url" TEXT NOT NULL,
-    "verified" BOOLEAN NOT NULL DEFAULT false,
-    "expiryDate" TIMESTAMP(3),
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "DriverDocument_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "Document" (
-    "id" TEXT NOT NULL,
-    "sellerId" TEXT NOT NULL,
-    "type" TEXT NOT NULL,
-    "url" TEXT NOT NULL,
-    "verified" BOOLEAN NOT NULL DEFAULT false,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "Document_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
 CREATE TABLE "Delivery" (
     "id" TEXT NOT NULL,
     "orderId" TEXT NOT NULL,
@@ -298,7 +284,7 @@ CREATE TABLE "Delivery" (
 -- CreateTable
 CREATE TABLE "DeliveryRoute" (
     "id" TEXT NOT NULL,
-    "driverId" TEXT NOT NULL,
+    "driverId" TEXT,
     "fromWarehouseId" TEXT NOT NULL,
     "toAddress" TEXT NOT NULL,
     "toCity" TEXT NOT NULL,
@@ -368,6 +354,26 @@ CREATE TABLE "Refund" (
     CONSTRAINT "Refund_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "Batch" (
+    "id" TEXT NOT NULL,
+    "type" "BatchType" NOT NULL,
+    "status" "BatchStatus" NOT NULL DEFAULT 'COLLECTING',
+    "warehouseId" TEXT NOT NULL,
+    "driverId" TEXT,
+    "routeId" TEXT,
+    "totalWeight" DOUBLE PRECISION NOT NULL,
+    "totalVolume" DOUBLE PRECISION NOT NULL,
+    "orderCount" INTEGER NOT NULL,
+    "vehicleType" "VehicleType" NOT NULL,
+    "scheduledTime" TIMESTAMP(3),
+    "completedTime" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Batch_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 
@@ -407,6 +413,9 @@ CREATE UNIQUE INDEX "Rating_orderId_key" ON "Rating"("orderId");
 -- CreateIndex
 CREATE UNIQUE INDEX "Refund_orderId_key" ON "Refund"("orderId");
 
+-- CreateIndex
+CREATE UNIQUE INDEX "Batch_routeId_key" ON "Batch"("routeId");
+
 -- AddForeignKey
 ALTER TABLE "Seller" ADD CONSTRAINT "Seller_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
@@ -418,6 +427,9 @@ ALTER TABLE "Order" ADD CONSTRAINT "Order_sellerId_fkey" FOREIGN KEY ("sellerId"
 
 -- AddForeignKey
 ALTER TABLE "Order" ADD CONSTRAINT "Order_warehouseId_fkey" FOREIGN KEY ("warehouseId") REFERENCES "Warehouse"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Order" ADD CONSTRAINT "Order_batchId_fkey" FOREIGN KEY ("batchId") REFERENCES "Batch"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "OrderItem" ADD CONSTRAINT "OrderItem_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "Order"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -447,12 +459,6 @@ ALTER TABLE "Driver" ADD CONSTRAINT "Driver_vehicleId_fkey" FOREIGN KEY ("vehicl
 ALTER TABLE "InsuranceInfo" ADD CONSTRAINT "InsuranceInfo_vehicleId_fkey" FOREIGN KEY ("vehicleId") REFERENCES "Vehicle"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "DriverDocument" ADD CONSTRAINT "DriverDocument_driverId_fkey" FOREIGN KEY ("driverId") REFERENCES "Driver"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Document" ADD CONSTRAINT "Document_sellerId_fkey" FOREIGN KEY ("sellerId") REFERENCES "Seller"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "Delivery" ADD CONSTRAINT "Delivery_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "Order"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -462,7 +468,7 @@ ALTER TABLE "Delivery" ADD CONSTRAINT "Delivery_driverId_fkey" FOREIGN KEY ("dri
 ALTER TABLE "Delivery" ADD CONSTRAINT "Delivery_routeId_fkey" FOREIGN KEY ("routeId") REFERENCES "DeliveryRoute"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "DeliveryRoute" ADD CONSTRAINT "DeliveryRoute_driverId_fkey" FOREIGN KEY ("driverId") REFERENCES "Driver"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "DeliveryRoute" ADD CONSTRAINT "DeliveryRoute_driverId_fkey" FOREIGN KEY ("driverId") REFERENCES "Driver"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "DeliveryRoute" ADD CONSTRAINT "DeliveryRoute_fromWarehouseId_fkey" FOREIGN KEY ("fromWarehouseId") REFERENCES "Warehouse"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -478,3 +484,12 @@ ALTER TABLE "Rating" ADD CONSTRAINT "Rating_orderId_fkey" FOREIGN KEY ("orderId"
 
 -- AddForeignKey
 ALTER TABLE "Refund" ADD CONSTRAINT "Refund_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "Order"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Batch" ADD CONSTRAINT "Batch_warehouseId_fkey" FOREIGN KEY ("warehouseId") REFERENCES "Warehouse"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Batch" ADD CONSTRAINT "Batch_driverId_fkey" FOREIGN KEY ("driverId") REFERENCES "Driver"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Batch" ADD CONSTRAINT "Batch_routeId_fkey" FOREIGN KEY ("routeId") REFERENCES "DeliveryRoute"("id") ON DELETE SET NULL ON UPDATE CASCADE;

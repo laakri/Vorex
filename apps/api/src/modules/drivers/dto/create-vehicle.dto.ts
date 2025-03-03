@@ -24,8 +24,7 @@ export class CreateVehicleDto {
   @IsNumber()
   maxWeight: number;
 
-  @IsEnum(VehicleStatus)
-  currentStatus: VehicleStatus;
+ 
 
   @IsDate()
   @Type(() => Date)

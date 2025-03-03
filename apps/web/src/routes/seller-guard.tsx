@@ -13,7 +13,7 @@ export function SellerGuard({ children }: SellerGuardProps) {
   useEffect(() => {
     if (!isAuthenticated) {
       navigate("/auth/sign-in");
-    } else if (user?.role !== "SELLER") {
+    } else if (!user?.role.includes("SELLER")) {
       navigate("/unauthorized");
     } else if (!isVerifiedSeller) {
       navigate("/seller/onboarding");

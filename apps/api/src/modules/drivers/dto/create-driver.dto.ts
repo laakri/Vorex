@@ -3,8 +3,7 @@ import { Type } from 'class-transformer';
 import { LicenseType } from '@prisma/client';
 
 export class CreateDriverDto {
-  @IsString()
-  userId: string;
+ 
 
   @IsString()
   licenseNumber: string;

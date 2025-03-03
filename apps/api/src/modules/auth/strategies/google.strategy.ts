@@ -62,7 +62,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
           email,
           fullName: `${firstName} ${lastName}`.trim(),
           password: '', 
-          role: Role.SELLER,
+          role: [Role.SELLER],
         },
         include: {
           seller: true
