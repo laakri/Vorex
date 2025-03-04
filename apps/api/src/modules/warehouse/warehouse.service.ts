@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
 import { CreateWarehouseDto } from './dto/create-warehouse.dto';
+import { Warehouse } from '@prisma/client';
 
 @Injectable()
 export class WarehouseService {
@@ -19,6 +20,17 @@ export class WarehouseService {
         currentLoad: 0,
         latitude: createWarehouseDto.latitude,
         longitude: createWarehouseDto.longitude,
+      },
+    });
+  }
+  async getWarehouses(): Promise<Warehouse[]> {
+    return this.prisma.warehouse.findMany({
+      include: {
+        managers: true, // Include related managers if needed
+        sections: true, // Include related sections if needed
+      },
+      orderBy: {
+        createdAt: 'desc', // Order by creation date
       },
     });
   }
