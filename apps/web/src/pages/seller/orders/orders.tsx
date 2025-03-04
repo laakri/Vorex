@@ -27,14 +27,28 @@ import api from "@/lib/axios";
 import { Button } from "@/components/ui/button";
 import { AddOrderDialog } from "./add-order-dialog";
 import React from "react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 // Enums
 export enum OrderStatus {
   PENDING = 'PENDING',
-  PROCESSING = 'PROCESSING',
-  READY_FOR_PICKUP = 'READY_FOR_PICKUP',
-  IN_TRANSIT = 'IN_TRANSIT',
-  DELIVERED = 'DELIVERED',
+  LOCAL_ASSIGNED_TO_PICKUP = 'LOCAL_ASSIGNED_TO_PICKUP',
+  LOCAL_PICKED_UP = 'LOCAL_PICKED_UP',
+  LOCAL_DELIVERED = 'LOCAL_DELIVERED',
+  CITY_ASSIGNED_TO_PICKUP = 'CITY_ASSIGNED_TO_PICKUP',
+  CITY_PICKED_UP = 'CITY_PICKED_UP',
+  CITY_IN_TRANSIT_TO_WAREHOUSE = 'CITY_IN_TRANSIT_TO_WAREHOUSE',
+  CITY_ARRIVED_AT_SOURCE_WAREHOUSE = 'CITY_ARRIVED_AT_SOURCE_WAREHOUSE',
+  CITY_READY_FOR_INTERCITY_TRANSFER = 'CITY_READY_FOR_INTERCITY_TRANSFER',
+  CITY_IN_TRANSIT_TO_DESTINATION_WAREHOUSE = 'CITY_IN_TRANSIT_TO_DESTINATION_WAREHOUSE',
+  CITY_ARRIVED_AT_DESTINATION_WAREHOUSE = 'CITY_ARRIVED_AT_DESTINATION_WAREHOUSE',
+  CITY_READY_FOR_LOCAL_DELIVERY = 'CITY_READY_FOR_LOCAL_DELIVERY',
+  CITY_DELIVERED = 'CITY_DELIVERED',
   CANCELLED = 'CANCELLED'
 }
 
@@ -59,8 +73,6 @@ interface Order {
   items: OrderItem[];
 }
 
-
-
 interface StatusConfig {
   label: string;
   color: string;
@@ -75,10 +87,18 @@ interface OrderStats {
 // Constants
 const ORDER_STATUSES: Record<OrderStatus, StatusConfig> = {
   [OrderStatus.PENDING]: { label: 'Pending', color: 'bg-yellow-500' },
-  [OrderStatus.PROCESSING]: { label: 'Processing', color: 'bg-blue-500' },
-  [OrderStatus.READY_FOR_PICKUP]: { label: 'Ready for Pickup', color: 'bg-purple-500' },
-  [OrderStatus.IN_TRANSIT]: { label: 'In Transit', color: 'bg-indigo-500' },
-  [OrderStatus.DELIVERED]: { label: 'Delivered', color: 'bg-green-500' },
+  [OrderStatus.LOCAL_ASSIGNED_TO_PICKUP]: { label: 'Local Assigned to Pickup', color: 'bg-blue-500' },
+  [OrderStatus.LOCAL_PICKED_UP]: { label: 'Local Picked Up', color: 'bg-purple-500' },
+  [OrderStatus.LOCAL_DELIVERED]: { label: 'Local Delivered', color: 'bg-green-500' },
+  [OrderStatus.CITY_ASSIGNED_TO_PICKUP]: { label: 'City Assigned to Pickup', color: 'bg-orange-500' },
+  [OrderStatus.CITY_PICKED_UP]: { label: 'City Picked Up', color: 'bg-indigo-500' },
+  [OrderStatus.CITY_IN_TRANSIT_TO_WAREHOUSE]: { label: 'City In Transit to Warehouse', color: 'bg-teal-500' },
+  [OrderStatus.CITY_ARRIVED_AT_SOURCE_WAREHOUSE]: { label: 'City Arrived at Source Warehouse', color: 'bg-gray-500' },
+  [OrderStatus.CITY_READY_FOR_INTERCITY_TRANSFER]: { label: 'City Ready for Intercity Transfer', color: 'bg-pink-500' },
+  [OrderStatus.CITY_IN_TRANSIT_TO_DESTINATION_WAREHOUSE]: { label: 'City In Transit to Destination Warehouse', color: 'bg-lime-500' },
+  [OrderStatus.CITY_ARRIVED_AT_DESTINATION_WAREHOUSE]: { label: 'City Arrived at Destination Warehouse', color: 'bg-rose-500' },
+  [OrderStatus.CITY_READY_FOR_LOCAL_DELIVERY]: { label: 'City Ready for Local Delivery', color: 'bg-emerald-500' },
+  [OrderStatus.CITY_DELIVERED]: { label: 'City Delivered', color: 'bg-green-700' },
   [OrderStatus.CANCELLED]: { label: 'Cancelled', color: 'bg-red-500' },
 };
 
@@ -108,7 +128,7 @@ export function OrdersPage(): JSX.Element {
   const stats: OrderStats = {
     total: orders.length,
     pending: orders.filter(order => order.status === OrderStatus.PENDING).length,
-    inTransit: orders.filter(order => order.status === OrderStatus.IN_TRANSIT).length,
+    inTransit: orders.filter(order => order.status === OrderStatus.CITY_IN_TRANSIT_TO_WAREHOUSE || order.status === OrderStatus.CITY_IN_TRANSIT_TO_DESTINATION_WAREHOUSE).length,
   };
 
   // Filters
@@ -134,10 +154,18 @@ export function OrdersPage(): JSX.Element {
   // Status order for display
   const statusOrder: OrderStatus[] = [
     OrderStatus.PENDING,
-    OrderStatus.PROCESSING,
-    OrderStatus.READY_FOR_PICKUP,
-    OrderStatus.IN_TRANSIT,
-    OrderStatus.DELIVERED,
+    OrderStatus.LOCAL_ASSIGNED_TO_PICKUP,
+    OrderStatus.LOCAL_PICKED_UP,
+    OrderStatus.LOCAL_DELIVERED,
+    OrderStatus.CITY_ASSIGNED_TO_PICKUP,
+    OrderStatus.CITY_PICKED_UP,
+    OrderStatus.CITY_IN_TRANSIT_TO_WAREHOUSE,
+    OrderStatus.CITY_ARRIVED_AT_SOURCE_WAREHOUSE,
+    OrderStatus.CITY_READY_FOR_INTERCITY_TRANSFER,
+    OrderStatus.CITY_IN_TRANSIT_TO_DESTINATION_WAREHOUSE,
+    OrderStatus.CITY_ARRIVED_AT_DESTINATION_WAREHOUSE,
+    OrderStatus.CITY_READY_FOR_LOCAL_DELIVERY,
+    OrderStatus.CITY_DELIVERED,
     OrderStatus.CANCELLED
   ];
 
@@ -281,9 +309,18 @@ export function OrdersPage(): JSX.Element {
                         <TableCell>
                           <div>
                             <div className="font-medium">{order.customerName}</div>
-                            <div className="text-sm text-muted-foreground">
-                              {order.customerEmail}
-                            </div>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger>
+                                  <div className="text-sm text-muted-foreground truncate max-w-[150px]">
+                                    {order.customerEmail}
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>{order.customerEmail}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                           </div>
                         </TableCell>
                         <TableCell>

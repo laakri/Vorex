@@ -67,24 +67,22 @@ enum VehicleStatus {
 }
 
 enum OrderStatus {
-  PENDING           // Initial state
-  ASSIGNED_TO_BATCH // Order is assigned to a pickup batch
-  PICKUP_COMPLETE   // Order has been picked up and is at source warehouse
-  IN_TRANSIT       // Order is in transit between warehouses
-  AT_DESTINATION_WH // Order has arrived at destination warehouse
-  OUT_FOR_DELIVERY  // Order is in a local delivery batch
-  DELIVERED        
+  PENDING
+  LOCAL_ASSIGNED_TO_PICKUP
+  LOCAL_PICKED_UP
+  LOCAL_DELIVERED
+  CITY_ASSIGNED_TO_PICKUP
+  CITY_PICKED_UP
+  CITY_IN_TRANSIT_TO_WAREHOUSE
+  CITY_ARRIVED_AT_SOURCE_WAREHOUSE
+  CITY_READY_FOR_INTERCITY_TRANSFER
+  CITY_IN_TRANSIT_TO_DESTINATION_WAREHOUSE
+  CITY_ARRIVED_AT_DESTINATION_WAREHOUSE
+  CITY_READY_FOR_LOCAL_DELIVERY
+  CITY_DELIVERED
   CANCELLED
 }
 
-enum DeliveryStatus {
-  PENDING
-  PICKED_UP
-  IN_TRANSIT
-  DELIVERED
-  FAILED
-  CANCELLED
-}
 
 enum RouteStatus {
   PENDING
@@ -203,7 +201,6 @@ model Order {
   seller     Seller       @relation(fields: [sellerId], references: [id])
   warehouse  Warehouse?   @relation(fields: [warehouseId], references: [id])
   items      OrderItem[]
-  delivery   Delivery?
   rating     Rating?
   refund     Refund?
   batch      Batch?        @relation(fields: [batchId], references: [id])
@@ -324,7 +321,6 @@ model Driver {
   // Relations
   user       User             @relation(fields: [userId], references: [id])
   vehicle    Vehicle?         @relation(fields: [vehicleId], references: [id])
-  deliveries Delivery[]
   routes     DeliveryRoute[]
   batches    Batch[]
 }
@@ -364,30 +360,6 @@ model InsuranceInfo {
   vehicle Vehicle @relation(fields: [vehicleId], references: [id])
 }
 
-
-
-model Delivery {
-  id              String         @id @default(cuid())
-  orderId         String         @unique
-  driverId        String
-  routeId         String
-  status          DeliveryStatus
-  scheduledTime   DateTime
-  startTime       DateTime?
-  completionTime  DateTime?
-  recipientName   String
-  recipientPhone  String
-  notes           String?
-  proofOfDelivery String?
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-
-  // Relations
-  order  Order         @relation(fields: [orderId], references: [id])
-  driver Driver        @relation(fields: [driverId], references: [id])
-  route  DeliveryRoute @relation(fields: [routeId], references: [id])
-}
-
 model DeliveryRoute {
   id              String      @id @default(cuid())
   driverId        String?     // Make driverId optional
@@ -406,7 +378,6 @@ model DeliveryRoute {
   // Relations
   driver        Driver?    @relation(fields: [driverId], references: [id])  // Make relation optional
   fromWarehouse Warehouse  @relation("FromWarehouse", fields: [fromWarehouseId], references: [id])
-  deliveries    Delivery[]
   batch         Batch?     // One-to-one relation with Batch
 }
 

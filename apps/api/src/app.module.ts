@@ -11,6 +11,8 @@ import { OrdersModule } from './modules/orders/orders.module';
 import { AiModule } from './modules/ai/ai.module';
 import { DriversModule } from './modules/drivers/drivers.module';
 import { BatchModule } from './modules/batches/batch.module';
+import { WarehouseModule } from './modules/warehouse/warehouse.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -25,6 +27,7 @@ import { BatchModule } from './modules/batches/batch.module';
     ProductsModule,
     OrdersModule,
     AiModule,
+    WarehouseModule,
     BatchModule,
   ],
   controllers: [AppController],
