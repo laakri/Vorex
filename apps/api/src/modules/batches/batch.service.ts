@@ -9,6 +9,7 @@ import {
   OrderItem,
   VehicleType,
   Batch,
+  Warehouse,
 } from '@prisma/client';
 
 type OrderWithItems = Order & {
@@ -53,7 +54,7 @@ export class BatchService {
 
   constructor(private prisma: PrismaService) {}
 
-  @Cron('*/30 * * * *')
+  @Cron('*/30 * * * * *')
   async processBatches() {
     this.logger.log('Starting batch processing...');
     try {
@@ -117,8 +118,18 @@ export class BatchService {
       }
     });
 
-    const ordersByWarehouse = this.groupOrdersByDestinationWarehouse(readyForDeliveryOrders);
-    await this.createBatchesForOrders(ordersByWarehouse, BatchType.LOCAL_DELIVERY, OrderStatus.CITY_READY_FOR_LOCAL_DELIVERY);
+    for (const order of readyForDeliveryOrders) {
+      const sellerLocation = { governorate: order.governorate }; // Assuming order has governorate
+      const buyerLocation = { governorate: order.city }; // Assuming city is used for buyer's governorate
+
+      const warehouse = await this.findWarehouse(sellerLocation, buyerLocation);
+      if (warehouse) {
+        // Proceed with creating batches using the found warehouse
+        // ...
+      } else {
+        this.logger.warn(`No suitable warehouse found for order ${order.id}`);
+      }
+    }
   }
 
   private async createBatchesForOrders(
@@ -285,5 +296,17 @@ export class BatchService {
         createdAt: 'desc', // Order by creation date
       },
     });
+  }
+
+  async findWarehouse(sellerLocation: { governorate: string }, buyerLocation: { governorate: string }): Promise<Warehouse | null> {
+    const warehouses = await this.prisma.warehouse.findMany();
+
+    // Check for a warehouse that covers the seller's and buyer's governorates
+    const suitableWarehouse = warehouses.find(warehouse => 
+      warehouse.coverageGovernorate.includes(sellerLocation.governorate) &&
+      warehouse.coverageGovernorate.includes(buyerLocation.governorate)
+    );
+
+    return suitableWarehouse || null; // Return the found warehouse or null if none found
   }
 }
