@@ -11,7 +11,8 @@ const tunisianRegions = {
   'Manouba': ['Manouba', 'Den Den', 'Douar Hicher', 'Oued Ellil'],
   'Nabeul': ['Nabeul', 'Hammamet', 'Dar Chaabane', 'Kelibia'],
   'Sousse': ['Sousse', 'Msaken', 'Kalaa Kebira', 'Enfidha'],
-  'Monastir': ['Monastir', 'Moknine', 'Jemmal', 'Ksar Hellal']
+  'Monastir': ['Monastir', 'Moknine', 'Jemmal', 'Ksar Hellal'],
+  'Sfax': ['Sfax', 'Kerkennah', 'Mahrès', 'Jebiniana'],
 };
 
 const generateOrder = async (sellerId: string, products: any[]) => {
@@ -36,36 +37,29 @@ const generateOrder = async (sellerId: string, products: any[]) => {
 
   const totalAmount = orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
-  // Set date range from January 1st, 2025
-  const startDate = new Date('2025-01-01T00:00:00Z');
-  const now = new Date();
-
   return {
     sellerId,
-    status: faker.helpers.arrayElement(Object.values(OrderStatus)),
+    status: faker.helpers.arrayElement(Object.values(OrderStatus)), // Use the new OrderStatus enum
     totalAmount,
     address: faker.location.streetAddress(),
     city,
     governorate,
     postalCode: faker.number.int({ min: 1000, max: 9999 }).toString(),
-    phone: faker.phone.number({ style: 'international' }).replace(/[^0-9+]/g, ''),
+    phone: faker.phone.number({ style: 'international' }),
     customerName: faker.person.fullName(),
     customerEmail: faker.internet.email(),
     notes: faker.helpers.maybe(() => faker.lorem.sentence(), { probability: 0.3 }),
     items: {
       create: orderItems
     },
-    createdAt: faker.date.between({ 
-      from: startDate,
-      to: now 
-    }),
+    createdAt: faker.date.past({ years: 1 }), // Orders within the last year
     updatedAt: faker.date.recent()
   };
 };
 
 async function main() {
   try {
-    const SELLER_USER_ID = 'cm7buv9we0000datlye1m063z';
+    const SELLER_USER_ID = 'cm7sxtbh00000dazygnv6uruw'; // Same as products seed
 
     // Get the seller
     const seller = await prisma.seller.findUnique({
@@ -91,13 +85,13 @@ async function main() {
     });
 
     if (products.length === 0) {
-      throw new Error('No products found for seller');
+      throw new Error('No products found for seller. Run product seed first.');
     }
 
     console.log(`Found ${products.length} products`);
 
-    // Generate and insert 100 orders within the last 30 days
-    const NUM_ORDERS = 100;
+    // Generate and insert 200 orders
+    const NUM_ORDERS = 200;
     console.log(`Generating ${NUM_ORDERS} new orders...`);
 
     for (let i = 0; i < NUM_ORDERS; i++) {
@@ -131,4 +125,4 @@ async function main() {
   }
 }
 
-main(); 
+main();

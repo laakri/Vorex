@@ -5,11 +5,10 @@ import {
   BatchStatus, 
   BatchType, 
   OrderStatus, 
-  RouteStatus, 
   Order,
   OrderItem,
-  DeliveryStatus,
   VehicleType,
+  Batch,
 } from '@prisma/client';
 
 type OrderWithItems = Order & {
@@ -82,13 +81,13 @@ export class BatchService {
     });
 
     const ordersByWarehouse = this.groupOrdersByNearestWarehouse(pendingOrders);
-    await this.createBatchesForOrders(ordersByWarehouse, BatchType.LOCAL_PICKUP);
+    await this.createBatchesForOrders(ordersByWarehouse, BatchType.LOCAL_PICKUP, OrderStatus.LOCAL_ASSIGNED_TO_PICKUP);
   }
 
   private async processIntercityTransfers() {
     const readyForTransferOrders = await this.prisma.order.findMany({
       where: {
-        status: OrderStatus.PICKUP_COMPLETE,
+        status: OrderStatus.CITY_READY_FOR_INTERCITY_TRANSFER,
         batchId: null,
         isLocalDelivery: false
       },
@@ -101,13 +100,13 @@ export class BatchService {
     });
 
     const ordersByWarehouse = this.groupOrdersBySourceWarehouse(readyForTransferOrders);
-    await this.createBatchesForOrders(ordersByWarehouse, BatchType.INTERCITY);
+    await this.createBatchesForOrders(ordersByWarehouse, BatchType.INTERCITY, OrderStatus.CITY_IN_TRANSIT_TO_WAREHOUSE);
   }
 
   private async processLocalDeliveries() {
     const readyForDeliveryOrders = await this.prisma.order.findMany({
       where: {
-        status: OrderStatus.AT_DESTINATION_WH,
+        status: OrderStatus.CITY_ARRIVED_AT_DESTINATION_WAREHOUSE,
         batchId: null
       },
       include: {
@@ -119,19 +118,20 @@ export class BatchService {
     });
 
     const ordersByWarehouse = this.groupOrdersByDestinationWarehouse(readyForDeliveryOrders);
-    await this.createBatchesForOrders(ordersByWarehouse, BatchType.LOCAL_DELIVERY);
+    await this.createBatchesForOrders(ordersByWarehouse, BatchType.LOCAL_DELIVERY, OrderStatus.CITY_READY_FOR_LOCAL_DELIVERY);
   }
 
   private async createBatchesForOrders(
     ordersByWarehouse: Record<string, OrderWithItems[]>,
-    batchType: BatchType
+    batchType: BatchType,
+    initialStatus: OrderStatus
   ) {
     for (const [warehouseId, orders] of Object.entries(ordersByWarehouse)) {
       if (orders.length >= this.batchConfig.minOrdersForBatch || 
           this.hasAnyExceededWaitTime(orders)) {
         const batches = this.createOptimalBatches(orders, warehouseId);
         for (const batch of batches) {
-          await this.createBatch(batch, batchType);
+          await this.createBatch(batch, batchType, initialStatus);
         }
       }
     }
@@ -177,7 +177,7 @@ export class BatchService {
     return batches;
   }
 
-  private async createBatch(batch: BatchGroup, type: BatchType) {
+  private async createBatch(batch: BatchGroup, type: BatchType, initialStatus: OrderStatus) {
     const vehicleType = this.determineVehicleType(batch.totalWeight, batch.totalVolume);
 
     const createdBatch = await this.prisma.batch.create({
@@ -196,32 +196,18 @@ export class BatchService {
     });
 
     // Update order statuses
-    const newStatus = this.getNewOrderStatus(type);
     await this.prisma.order.updateMany({
       where: {
         id: { in: batch.orders.map(o => o.id) }
       },
       data: { 
-        status: newStatus,
+        status: initialStatus,
         batchId: createdBatch.id
       }
     });
   }
 
-  private getNewOrderStatus(batchType: BatchType): OrderStatus {
-    switch (batchType) {
-      case BatchType.LOCAL_PICKUP:
-        return OrderStatus.ASSIGNED_TO_BATCH;
-      case BatchType.INTERCITY:
-        return OrderStatus.IN_TRANSIT;
-      case BatchType.LOCAL_DELIVERY:
-        return OrderStatus.OUT_FOR_DELIVERY;
-      default:
-        throw new Error(`Invalid batch type: ${batchType}`);
-    }
-  }
-
-  // Helper methods
+  // Helper methods remain unchanged
   private hasExceededWaitTime(createdAt: Date): boolean {
     return (Date.now() - createdAt.getTime()) >= this.batchConfig.maxWaitTime * 60 * 1000;
   }
@@ -271,7 +257,6 @@ export class BatchService {
 
   private groupOrdersByNearestWarehouse(orders: OrderWithItems[]): Record<string, OrderWithItems[]> {
     // Implementation depends on your warehouse coverage logic
-    // For now, returning empty to avoid TypeScript errors
     return {};
   }
 
@@ -290,4 +275,15 @@ export class BatchService {
     // Similar to groupOrdersBySourceWarehouse but using destination warehouse
     return {};
   }
-} 
+
+  async getBatches() {
+    return this.prisma.batch.findMany({
+      include: {
+        orders: true, // Include related orders
+      },
+      orderBy: {
+        createdAt: 'desc', // Order by creation date
+      },
+    });
+  }
+}
