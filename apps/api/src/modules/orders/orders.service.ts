@@ -1,9 +1,8 @@
 import { Injectable, NotFoundException, InternalServerErrorException, ConflictException } from '@nestjs/common';
-import { PrismaService } from 'prisma/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
-import { OrderStatus } from '@/common/enums/order-status.enum';
 import { Prisma } from '@prisma/client';
-import { WAREHOUSE_COVERAGE, Governorate } from '@/config/constants';
+import { PrismaService } from 'prisma/prisma.service';
+import { Governorate, WAREHOUSE_COVERAGE } from '@/config/constants';
 
 @Injectable()
 export class OrdersService {
@@ -21,15 +20,39 @@ export class OrdersService {
     return sellerWarehouse === buyerWarehouse;
   }
 
+  private async getWarehouseId(sellerGovernorate: string): Promise<string | null> {
+    const warehouse = await this.prisma.warehouse.findFirst({
+      where: {
+        coverageGovernorate: {
+          has: sellerGovernorate,
+        },
+      },
+    });
+
+    return warehouse ? warehouse.id : null; // Return the warehouse ID or null if not found
+  }
+
+  private async getSecondaryWarehouseId(buyerGovernorate: string): Promise<string | null> {
+    const warehouse = await this.prisma.warehouse.findFirst({
+      where: {
+        coverageGovernorate: {
+          has: buyerGovernorate,
+        },
+      },
+    });
+
+    return warehouse ? warehouse.id : null; // Return the warehouse ID or null if not found
+  }
+
   async create(userId: string, createOrderDto: CreateOrderDto) {
     try {
       const seller = await this.prisma.seller.findUnique({
         where: { userId },
         select: {
           id: true,
+          governorate: true,
           latitude: true,
           longitude: true,
-          governorate: true
         }
       });
 
@@ -37,12 +60,12 @@ export class OrdersService {
         throw new NotFoundException('Seller not found');
       }
 
-      const isLocal = this.isLocalDelivery(
-        seller.governorate,
-        createOrderDto.governorate
-      );
+      const isLocal = this.isLocalDelivery(seller.governorate, createOrderDto.governorate);
 
-      // Create the order with items in a transaction
+      // Determine warehouse IDs based on seller and buyer locations
+      const warehouseId = await this.getWarehouseId(seller.governorate);
+      const secondaryWarehouseId = await this.getSecondaryWarehouseId(createOrderDto.governorate);
+
       const order = await this.prisma.$transaction(async (prisma) => {
         const order = await prisma.order.create({
           data: {
@@ -57,6 +80,8 @@ export class OrdersService {
             notes: createOrderDto.notes,
             status: 'PENDING',
             totalAmount: createOrderDto.totalAmount,
+            warehouseId,
+            secondaryWarehouseId,
             pickupLatitude: seller.latitude,
             pickupLongitude: seller.longitude,
             dropLatitude: createOrderDto.dropLatitude,
@@ -89,7 +114,6 @@ export class OrdersService {
           }
         });
 
-        // Update product stock
         for (const item of order.items) {
           await prisma.product.update({
             where: { id: item.productId },
@@ -174,30 +198,7 @@ export class OrdersService {
     return order;
   }
 
-  async updateStatus(sellerId: string, id: string, status: OrderStatus) {
-    const order = await this.prisma.order.findFirst({
-      where: {
-        id,
-        sellerId,
-      },
-    });
 
-    if (!order) {
-      throw new NotFoundException(`Order #${id} not found`);
-    }
-
-    return this.prisma.order.update({
-      where: { id },
-      data: { status }, 
-      include: {
-        items: {
-          include: {
-            product: true,
-          },
-        },
-      },
-    });
-  }
 
   async findProducts(sellerId: string) {
     try {

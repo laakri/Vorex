@@ -54,7 +54,7 @@ export class BatchService {
 
   constructor(private prisma: PrismaService) {}
 
-  @Cron('*/30 * * * * *')
+  @Cron('*/10 * * * * *')
   async processBatches() {
     this.logger.log('Starting batch processing...');
     try {
@@ -119,13 +119,23 @@ export class BatchService {
     });
 
     for (const order of readyForDeliveryOrders) {
-      const sellerLocation = { governorate: order.governorate }; // Assuming order has governorate
-      const buyerLocation = { governorate: order.city }; // Assuming city is used for buyer's governorate
+      const sellerLocation = { governorate: order.governorate };
+      const buyerLocation = { governorate: order.city };
 
+      this.logger.log(`Finding warehouse for seller: ${sellerLocation.governorate}, buyer: ${buyerLocation.governorate}`);
+      
       const warehouse = await this.findWarehouse(sellerLocation, buyerLocation);
+      console.log(`Found warehouse: ${warehouse ? warehouse.id : 'none'}`);
+
       if (warehouse) {
+        // Assign warehouseId to the order
+        await this.prisma.order.update({
+          where: { id: order.id },
+          data: { warehouseId: warehouse.id }
+        });
+
         // Proceed with creating batches using the found warehouse
-        // ...
+        // You may want to group orders by warehouse here and create batches
       } else {
         this.logger.warn(`No suitable warehouse found for order ${order.id}`);
       }
@@ -189,6 +199,19 @@ export class BatchService {
   }
 
   private async createBatch(batch: BatchGroup, type: BatchType, initialStatus: OrderStatus) {
+    // Validate warehouseId
+    if (!batch.warehouseId) {
+      throw new Error(`Warehouse ID is null or undefined.`);
+    }
+
+    const existingWarehouse = await this.prisma.warehouse.findUnique({
+      where: { id: batch.warehouseId },
+    });
+
+    if (!existingWarehouse) {
+      throw new Error(`Warehouse with ID ${batch.warehouseId} does not exist.`);
+    }
+
     const vehicleType = this.determineVehicleType(batch.totalWeight, batch.totalVolume);
 
     const createdBatch = await this.prisma.batch.create({
@@ -201,20 +224,20 @@ export class BatchService {
         orderCount: batch.orders.length,
         vehicleType,
         orders: {
-          connect: batch.orders.map(order => ({ id: order.id }))
-        }
-      }
+          connect: batch.orders.map(order => ({ id: order.id })),
+        },
+      },
     });
 
     // Update order statuses
     await this.prisma.order.updateMany({
       where: {
-        id: { in: batch.orders.map(o => o.id) }
+        id: { in: batch.orders.map(o => o.id) },
       },
-      data: { 
+      data: {
         status: initialStatus,
-        batchId: createdBatch.id
-      }
+        batchId: createdBatch.id,
+      },
     });
   }
 
@@ -267,19 +290,31 @@ export class BatchService {
   }
 
   private groupOrdersByNearestWarehouse(orders: OrderWithItems[]): Record<string, OrderWithItems[]> {
-    // Implementation depends on your warehouse coverage logic
-    return {};
+    const groupedOrders: Record<string, OrderWithItems[]> = {};
+    for (const order of orders) {
+      const warehouseId = order.warehouseId || order.secondaryWarehouseId; // Use secondary warehouse if primary is not available
+      if (warehouseId) {
+        if (!groupedOrders[warehouseId]) {
+          groupedOrders[warehouseId] = [];
+        }
+        groupedOrders[warehouseId].push(order);
+      }
+    }
+    return groupedOrders;
   }
 
   private groupOrdersBySourceWarehouse(orders: OrderWithItems[]): Record<string, OrderWithItems[]> {
-    return orders.reduce((groups, order) => {
-      const warehouseId = order.warehouseId!;
-      if (!groups[warehouseId]) {
-        groups[warehouseId] = [];
+    const groupedOrders: Record<string, OrderWithItems[]> = {};
+    for (const order of orders) {
+      const warehouseId = order.warehouseId || order.secondaryWarehouseId; // Use secondary warehouse if primary is not available
+      if (warehouseId) {
+        if (!groupedOrders[warehouseId]) {
+          groupedOrders[warehouseId] = [];
+        }
+        groupedOrders[warehouseId].push(order);
       }
-      groups[warehouseId].push(order);
-      return groups;
-    }, {} as Record<string, OrderWithItems[]>);
+    }
+    return groupedOrders;
   }
 
   private groupOrdersByDestinationWarehouse(orders: OrderWithItems[]): Record<string, OrderWithItems[]> {
@@ -298,7 +333,7 @@ export class BatchService {
     });
   }
 
-  async findWarehouse(sellerLocation: { governorate: string }, buyerLocation: { governorate: string }): Promise<Warehouse | null> {
+  private async findWarehouse(sellerLocation: { governorate: string }, buyerLocation: { governorate: string }): Promise<Warehouse | null> {
     const warehouses = await this.prisma.warehouse.findMany();
 
     // Check for a warehouse that covers the seller's and buyer's governorates

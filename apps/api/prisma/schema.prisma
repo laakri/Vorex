@@ -175,27 +175,28 @@ model Product {
 }
 
 model Order {
-  id            String      @id @default(cuid())
-  sellerId      String
-  warehouseId   String?
-  status        OrderStatus @default(PENDING)
-  totalAmount   Float
-  address       String
-  city          String
-  governorate   String
-  postalCode    String
-  phone         String
-  customerName  String
-  customerEmail String
-  notes         String?
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-  pickupLatitude   Float?
-  pickupLongitude  Float?
-  dropLatitude     Float?
-  dropLongitude    Float?
-  isLocalDelivery  Boolean   @default(false)
-  batchId        String?
+  id                String      @id @default(cuid())
+  sellerId          String
+  warehouseId       String?     // Primary warehouse ID
+  secondaryWarehouseId String?   // Secondary warehouse ID
+  status            OrderStatus @default(PENDING)
+  totalAmount       Float
+  address           String
+  city              String
+  governorate       String
+  postalCode        String
+  phone             String
+  customerName      String
+  customerEmail     String
+  notes             String?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  pickupLatitude    Float?
+  pickupLongitude   Float?
+  dropLatitude      Float?
+  dropLongitude     Float?
+  isLocalDelivery    Boolean     @default(false)
+  batchId           String?
 
   // Relations
   seller     Seller       @relation(fields: [sellerId], references: [id])

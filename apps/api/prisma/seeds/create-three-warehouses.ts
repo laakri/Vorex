@@ -4,9 +4,14 @@ const prisma = new PrismaClient();
 
 async function main() {
   try {
+    console.log('Deleting existing warehouses...');
+    // Delete all existing warehouses
+    await prisma.warehouse.deleteMany({});
+    console.log('Existing warehouses deleted.');
+
     console.log('Creating warehouses...');
 
-    // Define the warehouses to be created
+    // Define the warehouses to be created with coverageGovernorate
     const warehouses = [
       {
         name: 'Sousse Warehouse',
@@ -19,6 +24,10 @@ async function main() {
         currentLoad: 0, // Default current load
         latitude: 35.8256,
         longitude: 10.6381,
+        coverageGovernorate: [
+          'Sousse', 'Monastir', 'Mahdia', 'Kairouan', 'Kasserine', 
+          'Gabès', 'Medenine' // Coverage for Sousse Warehouse
+        ],
       },
       {
         name: 'Tunis Warehouse',
@@ -31,6 +40,10 @@ async function main() {
         currentLoad: 0, // Default current load
         latitude: 36.8065,
         longitude: 10.1815,
+        coverageGovernorate: [
+          'Tunis', 'Ariana', 'Ben Arous', 'Manouba', 'Zaghouan', 
+          'Bizerte', 'Kef', 'Siliana' // Coverage for Tunis Warehouse
+        ],
       },
       {
         name: 'Sfax Warehouse',
@@ -43,6 +56,10 @@ async function main() {
         currentLoad: 0, // Default current load
         latitude: 34.7405,
         longitude: 10.7603,
+        coverageGovernorate: [
+          'Sfax', 'Gabès', 'Medenine', 'Tataouine', 'Gafsa', 
+          'Tozeur', 'Kebili' // Coverage for Sfax Warehouse
+        ],
       },
     ];
 
