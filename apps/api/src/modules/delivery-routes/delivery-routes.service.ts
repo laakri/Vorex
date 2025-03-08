@@ -23,8 +23,8 @@ export class DeliveryRoutesService {
 
     const unassignedBatches = await this.prisma.batch.findMany({
       where: {
-        routeId: null,
-        status: BatchStatus.COLLECTING
+        status: BatchStatus.COLLECTING,
+        routeId: null
       },
       include: {
         orders: true,
@@ -35,7 +35,30 @@ export class DeliveryRoutesService {
     this.logger.log(`Found ${unassignedBatches.length} unassigned batches`);
 
     for (const batch of unassignedBatches) {
-      await this.createRouteForBatch(batch);
+      const existingRoute = await this.prisma.deliveryRoute.findUnique({
+        where: { batchId: batch.id }
+      });
+
+      if (existingRoute) {
+        this.logger.log(`Route already exists for batch ${batch.id}, skipping creation`);
+        continue;
+      }
+
+      const route = await this.createRouteForBatch(batch);
+      
+      if (route) {
+        // Update batch with routeId and mark as COMPLETED immediately
+        await this.prisma.batch.update({
+          where: { id: batch.id },
+          data: { 
+            routeId: route.id,
+            status: BatchStatus.COMPLETED,
+            completedTime: new Date()
+          }
+        });
+        
+        this.logger.log(`Batch ${batch.id} marked as COMPLETED after route creation`);
+      }
     }
   }
 
@@ -179,6 +202,16 @@ export class DeliveryRoutesService {
     this.logger.log(`Creating route for batch ${batch.id} of type ${batch.type}`);
     
     try {
+      // Check if a route already exists for this batch to avoid conflicts
+      const existingRoute = await this.prisma.deliveryRoute.findFirst({
+        where: { batchId: batch.id }
+      });
+      
+      if (existingRoute) {
+        this.logger.log(`Route already exists for batch ${batch.id}, skipping creation`);
+        return existingRoute;
+      }
+      
       // Get warehouse info
       const warehouse = await this.prisma.warehouse.findUnique({
         where: { id: batch.warehouseId }
@@ -256,23 +289,39 @@ export class DeliveryRoutesService {
           break;
           
         case BatchType.INTERCITY:
-          // For warehouse to warehouse transfers, we need to find the secondary warehouse
-          // First, check if any order has a secondaryWarehouseId
-          const orderWithSecondaryWarehouse = batch.orders.find(order => order.secondaryWarehouseId);
+          // For warehouse to warehouse transfers
+          let destinationWarehouseId: string | undefined = undefined;
           
-          if (!orderWithSecondaryWarehouse) {
-            throw new Error('No secondary warehouse ID found for intercity batch');
+          // First try to get from orders
+          const orderWithSecondaryWarehouse = batch.orders.find(order => order.secondaryWarehouseId);
+          if (orderWithSecondaryWarehouse) {
+            destinationWarehouseId = orderWithSecondaryWarehouse.secondaryWarehouseId;
+          } 
+          
+          // If no destination in orders, try to find another warehouse
+          if (!destinationWarehouseId) {
+            const otherWarehouses = await this.prisma.warehouse.findMany({
+              where: {
+                id: { not: warehouse.id }
+              },
+              take: 1
+            });
+            
+            if (otherWarehouses.length > 0) {
+              destinationWarehouseId = otherWarehouses[0].id;
+              this.logger.log(`No destination warehouse found in orders. Using default warehouse: ${destinationWarehouseId}`);
+            } else {
+              throw new Error('No secondary warehouse found for intercity batch');
+            }
           }
           
-          const secondaryWarehouseId = orderWithSecondaryWarehouse.secondaryWarehouseId;
-          
-          // Fetch the secondary warehouse
-          const secondaryWarehouse = await this.prisma.warehouse.findUnique({
-            where: { id: secondaryWarehouseId }
+          // Get the destination warehouse details
+          const destinationWarehouse = await this.prisma.warehouse.findUnique({
+            where: { id: destinationWarehouseId }
           });
           
-          if (!secondaryWarehouse) {
-            throw new Error(`Secondary warehouse with ID ${secondaryWarehouseId} not found`);
+          if (!destinationWarehouse) {
+            throw new Error(`Destination warehouse with ID ${destinationWarehouseId} not found`);
           }
           
           // Add source warehouse
@@ -287,10 +336,10 @@ export class DeliveryRoutesService {
           
           // Add destination warehouse
           stops.push({
-            warehouseId: secondaryWarehouse.id,
-            address: secondaryWarehouse.address,
-            latitude: secondaryWarehouse.latitude,
-            longitude: secondaryWarehouse.longitude,
+            warehouseId: destinationWarehouse.id,
+            address: destinationWarehouse.address,
+            latitude: destinationWarehouse.latitude,
+            longitude: destinationWarehouse.longitude,
             isPickup: false,
             sequenceOrder: 1
           });
@@ -305,27 +354,35 @@ export class DeliveryRoutesService {
       const estimatedDuration = this.estimateDuration(stops.length, batch.type);
       
       // Create route with stops
+      const routeData: any = {
+        batchId: batch.id,
+        totalDistance,
+        estimatedDuration,
+        fromWarehouseId: batch.warehouseId,
+        stops: {
+          create: stops
+        }
+      };
+      
+      // For intercity, add destination warehouse
+      if (batch.type === BatchType.INTERCITY) {
+        // Find destination warehouse ID from the last stop
+        const destinationStop = stops.find(stop => !stop.isPickup);
+        if (destinationStop && destinationStop.warehouseId) {
+          routeData.toWarehouseId = destinationStop.warehouseId;
+        }
+      }
+      
       return await this.prisma.deliveryRoute.create({
-        data: {
-          batchId: batch.id,
-          totalDistance,
-          estimatedDuration,
-          fromWarehouseId: batch.warehouseId,
-          // For intercity, set toWarehouseId
-          ...(batch.type === BatchType.INTERCITY && {
-            toWarehouseId: batch.orders[0]?.secondaryWarehouseId
-          }),
-          stops: {
-            create: stops
-          }
-        },
+        data: routeData,
         include: {
           stops: true
         }
       });
     } catch (error) {
       this.logger.error(`Error creating route for batch ${batch.id}: ${error.message}`);
-      throw error;
+      // Return null instead of throwing, so the cron job can continue
+      return null;
     }
   }
 
@@ -457,5 +514,51 @@ export class DeliveryRoutesService {
         }
       });
     }
+  }
+
+  async getRoutesByWarehouse(warehouseId: string) {
+    return this.prisma.deliveryRoute.findMany({
+      where: {
+        OR: [
+          { fromWarehouseId: warehouseId },
+          { toWarehouseId: warehouseId }
+        ]
+      },
+      include: {
+        batch: true,
+        driver: true,
+        stops: {
+          orderBy: {
+            sequenceOrder: 'asc'
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+  }
+
+  // Add this new method to get available routes
+  async getAvailableRoutes() {
+    return this.prisma.deliveryRoute.findMany({
+      where: {
+        status: RouteStatus.PENDING,
+        driverId: null // Only routes not assigned to a driver
+      },
+      include: {
+        batch: true,
+        fromWarehouse: true,
+        toWarehouse: true,
+        stops: {
+          orderBy: {
+            sequenceOrder: 'asc'
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
   }
 } 

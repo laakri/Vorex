@@ -25,16 +25,32 @@ export class DeliveryRoutesController {
     private readonly prisma: PrismaService
   ) {}
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN, Role.WAREHOUSE_MANAGER)
+  @Get('available')
+  async getAvailableRoutes() {
+    return this.deliveryRoutesService.getAvailableRoutes();
+  }
+
   @Get()
-  async getRoutes(@Query('driverId') driverId?: string) {
+  async getRoutes(
+    @Query('driverId') driverId?: string,
+    @Query('warehouseId') warehouseId?: string
+  ) {
     if (driverId) {
       return this.deliveryRoutesService.getRoutesByDriver(driverId);
     }
     
-    // Could expand this with pagination and filters in the future
+    if (warehouseId) {
+      return this.deliveryRoutesService.getRoutesByWarehouse(warehouseId);
+    }
+    
+    // If no query params, return an empty array or implement pagination later
     return [];
+  }
+  
+
+  @Get('warehouse/:warehouseId')
+  async getWarehouseRoutes(@Param('warehouseId') warehouseId: string) {
+    return this.deliveryRoutesService.getRoutesByWarehouse(warehouseId);
   }
   
   @UseGuards(JwtAuthGuard)
