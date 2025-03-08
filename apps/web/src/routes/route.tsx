@@ -24,10 +24,12 @@ import OrderPage from "@/pages/seller/orders/order-page";
 import  {DriverLayout}  from "@/layers/driver-layout";
 import { DriverApplication } from "@/pages/driver/driver-application";
 // Protected route
-import { ProtectedRoute } from "./protected-route";
 import { SellerGuard } from "./seller-guard";
 import { GoogleCallback } from "@/pages/auth/google-callback";
 import { RoleSelectionPage } from "@/pages/auth/RoleSelectionPage";
+import { DriverAvailableRoutes } from "@/pages/driver/driver-available-routes";
+import { ProtectedRoute } from "./protected-route";
+import { DriverDashboard } from "@/pages/driver/driver-dashboard";
 
 
 export function AppRoutes() {
@@ -123,6 +125,22 @@ export function AppRoutes() {
 
       {/* Driver Platform */}
       <Route path="/driver" element={<DriverLayout />}>
+      <Route
+          index
+          element={
+            <ProtectedRoute>
+                <DriverDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="dashboard"
+          element={
+            <ProtectedRoute>
+                <DriverDashboard />
+            </ProtectedRoute>
+          }
+        />
         <Route
             path="application"
             element={
@@ -131,9 +149,15 @@ export function AppRoutes() {
               </ProtectedRoute>
             }
           />
-        <Route index element={<div>Driver Dashboard</div>} />
-        <Route path="routes" element={<div>Routes Management</div>} />
-        <Route path="drivers" element={<div>Drivers Management</div>} />
+          <Route
+          path="available-routes"
+          element={
+            <ProtectedRoute>
+                <DriverAvailableRoutes />
+            </ProtectedRoute>
+          }
+        />
+        
         
       </Route>
     </Routes>

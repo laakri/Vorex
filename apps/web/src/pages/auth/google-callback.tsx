@@ -6,12 +6,21 @@ export function GoogleCallback() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const handleGoogleCallback = useAuthStore(state => state.handleGoogleCallback);
+  const { user } = useAuthStore();
 
   useEffect(() => {
     const token = searchParams.get('token');
     if (token) {
       handleGoogleCallback(token)
-        .then(() => navigate('/seller'))
+        .then(() => {
+          if (user?.role && user.role.length > 1) {
+            navigate('/role-selection');
+          } else if (user?.role && user.role.length === 1) {
+            navigate('/seller');
+          } else {
+            navigate('/auth/sign-in');
+          }
+        })
         .catch(() => navigate('/auth/sign-in'));
     } else {
       navigate('/auth/sign-in');

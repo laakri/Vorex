@@ -21,7 +21,15 @@ export function SignIn() {
     try {
       console.log('Attempting login with:', { email });
       await signIn(email, password);
-      navigate("/seller");
+      const user = useAuthStore.getState().user;
+      
+      if (user?.role && user.role.length > 1) {
+        navigate('/role-selection');
+      } else if (user?.role.length === 1) {
+        navigate('/seller');
+      } else {
+        setError('No roles assigned to this account');
+      }
     } catch (err: any) {
       console.error('Login error:', err);
       setError(

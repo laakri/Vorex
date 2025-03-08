@@ -12,7 +12,21 @@ import {
   Brain,
   Bell,
   X,
-  Info,
+  CheckSquare,
+  FileText,
+  Settings,
+  HelpCircle,
+  Lightbulb,
+  Zap,
+  Clock,
+  Activity,
+  TrendingUp,
+  Calendar,
+  CheckCircle2,
+  AlertCircle,
+  BookOpen,
+  Video,
+  MessageSquare
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useState } from "react";
@@ -28,6 +42,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
+import { AddProductModal } from "@/pages/seller/products/add-product-modal";
 
 const menuItems = [
   {
@@ -61,6 +76,9 @@ export function SellerLayout() {
   const navigate = useNavigate();
   const [showInfoCard, setShowInfoCard] = useState(true);
   const notificationsCount = 1;
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isAIChatOpen, setIsAIChatOpen] = useState(false);
+  const [showAllNotifications, setShowAllNotifications] = useState(false);
 
   const getInitials = (name?: string) => {
     if (!name) return "U";
@@ -85,7 +103,7 @@ export function SellerLayout() {
       {/* Sidebar - Fixed height */}
       <aside
         className={cn(
-          "border-r bg-background transition-all duration-300 flex flex-col h-screen",
+          "border-r bg-background-secondary transition-all duration-300 flex flex-col h-screen",
           collapsed ? "w-[70px]" : "w-64"
         )}
       >
@@ -249,29 +267,185 @@ export function SellerLayout() {
         </div>
       </aside>
 
-      {/* Main Content - Scrollable */}
-      <main className="flex-1 overflow-auto relative">
-        <div className="p-6">
-          <Outlet />
-        </div>
+      {/* Main Content  */}
+      <div className="flex-1 flex overflow-hidden">
+        <main className="flex-1 overflow-auto relative">
+          <div className="p-6">
+            <Outlet />
+          </div>
 
-        {/* Floating AI Chat Button */}
-        <Sheet>
-          <SheetTrigger asChild>
-            <Button
-              size="icon"
-              className="fixed bottom-14 right-6 h-12 w-12 rounded-full shadow-lg"
-            >
-              <Brain className="h-6 w-6" />
-            </Button>
-          </SheetTrigger>
-          <SheetContent className="w-[400px] sm:w-[540px]">
-            <div className="h-full py-6">
-              <AiChat />
+          {/* AI Chat Sheet */}
+          <Sheet open={isAIChatOpen} onOpenChange={setIsAIChatOpen}>
+            <SheetContent className="w-[400px] sm:w-[540px]">
+              <div className="h-full py-6">
+                <AiChat />
+              </div>
+            </SheetContent>
+          </Sheet>
+
+          {/* Floating AI Chat Button */}
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button
+                size="icon"
+                className="fixed bottom-14 right-6 h-12 w-12 rounded-full shadow-lg"
+              >
+                <Brain className="h-6 w-6" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent className="w-[400px] sm:w-[540px]">
+              <div className="h-full py-6">
+                <AiChat />
+              </div>
+            </SheetContent>
+          </Sheet>
+        </main>
+
+        {/* Enhanced Right Sidebar */}
+        <aside className="w-80 border-l border-border/90 bg-background overflow-y-auto">
+          <div className="p-4 space-y-6">
+            {/* Activity Overview */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-medium flex items-center gap-2 text-muted-foreground">
+                <Activity className="h-4 w-4" />
+                Activity Overview
+              </h3>
+              <Card className="p-4 bg-background/50">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium">Today's Activity</p>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Calendar className="h-3 w-3" />
+                        {new Date().toLocaleDateString()}
+                      </div>
+                    </div>
+                    <TrendingUp className="h-4 w-4 text-emerald-500" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 pt-2">
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground">Active Time</p>
+                      <p className="text-sm font-medium">2h 15m</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground">Sessions</p>
+                      <p className="text-sm font-medium">3</p>
+                    </div>
+                  </div>
+                </div>
+              </Card>
             </div>
-          </SheetContent>
-        </Sheet>
-      </main>
+
+            {/* Quick Actions */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-medium flex items-center gap-2 text-muted-foreground">
+                <Zap className="h-4 w-4" />
+                Quick Actions
+              </h3>
+              <div className="grid grid-cols-2 gap-2">
+                <Button 
+                  variant="outline" 
+                  className="w-full h-auto py-4 flex flex-col gap-1"
+                  onClick={() => setIsAddModalOpen(true)}
+                >
+                  <Package className="h-4 w-4" />
+                  <span className="text-xs">New Product</span>
+                </Button>
+                <Link to="/seller/orders">
+                  <Button variant="outline" className="w-full h-auto py-4 flex flex-col gap-1">
+                    <ShoppingCart className="h-4 w-4" />
+                    <span className="text-xs">View Orders</span>
+                  </Button>
+                </Link>
+                <Link to="/seller/settings">
+                  <Button variant="outline" className="w-full h-auto py-4 flex flex-col gap-1">
+                    <Settings className="h-4 w-4" />
+                    <span className="text-xs">Settings</span>
+                  </Button>
+                </Link>
+                <Button 
+                  variant="outline" 
+                  className="w-full h-auto py-4 flex flex-col gap-1"
+                  onClick={() => setIsAIChatOpen(true)}
+                >
+                  <HelpCircle className="h-4 w-4" />
+                  <span className="text-xs">Help Center</span>
+                </Button>
+              </div>
+            </div>
+
+            {/* System Status */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-medium flex items-center gap-2 text-muted-foreground">
+                <CheckCircle2 className="h-4 w-4" />
+                System Status
+              </h3>
+              <Card className="divide-y divide-border/40">
+                <div className="p-3 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="h-2 w-2 rounded-full bg-emerald-500" />
+                    <span className="text-sm">API Services</span>
+                  </div>
+                  <span className="text-xs text-muted-foreground">Operational</span>
+                </div>
+                <div className="p-3 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="h-2 w-2 rounded-full bg-emerald-500" />
+                    <span className="text-sm">Payment Processing</span>
+                  </div>
+                  <span className="text-xs text-muted-foreground">Operational</span>
+                </div>
+              </Card>
+            </div>
+
+           
+            {/* Learning Resources */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-medium flex items-center gap-2 text-muted-foreground">
+                <BookOpen className="h-4 w-4" />
+                Learning Resources
+              </h3>
+              <Card className="divide-y divide-border/40">
+                <div className="p-3 flex items-center gap-3 hover:bg-muted/50 cursor-pointer">
+                  <Video className="h-4 w-4 text-primary" />
+                  <div>
+                    <p className="text-sm font-medium">Product Photography Tips</p>
+                    <p className="text-xs text-muted-foreground">5 min video tutorial</p>
+                  </div>
+                </div>
+                <div className="p-3 flex items-center gap-3 hover:bg-muted/50 cursor-pointer">
+                  <BookOpen className="h-4 w-4 text-primary" />
+                  <div>
+                    <p className="text-sm font-medium">SEO Best Practices</p>
+                    <p className="text-xs text-muted-foreground">Quick guide</p>
+                  </div>
+                </div>
+              </Card>
+            </div>
+
+            {/* AI Assistant Promo */}
+            <Card className="p-4 bg-primary/5 border-primary/10">
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-full bg-primary/10">
+                  <Brain className="h-4 w-4 text-primary" />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">AI Assistant</p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Get instant help with your store management. Click the AI button below to start a conversation.
+                  </p>
+                </div>
+              </div>
+            </Card>
+          </div>
+        </aside>
+      </div>
+
+      {/* Add Product Modal */}
+      <AddProductModal 
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+      />
     </div>
   );
 }

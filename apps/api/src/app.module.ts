@@ -12,13 +12,14 @@ import { AiModule } from './modules/ai/ai.module';
 import { DriversModule } from './modules/drivers/drivers.module';
 import { BatchModule } from './modules/batches/batch.module';
 import { WarehouseModule } from './modules/warehouse/warehouse.module';
+import { DeliveryRoutesModule } from './modules/delivery-routes/delivery-routes.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       cache: true,
-    }),
+    }),    
     PrismaModule,
     AuthModule,
     UsersModule,
@@ -29,6 +30,7 @@ import { WarehouseModule } from './modules/warehouse/warehouse.module';
     AiModule,
     WarehouseModule,
     BatchModule,
+    DeliveryRoutesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

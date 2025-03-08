@@ -133,6 +133,9 @@ module.exports = {
         "accordion-up": "accordion-up 0.2s ease-out",
         "infinite-scroll": "infinite-scroll 40s linear infinite",
       },
+      backgroundColor: {
+        'background-secondary': 'hsl(var(--background-secondary))',
+      },
     },
   },
   plugins: [require("tailwindcss-animate")],

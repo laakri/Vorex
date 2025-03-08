@@ -1,13 +1,17 @@
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/logo";
 import {
   LayoutDashboard,
-  Package,
-  ShoppingCart,
+  Route as RouteIcon,
+  Clock,
+  Settings,
+  Car,
+  Calendar,
   LogOut,
   ChevronLeft,
+  Navigation,
 } from "lucide-react";
 import { useState } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -28,14 +32,35 @@ const menuItems = [
     href: "/driver/dashboard",
   },
   {
-    title: "Orders",
-    icon: ShoppingCart,
-    href: "/driver/orders",
+    title: "Available Routes",
+    icon: RouteIcon,
+    href: "/driver/available-routes",
+    badge: "New",
   },
   {
-    title: "Packages",
-    icon: Package,
-    href: "/driver/packages",
+    title: "Active Delivery",
+    icon: Navigation,
+    href: "/driver/active-delivery",
+  },
+  {
+    title: "Schedule",
+    icon: Calendar,
+    href: "/driver/schedule",
+  },
+  {
+    title: "History",
+    icon: Clock,
+    href: "/driver/history",
+  },
+  {
+    title: "Vehicle Info",
+    icon: Car,
+    href: "/driver/vehicle",
+  },
+  {
+    title: "Settings",
+    icon: Settings,
+    href: "/driver/settings",
   },
 ];
 
@@ -65,8 +90,10 @@ export function DriverLayout() {
 
   return (
     <div className="flex h-screen overflow-hidden">
-      {/* Sidebar - Fixed height */}
-      <aside className={cn("border-r bg-background transition-all duration-300 flex flex-col h-screen", collapsed ? "w-[70px]" : "w-64")}>
+      {/* Left Sidebar */}
+      <aside className={cn("border-r bg-background-secondary transition-all duration-300 flex flex-col h-screen", 
+        collapsed ? "w-[70px]" : "w-64"
+      )}>
         {/* Header - Fixed height */}
         <div className="h-14 flex items-center justify-between border-b px-3 shrink-0">
           {!collapsed && (
@@ -90,7 +117,7 @@ export function DriverLayout() {
           </Button>
         </div>
 
-        {/* Menu - Fixed height, no scroll */}
+        {/* Updated Menu Items */}
         <nav className="flex-1 py-3 flex flex-col justify-between">
           <div className="px-3 space-y-1">
             {menuItems.map((item) => (
@@ -112,7 +139,16 @@ export function DriverLayout() {
                     location.pathname === item.href && "text-primary"
                   )}
                 />
-                {!collapsed && <span className="text-sm">{item.title}</span>}
+                {!collapsed && (
+                  <div className="flex items-center justify-between flex-1">
+                    <span className="text-sm">{item.title}</span>
+                    {item.badge && (
+                      <span className="text-[10px] font-medium bg-primary/10 text-primary px-1.5 rounded-full">
+                        {item.badge}
+                      </span>
+                    )}
+                  </div>
+                )}
               </Link>
             ))}
           </div>
@@ -188,7 +224,10 @@ export function DriverLayout() {
         </div>
       </aside>
 
-     
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <Outlet />
+      </div>
     </div>
   );
 }

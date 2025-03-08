@@ -72,13 +72,16 @@ enum OrderStatus {
   LOCAL_PICKED_UP
   LOCAL_DELIVERED
   CITY_ASSIGNED_TO_PICKUP
+  CITY_ASSIGNED_TO_PICKUP_ACCEPTED
   CITY_PICKED_UP
   CITY_IN_TRANSIT_TO_WAREHOUSE
   CITY_ARRIVED_AT_SOURCE_WAREHOUSE
   CITY_READY_FOR_INTERCITY_TRANSFER
+  CITY_READY_FOR_INTERCITY_TRANSFER_BATCHED
   CITY_IN_TRANSIT_TO_DESTINATION_WAREHOUSE
   CITY_ARRIVED_AT_DESTINATION_WAREHOUSE
   CITY_READY_FOR_LOCAL_DELIVERY
+  CITY_READY_FOR_LOCAL_DELIVERY_BATCHED
   CITY_DELIVERED
   CANCELLED
 }
@@ -88,7 +91,7 @@ enum RouteStatus {
   PENDING
   IN_PROGRESS
   COMPLETED
-  CANCELLED
+  FAILED
 }
 
 enum RefundStatus {
@@ -99,16 +102,15 @@ enum RefundStatus {
 
 enum BatchType {
   LOCAL_PICKUP     // For collecting from sellers to warehouse
-  LOCAL_DELIVERY   // For delivering from warehouse to customers
+  LOCAL_SELLERS_WAREHOUSE  // For delivering from seller to warehouse
+  LOCAL_WAREHOUSE_BUYERS   // For delivering from warehouse to customers
   INTERCITY        // For warehouse to warehouse transfers
 }
 
 enum BatchStatus {
   COLLECTING
-  READY
   PROCESSING
   COMPLETED
-  CANCELLED
 }
 
 // Models
@@ -205,6 +207,7 @@ model Order {
   rating     Rating?
   refund     Refund?
   batch      Batch?        @relation(fields: [batchId], references: [id])
+  routeStops RouteStop[]
 }
 
 model OrderItem {
@@ -267,7 +270,9 @@ model Warehouse {
   sections        WarehouseSection[]
   orders          Order[]
   outgoingRoutes  DeliveryRoute[]    @relation("FromWarehouse")
+  incomingRoutes  DeliveryRoute[]    @relation("ToWarehouse")
   batches         Batch[]
+  routeStops      RouteStop[]
 }
 
 model WarehouseSection {
@@ -363,23 +368,59 @@ model InsuranceInfo {
 
 model DeliveryRoute {
   id              String      @id @default(cuid())
-  driverId        String?     // Make driverId optional
-  fromWarehouseId String
-  toAddress       String
-  toCity          String
-  toGovernorate   String
-  distance        Float
-  estimatedTime   Float
-  status          RouteStatus
-  startTime       DateTime?
-  endTime         DateTime?
+  batchId         String      @unique
+  batch           Batch       @relation(fields: [batchId], references: [id])
+  status          RouteStatus @default(PENDING)
+  driverId        String?
+  driver          Driver?     @relation(fields: [driverId], references: [id])
+  
+  // Route details
+  totalDistance   Float       // Total route distance in km
+  estimatedDuration Int       // Estimated duration in minutes
+  
+  // Stops collection
+  stops           RouteStop[]
+  
+  // Relations
+  fromWarehouse   Warehouse?  @relation("FromWarehouse", fields: [fromWarehouseId], references: [id])
+  fromWarehouseId String?
+  toWarehouse     Warehouse?  @relation("ToWarehouse", fields: [toWarehouseId], references: [id])
+  toWarehouseId   String?
+  
+  startedAt       DateTime?
+  completedAt     DateTime?
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
+}
 
-  // Relations
-  driver        Driver?    @relation(fields: [driverId], references: [id])  // Make relation optional
-  fromWarehouse Warehouse  @relation("FromWarehouse", fields: [fromWarehouseId], references: [id])
-  batch         Batch?     // One-to-one relation with Batch
+model RouteStop {
+  id              String      @id @default(cuid())
+  routeId         String
+  route           DeliveryRoute @relation(fields: [routeId], references: [id])
+  
+  orderId         String?
+  order           Order?      @relation(fields: [orderId], references: [id])
+  warehouseId     String?
+  warehouse       Warehouse?  @relation(fields: [warehouseId], references: [id])
+  
+  // Location info
+  address         String
+  latitude        Float
+  longitude       Float
+  
+  // Is this a pickup or delivery stop?
+  isPickup        Boolean
+  
+  // For optimization
+  sequenceOrder   Int         // Position in the route
+  
+  // Status tracking
+  isCompleted     Boolean     @default(false)
+  completedAt     DateTime?
+  notes           String?
+  
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
 }
 
 model InventoryAudit {
@@ -455,6 +496,6 @@ model Batch {
   // Relations
   warehouse       Warehouse        @relation(fields: [warehouseId], references: [id])
   driver          Driver?          @relation(fields: [driverId], references: [id])
-  route           DeliveryRoute?   @relation(fields: [routeId], references: [id])
+  route           DeliveryRoute?   // Remove fields and references here
   orders          Order[]
 }

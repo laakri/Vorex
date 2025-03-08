@@ -1,75 +1,85 @@
 @tailwind base;
-  @tailwind components;
-  @tailwind utilities;
+@tailwind components;
+@tailwind utilities;
 
-
-
-  @layer base {
-    :root {
-      --background: 0 0% 100%;
-      --foreground: 0 0% 3.9%;
-      --card: 0 0% 100%;
-      --card-foreground: 0 0% 3.9%;
-      --popover: 0 0% 100%;
-      --popover-foreground: 0 0% 3.9%;
-      --primary: 0 72.2% 50.6%;
-      --primary-foreground: 0 85.7% 97.3%;
-      --secondary: 0 0% 96.1%;
-      --secondary-foreground: 0 0% 9%;
-      --muted: 0 0% 96.1%;
-      --muted-foreground: 0 0% 45.1%;
-      --accent: 0 0% 96.1%;
-      --accent-foreground: 0 0% 9%;
-      --destructive: 0 84.2% 60.2%;
-      --destructive-foreground: 0 0% 98%;
-      --border: 0 0% 89.8%;
-      --input: 0 0% 89.8%;
-      --ring: 0 72.2% 50.6%;
-      --radius: 1rem;
-      --chart-1: 12 76% 61%;
-      --chart-2: 173 58% 39%;
-      --chart-3: 197 37% 24%;
-      --chart-4: 43 74% 66%;
-      --chart-5: 27 87% 67%;
-    }
-  
-    .dark {
-      --background: 0 0% 3.9%;
-      --foreground: 0 0% 98%;
-      --card: 0 0% 3.9%;
-      --card-foreground: 0 0% 98%;
-      --popover: 0 0% 3.9%;
-      --popover-foreground: 0 0% 98%;
-      --primary: 0 72.2% 50.6%;
-      --primary-foreground: 0 85.7% 97.3%;
-      --secondary: 0 0% 14.9%;
-      --secondary-foreground: 0 0% 98%;
-      --muted: 0 0% 14.9%;
-      --muted-foreground: 0 0% 63.9%;
-      --accent: 0 0% 14.9%;
-      --accent-foreground: 0 0% 98%;
-      --destructive: 0 62.8% 30.6%;
-      --destructive-foreground: 0 0% 98%;
-      --border: 0 0% 14.9%;
-      --input: 0 0% 14.9%;
-      --ring: 0 72.2% 50.6%;
-      --chart-1: 220 70% 50%;
-      --chart-2: 160 60% 45%;
-      --chart-3: 30 80% 55%;
-      --chart-4: 280 65% 60%;
-      --chart-5: 340 75% 55%;
-    }
+@layer base {
+  :root {
+    /* Font configuration */
+    font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+    
+    /* Light theme - inspired by Docker's light elements */
+    --background: 200 33% 98%;
+    --background-secondary: 200 33% 95%;
+    --foreground: 200 23% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 200 23% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 200 23% 3.9%;
+    --primary: 201 100% 35%; /* Docker blue */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 199 89% 48%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 200 33% 97%;
+    --muted-foreground: 200 23% 45%;
+    --accent: 187 47% 55%; /* Docker teal accent */
+    --accent-foreground: 200 23% 9%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 200 33% 90%;
+    --input: 200 33% 90%;
+    --ring: 201 100% 35%;
+    --radius: 0.5rem;
+    
+    /* Chart colors inspired by Docker's UI */
+    --chart-1: 201 100% 35%; /* Docker blue */
+    --chart-2: 187 47% 55%; /* Docker teal */
+    --chart-3: 215 25% 27%; /* Dark blue-grey */
+    --chart-4: 152 57% 58%; /* Seafoam */
+    --chart-5: 190 90% 50%; /* Light blue */
   }
-  
-  @layer base {
-    * {
-      @apply border-border;
-    }
-    body {
-      @apply bg-background text-foreground;
-    }
+
+  .dark {
+    /* Dark theme - matching Docker Desktop's dark theme */
+    --background: 200 23% 7%; /* Docker dark background */
+    --background-secondary: 206 21% 14%; /* Docker dark background */
+    --foreground: 0 0% 98%;
+    --card: 200 23% 10%;
+    --card-foreground: 0 0% 98%;
+    --popover: 200 23% 7%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 201 100% 35%; /* Docker blue */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 187 47% 35%; /* Docker teal - darker */
+    --secondary-foreground: 0 0% 100%;
+    --muted: 200 23% 25%;
+    --muted-foreground: 200 23% 70%;
+    --accent: 187 47% 30%; /* Docker teal accent */
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 200 23% 15%;
+    --input: 200 23% 15%;
+    --ring: 201 100% 35%;
+    
+    /* Dark theme chart colors */
+    --chart-1: 201 100% 45%; /* Brighter Docker blue */
+    --chart-2: 187 47% 65%; /* Brighter teal */
+    --chart-3: 152 57% 58%; /* Seafoam */
+    --chart-4: 190 90% 50%; /* Light blue */
+    --chart-5: 215 25% 40%; /* Lighter blue-grey */
   }
-  
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
 @layer utilities {
   .animation-delay-2000 {
     animation-delay: 2s;
@@ -77,8 +87,8 @@
   .animation-delay-4000 {
     animation-delay: 4s;
   }
-  
 }
+
 .custom-div-icon svg {
   color: hsl(var(--primary));
   stroke: currentColor;
