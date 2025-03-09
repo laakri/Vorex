@@ -8,7 +8,6 @@ import {
   Clock,
   Settings,
   Car,
-  Calendar,
   LogOut,
   ChevronLeft,
   Navigation,
@@ -41,11 +40,6 @@ const menuItems = [
     title: "Active Delivery",
     icon: Navigation,
     href: "/driver/active-delivery",
-  },
-  {
-    title: "Schedule",
-    icon: Calendar,
-    href: "/driver/schedule",
   },
   {
     title: "History",

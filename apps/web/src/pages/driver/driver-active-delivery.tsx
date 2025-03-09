@@ -1,5 +1,3 @@
-"use client"
-
 import { useState, useEffect, useCallback, useRef } from "react"
 import {
   Navigation2,
@@ -407,7 +405,7 @@ export function ActiveDelivery() {
   if (!activeRoute) {
     return (
       <div className="container max-w-5xl py-12">
-        <Card className="border-dashed bg-gradient-to-b from-background to-muted/30">
+        <Card className="border-dashed bg-transparent">
           <CardContent className="py-16 text-center">
             <div className="rounded-full bg-primary/10 w-20 h-20 flex items-center justify-center mx-auto mb-6">
               <Truck className="w-10 h-10 text-primary" />
@@ -481,7 +479,7 @@ export function ActiveDelivery() {
           <TabsContent value="overview" className="mt-0">
             <div className="space-y-4 container py-4">
               {/* Progress Card */}
-              <Card className="bg-gradient-to-br from-background to-muted/20">
+              <Card className="bg-transparent">
                 <CardContent className="pt-6">
                   <div className="flex items-center justify-between gap-4 mb-4">
                     <div className="space-y-1">
@@ -552,8 +550,8 @@ export function ActiveDelivery() {
 
               {/* Next Stop Card */}
               {nextStop && (
-                <Card className="border-2 border-primary/20 overflow-hidden">
-                  <div className="bg-primary/5 px-4 py-2 border-b border-primary/10">
+                <Card className="border-2 border-primary/20 overflow-hidden bg-transparent">
+                  <div className="px-4 py-2 ">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <div className="bg-primary/10 rounded-full p-1">
@@ -637,8 +635,8 @@ export function ActiveDelivery() {
           </TabsContent>
 
           <TabsContent value="stops" className="mt-0">
-            <div className="container py-4">
-              <Card className="border shadow-sm overflow-hidden">
+            <div className="container py-4"> 
+              <Card className="border shadow-sm overflow-hidden bg-transparent">
                 <CardHeader className="pb-3 border-b bg-background">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-lg flex items-center gap-2">
@@ -860,7 +858,7 @@ export function ActiveDelivery() {
             {/* Left Column */}
             <div className="col-span-8 space-y-6">
               {/* Progress Card */}
-              <Card className="bg-gradient-to-br from-background to-muted/20">
+              <Card className="bg-transparent">
                 <CardContent className="pt-6">
                   <div className="flex items-center justify-between gap-4 mb-4">
                     <div className="space-y-1">
@@ -925,7 +923,7 @@ export function ActiveDelivery() {
               </Card>
 
               {/* Map */}
-              <Card>
+              <Card className="bg-transparent">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-xl flex items-center gap-2">
                     <Navigation2 className="h-5 w-5 text-primary" />
@@ -943,7 +941,7 @@ export function ActiveDelivery() {
             <div className="col-span-4 space-y-6">
               {/* Next Stop Card */}
               {nextStop && (
-                <Card className="border-2 border-primary/20 overflow-hidden">
+                <Card className="border-2 border-primary/20 overflow-hidden bg-transparent">
                   <div className="bg-primary/5 px-6 py-3 border-b border-primary/10">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -1013,7 +1011,7 @@ export function ActiveDelivery() {
               )}
 
               {/* Stops */}
-              <Card className="border shadow-sm overflow-hidden">
+              <Card className="border shadow-sm overflow-hidden bg-transparent">
                 <CardHeader className="pb-3 border-b bg-background">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-lg flex items-center gap-2">

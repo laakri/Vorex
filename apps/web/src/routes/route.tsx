@@ -30,7 +30,9 @@ import { RoleSelectionPage } from "@/pages/auth/RoleSelectionPage";
 import { DriverAvailableRoutes } from "@/pages/driver/driver-available-routes";
 import { ProtectedRoute } from "./protected-route";
 import { DriverDashboard } from "@/pages/driver/driver-dashboard";
-import { ActiveDelivery } from "@/pages/driver/active-delivery";
+import { ActiveDelivery } from "@/pages/driver/driver-active-delivery";
+import { DriverHistory } from "@/pages/driver/driver-history";
+import { DriverVehicle } from "@/pages/driver/driver-vehicle";
 
 
 export function AppRoutes() {
@@ -155,6 +157,22 @@ export function AppRoutes() {
           element={
             <ProtectedRoute>
                 <ActiveDelivery />
+            </ProtectedRoute>
+          }
+          />
+          <Route
+          path="history"
+          element={
+            <ProtectedRoute>
+                <DriverHistory />
+            </ProtectedRoute>
+          }
+          />
+          <Route
+          path="vehicle"
+          element={
+            <ProtectedRoute>
+                <DriverVehicle />
             </ProtectedRoute>
           }
           />
