@@ -561,4 +561,98 @@ export class DeliveryRoutesService {
       }
     });
   }
+
+  async getDriverActiveRoute(driverId: string) {
+    // Get the active route for this driver
+    const activeRoute = await this.prisma.deliveryRoute.findFirst({
+      where: {
+        driverId,
+        status: RouteStatus.IN_PROGRESS,
+      },
+      include: {
+        batch: true,
+        fromWarehouse: true,
+        toWarehouse: true,
+        stops: {
+          orderBy: {
+            sequenceOrder: 'asc',
+          },
+          include: {
+            order: {
+              select: {
+                id: true,
+                status: true,
+                customerName: true,
+                phone: true,
+                totalAmount: true,
+                notes: true,
+              }
+            },
+            warehouse: true,
+          }
+        },
+        driver: true
+      },
+    });
+    
+    return activeRoute;
+  }
+
+  async updateRouteStopCompletion(stopId: string, data: { isCompleted: boolean, notes?: string }) {
+    const stop = await this.prisma.routeStop.findUnique({
+      where: { id: stopId },
+      include: { route: true }
+    });
+    
+    if (!stop) {
+      throw new NotFoundException('Route stop not found');
+    }
+    
+    // Update the stop
+    const updatedStop = await this.prisma.routeStop.update({
+      where: { id: stopId },
+      data: {
+        isCompleted: data.isCompleted,
+        completedAt: data.isCompleted ? new Date() : null,
+        notes: data.notes,
+      },
+      include: {
+        order: true,
+        route: true
+      }
+    });
+    
+    // Check if all stops are completed
+    if (data.isCompleted) {
+      const allStops = await this.prisma.routeStop.findMany({
+        where: { routeId: stop.routeId }
+      });
+      
+      const allCompleted = allStops.every(s => s.isCompleted);
+      
+      // If all stops are completed, mark the route as completed
+      if (allCompleted) {
+        await this.prisma.deliveryRoute.update({
+          where: { id: stop.routeId },
+          data: {
+            status: RouteStatus.COMPLETED,
+            completedAt: new Date()
+          }
+        });
+        
+        // Also update the batch if there is one
+        if (stop.route.batchId) {
+          await this.prisma.batch.update({
+            where: { id: stop.route.batchId },
+            data: {
+              status: BatchStatus.COMPLETED,
+              completedTime: new Date()
+            }
+          });
+        }
+      }
+    }
+    
+    return updatedStop;
+  }
 } 

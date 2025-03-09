@@ -6,7 +6,8 @@ import {
   Body, 
   UseGuards,
   Query,
-  Post
+  Post,
+  NotFoundException
 } from '@nestjs/common';
 import { DeliveryRoutesService } from './delivery-routes.service';
 import { RolesGuard } from '@/common/guards/roles.guard';
@@ -74,14 +75,24 @@ export class DeliveryRoutesController {
     return this.deliveryRoutesService.getRouteById(id);
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN, Role.WAREHOUSE_MANAGER)
+  @UseGuards(JwtAuthGuard)
   @Post(':id/assign')
   async assignDriverToRoute(
     @Param('id') id: string,
-    @Body() dto: AssignDriverDto
+    @Body() dto: { userId: string },
+    @GetUser() user: any
   ) {
-    return this.deliveryRoutesService.assignDriverToRoute(id, dto);
+    // First get the driver ID for this user
+    const driver = await this.prisma.driver.findFirst({
+      where: { userId: dto.userId || user.id }
+    });
+    
+    if (!driver) {
+      throw new NotFoundException('Driver not found for this user');
+    }
+    
+    // Then pass the driver ID to the service
+    return this.deliveryRoutesService.assignDriverToRoute(id, { driverId: driver.id });
   }
 
   @UseGuards(JwtAuthGuard)
@@ -91,5 +102,32 @@ export class DeliveryRoutesController {
     @Body() dto: UpdateRouteStopDto
   ) {
     return this.deliveryRoutesService.updateRouteStop(id, dto);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('driver/active')
+  async getDriverActiveRoute(@GetUser() user: any) {
+    // First get the driver ID for this user
+    const driver = await this.prisma.driver.findFirst({
+      where: { userId: user.id }
+    });
+    
+    if (!driver) {
+      throw new NotFoundException('Driver not found for this user');
+    }
+    
+    return this.deliveryRoutesService.getDriverActiveRoute(driver.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('stops/:id/complete')
+  async completeRouteStop(
+    @Param('id') id: string,
+    @Body() data: { notes?: string }
+  ) {
+    return this.deliveryRoutesService.updateRouteStopCompletion(id, {
+      isCompleted: true,
+      notes: data.notes
+    });
   }
 } 

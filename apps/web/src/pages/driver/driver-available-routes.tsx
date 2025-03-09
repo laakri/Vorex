@@ -8,7 +8,6 @@ import {
   Warehouse,
   Map,
   Weight,
-  Boxes,
   Search,
   Truck,
   Clock,
@@ -17,10 +16,15 @@ import {
   RotateCw,
   Route as RouteIcon,
   Calendar,
-  ChevronRight,
-  Clock3,
-  Info,
   Navigation,
+  Info,
+  Clock3,
+  LayoutGrid,
+  LayoutList,
+  ArrowDown,
+  PackageCheck,
+  Loader2,
+  CheckCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -29,7 +33,6 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -39,13 +42,10 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
+ 
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { toast } from "@/hooks/use-toast";
+import {  useToast } from "@/hooks/use-toast";
 import api from "@/lib/axios";
 import { useAuthStore } from "@/stores/auth.store";
 import { Separator } from "@/components/ui/separator";
@@ -134,7 +134,6 @@ const statusColors = {
 };
 
 export function DriverAvailableRoutes() {
-  const { user } = useAuthStore();
   const [routes, setRoutes] = useState<DeliveryRoute[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -144,8 +143,11 @@ export function DriverAvailableRoutes() {
   const [sortBy, setSortBy] = useState("distance");
   const [filterVehicle, setFilterVehicle] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [acceptingRoute, setAcceptingRoute] = useState(false);
+  const [acceptingRouteId, setAcceptingRouteId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [viewType, setViewType] = useState<"grid" | "list">("grid");
+  const { toast } = useToast();
+  const user = useAuthStore(state => state.user);
   
   // Fetch available routes
   const fetchRoutes = useCallback(async (showRefreshIndicator = false) => {
@@ -237,35 +239,39 @@ export function DriverAvailableRoutes() {
       });
   }, [routes, filterVehicle, activeTab, searchQuery, sortBy]);
 
-  // Handle route acceptance
-  const handleAcceptRoute = async (route: DeliveryRoute) => {
+  // Update the acceptRoute function to use the user ID directly
+  const acceptRoute = async (routeId: string) => {
     try {
-      setAcceptingRoute(true);
+      setAcceptingRouteId(routeId);
       
-      // Call API to assign driver to route
-      await api.post(`/delivery-routes/${route.id}/assign`, {
-        driverId: user?.id,
+      if (!user?.id) {
+        throw new Error("User not authenticated");
+      }
+      
+      // Assign the route directly using the route ID
+      await api.post(`/delivery-routes/${routeId}/assign`, {
+        userId: user.id  // Send user ID instead of driver ID
       });
       
+      // Show success message
       toast({
-        title: "Route Accepted",
-        description: "You have successfully accepted this delivery route.",
+        title: "Route accepted!",
+        description: "You've successfully accepted this delivery route.",
+        variant: "default",
       });
       
-      setRoutes(routes.filter(r => r.id !== route.id));
-      setShowRouteDetails(false);
-      
-      // Refresh routes list to get latest data
+      // Refresh the routes to update the UI
       fetchRoutes(true);
-    } catch (error) {
-      console.error('Failed to accept route:', error);
+      
+    } catch (err: any) {
+      console.error("Error accepting route:", err);
       toast({
+        title: "Failed to accept route",
+        description: err.response?.data?.message || "An error occurred while accepting the route",
         variant: "destructive",
-        title: "Error accepting route",
-        description: "Could not accept this route. Please try again.",
       });
     } finally {
-      setAcceptingRoute(false);
+      setAcceptingRouteId(null);
     }
   };
 
@@ -298,29 +304,17 @@ export function DriverAvailableRoutes() {
   
   // Render skeleton loaders during initial load
   const renderSkeletons = () => (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 pb-6">
-      {[1, 2, 3, 4].map(i => (
-        <Card key={i} className="overflow-hidden">
-          <div className="p-4 space-y-3">
-            <div className="flex justify-between">
-              <Skeleton className="h-6 w-48" />
-              <Skeleton className="h-6 w-16" />
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {[1, 2, 3, 4].map(j => (
-                <Skeleton key={j} className="h-5 w-20" />
-              ))}
-            </div>
-            <div className="flex gap-2">
-              <Skeleton className="h-5 w-24" />
-              <Skeleton className="h-5 w-24" />
-            </div>
-            <div className="flex justify-between">
-              <Skeleton className="h-9 w-32" />
-              <Skeleton className="h-9 w-32" />
-            </div>
-          </div>
-        </Card>
+    <div className={cn(
+      viewType === "grid" 
+        ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" 
+        : "space-y-4"
+    )}>
+      {[1, 2, 3, 4, 5, 6].map((i) => (
+        <Skeleton key={i} className={cn(
+          viewType === "grid" 
+            ? "h-[220px] rounded-lg" 
+            : "h-[140px] rounded-lg"
+        )} />
       ))}
     </div>
   );
@@ -328,7 +322,7 @@ export function DriverAvailableRoutes() {
   return (
     <div className="h-full flex flex-col bg-background">
       {/* Header with Stats */}
-      <div className="border-b">
+      <div className="border-b bg-background-secondary/50 backdrop-blur-sm">
         <div className="container py-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
             <div>
@@ -516,149 +510,223 @@ export function DriverAvailableRoutes() {
                 </Select>
               </div>
             </div>
+
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-bold">Available Routes</h2>
+              
+              <div className="flex items-center space-x-2">
+                <Tabs value={viewType} onValueChange={(value) => setViewType(value as "grid" | "list")}>
+                  <TabsList className="grid w-[160px] grid-cols-2">
+                    <TabsTrigger value="grid" className="flex items-center justify-center">
+                      <LayoutGrid className="h-4 w-4 mr-2" />
+                      Grid
+                    </TabsTrigger>
+                    <TabsTrigger value="list" className="flex items-center justify-center">
+                      <LayoutList className="h-4 w-4 mr-2" />
+                      List
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Route Cards */}
-      <div className="flex-1 overflow-hidden">
-        <div className="container h-full py-6">
+      {/* Add this wrapper div with overflow-auto */}
+      <div className="flex-1 overflow-auto">
+        <div className="container py-6">
+          {/* View Content */}
           {loading ? (
             renderSkeletons()
           ) : error ? (
-            <div className="flex flex-col items-center justify-center h-[calc(100vh-280px)] p-8">
-              <div className="bg-red-50 rounded-full p-3 mb-4">
-                <X className="h-6 w-6 text-red-500" />
+            <Card className="p-8 text-center">
+              <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-red-100">
+                <X className="h-10 w-10 text-red-600" />
               </div>
-              <h3 className="text-xl font-medium mb-2">Error Loading Routes</h3>
-              <p className="text-muted-foreground text-center mb-6">{error}</p>
-              <Button onClick={() => fetchRoutes()}>
-                <RotateCw className="mr-2 h-4 w-4" />
+              <h3 className="mt-4 text-lg font-semibold">Error Loading Routes</h3>
+              <p className="mt-2 text-sm text-muted-foreground">{error}</p>
+              <Button onClick={() => fetchRoutes(true)} className="mt-4">
                 Try Again
               </Button>
-            </div>
-          ) : filteredRoutes.length > 0 ? (
-            <ScrollArea className="h-[calc(100vh-280px)]">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 pb-6">
-                {filteredRoutes.map((route) => (
-                  <Card 
-                    key={route.id} 
-                    className={cn(
-                      "overflow-hidden hover:shadow-md transition-shadow border",
-                      route.status === "PENDING" && "border-l-4 border-l-primary"
-                    )}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex flex-col gap-3">
-                        {/* Route Header */}
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h3 className="font-medium">{getRouteDescription(route)}</h3>
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              <Warehouse className="h-3 w-3" />
-                              {route.fromWarehouse?.name} 
-                              <span className="inline-block h-1 w-1 rounded-full bg-muted-foreground"></span>
-                              <Calendar className="h-3 w-3" />
-                              {new Date(route.createdAt).toLocaleDateString()}
-                            </div>
-                          </div>
-                          <Badge className={cn(
-                            "capitalize border",
-                            statusColors[route.status] || "bg-secondary"
-                          )}>
-                            {route.status.replace('_', ' ')}
-                          </Badge>
-                        </div>
-
-                        {/* Route Stats */}
-                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 bg-muted/30 rounded-md p-2">
-                          <div className="flex items-center gap-2">
-                            <Weight className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm">{Math.round(route.batch.totalWeight)} kg</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Boxes className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm">{route.batch.orderCount} orders</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Navigation2 className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm">{route.totalDistance.toFixed(1)} km</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Clock className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm">{route.estimatedDuration} min</span>
-                          </div>
-                        </div>
-
-                        {/* Tags */}
-                        <div className="flex flex-wrap gap-2">
-                          <Badge variant="secondary" className="font-normal">
-                            {batchTypeLabels[route.batch.type] || route.batch.type}
-                          </Badge>
-                          <Badge variant="outline" className="font-normal">
-                            {vehicleTypeLabels[route.batch.vehicleType] || route.batch.vehicleType}
-                          </Badge>
-                          {route.stops.length > 3 && (
-                            <Badge variant="outline" className="font-normal text-blue-600 border-blue-200 bg-blue-50">
-                              {route.stops.length} stops
-                            </Badge>
-                          )}
-                        </div>
-
-                        {/* Action Buttons */}
-                        <div className="flex justify-between items-center pt-2">
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => {
-                              setSelectedRoute(route);
-                              setShowRouteDetails(true);
-                            }}
-                          >
-                            <RouteIcon className="mr-2 h-4 w-4" />
-                            View Details
-                          </Button>
-                          
-                          {route.status === "PENDING" && (
-                            <Button 
-                              variant="default" 
-                              size="sm"
-                              onClick={() => {
-                                setSelectedRoute(route);
-                                setShowRouteDetails(true);
-                              }}
-                            >
-                              <CheckCircle2 className="mr-2 h-4 w-4" />
-                              Accept Route
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+            </Card>
+          ) : filteredRoutes.length === 0 ? (
+            <Card className="p-8 text-center">
+              <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-muted">
+                <RouteIcon className="h-10 w-10 text-muted-foreground" />
               </div>
-            </ScrollArea>
-          ) : (
-            <div className="flex flex-col items-center justify-center h-[calc(100vh-280px)]">
-              <div className="bg-muted rounded-full p-3 mb-4">
-                <Truck className="h-6 w-6 text-muted-foreground" />
-              </div>
-              <h3 className="text-xl font-medium mb-2">No Routes Found</h3>
-              <p className="text-muted-foreground text-center mb-6">
-                {searchQuery || filterVehicle !== "all" || activeTab !== "all" 
-                  ? "Try adjusting your filters or search query"
-                  : "There are no available routes right now. Check back later."}
+              <h3 className="mt-4 text-lg font-semibold">No Routes Found</h3>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {searchQuery || filterVehicle !== "all" || activeTab !== "all"
+                  ? "Try changing your filters or search query."
+                  : "There are no available routes at the moment."}
               </p>
               {(searchQuery || filterVehicle !== "all" || activeTab !== "all") && (
                 <Button variant="outline" onClick={() => {
                   setSearchQuery("");
                   setFilterVehicle("all");
                   setActiveTab("all");
-                }}>
+                }} className="mt-4">
                   Clear Filters
                 </Button>
               )}
+            </Card>
+          ) : (
+            <div className={cn(
+              viewType === "grid" 
+                ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" 
+                : "space-y-4"
+            )}>
+              {filteredRoutes.map((route) => (
+                viewType === "grid" ? (
+                  <Card key={route.id} className="overflow-hidden">
+                    <CardContent className="p-0">
+                      <div className="p-4">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <Badge 
+                              className={cn(
+                                "mb-2", 
+                                statusColors[route.status]
+                              )}
+                            >
+                              {route.status.replace('_', ' ')}
+                            </Badge>
+                            <h3 className="font-semibold text-base">{getRouteDescription(route)}</h3>
+                          </div>
+                          
+                          <div className="flex items-center justify-center h-8 w-8 rounded-full bg-primary/10">
+                            <Truck className="h-4 w-4 text-primary" />
+                          </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-y-2 mt-4 text-sm">
+                          <div className="flex items-center gap-2">
+                            <Navigation2 className="h-4 w-4 text-muted-foreground" />
+                            <span>{route.totalDistance.toFixed(1)} km</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Timer className="h-4 w-4 text-muted-foreground" />
+                            <span>{route.estimatedDuration} min</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Package className="h-4 w-4 text-muted-foreground" />
+                            <span>{route.batch.orderCount} orders</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4 text-muted-foreground" />
+                            <span>{new Date(route.createdAt).toLocaleDateString()}</span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <Separator />
+                      
+                      <div className="p-4 flex justify-between items-center">
+                        <Badge variant="outline">
+                          {vehicleTypeLabels[route.batch.vehicleType]}
+                        </Badge>
+                        
+                        <Button 
+                          size="sm" 
+                          onClick={() => {
+                            setSelectedRoute(route);
+                            setShowRouteDetails(true);
+                          }}
+                        >
+                          View Details
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <Card key={route.id} className={cn(
+                    "overflow-hidden",
+                    "flex flex-col md:flex-row"
+                  )}>
+                    <CardContent className={cn(
+                      "p-0",
+                      "flex flex-col md:flex-1"
+                    )}>
+                      <div className="p-4 flex flex-col">
+                        <div className="flex justify-between items-start mb-2">
+                          <div>
+                            <h3 className="font-medium">{route.fromWarehouse?.name} Route</h3>
+                            <p className="text-sm text-muted-foreground">
+                              {new Date(route.createdAt).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <Badge variant={
+                            route.status === "PENDING" ? "outline" : 
+                            route.status === "IN_PROGRESS" ? "secondary" : 
+                            "default"
+                          }>
+                            {route.status}
+                          </Badge>
+                        </div>
+                        
+                        <div className="mt-2 space-y-1 flex-1">
+                          <div className="text-sm flex items-center gap-2">
+                            <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
+                            <span className="flex-1 truncate">{route.fromWarehouse?.address}</span>
+                          </div>
+                          {route.toWarehouse && (
+                            <div className="text-sm flex items-center gap-2">
+                              <ArrowDown className="h-3.5 w-3.5 text-muted-foreground" />
+                              <span className="flex-1 truncate">{route.toWarehouse?.address}</span>
+                            </div>
+                          )}
+                          <div className="text-sm flex items-center gap-2">
+                            <PackageCheck className="h-3.5 w-3.5 text-muted-foreground" />
+                            <span>{route.stops?.length || 0} stops</span>
+                          </div>
+                          <div className="text-sm flex items-center gap-2">
+                            <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                            <span>{Math.round(route.estimatedDuration / 60)} hours</span>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                    
+                    <div className={cn(
+                      "p-4 flex flex-row gap-2 justify-end items-center border-t",
+                      "md:border-t-0 md:border-l"
+                    )}>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => {
+                          setSelectedRoute(route);
+                          setShowRouteDetails(true);
+                        }}
+                      >
+                        View Details
+                      </Button>
+                      
+                      <Button 
+                        variant="default" 
+                        size="sm"
+                        onClick={() => acceptRoute(route.id)}
+                        disabled={!!acceptingRouteId || route.driverId !== null}
+                      >
+                        {acceptingRouteId === route.id ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Accepting...
+                          </>
+                        ) : route.driverId !== null ? (
+                          "Already Assigned"
+                        ) : (
+                          <>
+                            <CheckCircle className="mr-2 h-4 w-4" />
+                            Accept Route
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </Card>
+                )
+              ))}
             </div>
           )}
         </div>
@@ -667,10 +735,10 @@ export function DriverAvailableRoutes() {
       {/* Route Details Dialog */}
       {selectedRoute && (
         <Dialog open={showRouteDetails} onOpenChange={setShowRouteDetails}>
-          <DialogContent className="max-w-4xl p-0 overflow-hidden">
+          <DialogContent className="max-w-4xl p-0 overflow-hidden flex flex-col">
             <div className="flex flex-col md:flex-row">
               {/* Left Sidebar */}
-              <div className="w-full md:w-1/3 bg-gray-50 dark:bg-gray-900 p-6 border-r">
+              <div className="w-full md:w-1/3  p-6 border-r">
                 <div className="space-y-6">
                   {/* Route ID and Status */}
                   <div>
@@ -688,7 +756,7 @@ export function DriverAvailableRoutes() {
                           "bg-red-100 text-red-800"
                         )}
                       >
-                        {selectedRoute.status.replace('_', ' ')}
+                        {selectedRoute.status}
                       </Badge>
                       <span className="text-xs text-muted-foreground">
                         ID: {selectedRoute.id.slice(0, 8)}...
@@ -920,29 +988,29 @@ export function DriverAvailableRoutes() {
                 <X className="mr-2 h-4 w-4" />
                 Close
               </Button>
-
-              <div className="flex items-center gap-2">
-                {selectedRoute.status === "PENDING" && (
-                  <Button
-                    size="sm"
-                    disabled={acceptingRoute}
-                    onClick={() => handleAcceptRoute(selectedRoute)}
-                    className="bg-green-600 hover:bg-green-700 text-white"
-                  >
-                    {acceptingRoute ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        Processing...
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle2 className="mr-2 h-4 w-4" />
-                        Accept Route
-                      </>
-                    )}
-                  </Button>
-                )}
-              </div>
+              
+              {/* Add Accept Route button */}
+              {selectedRoute.status === "PENDING" && !selectedRoute.driverId && (
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                  onClick={() => acceptRoute(selectedRoute.id)}
+                  disabled={acceptingRouteId === selectedRoute.id}
+                >
+                  {acceptingRouteId === selectedRoute.id ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Accepting Route...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="mr-2 h-4 w-4" />
+                      Accept Route
+                    </>
+                  )}
+                </Button>
+              )}
             </div>
           </DialogContent>
         </Dialog>

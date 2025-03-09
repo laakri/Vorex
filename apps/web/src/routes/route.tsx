@@ -30,6 +30,7 @@ import { RoleSelectionPage } from "@/pages/auth/RoleSelectionPage";
 import { DriverAvailableRoutes } from "@/pages/driver/driver-available-routes";
 import { ProtectedRoute } from "./protected-route";
 import { DriverDashboard } from "@/pages/driver/driver-dashboard";
+import { ActiveDelivery } from "@/pages/driver/active-delivery";
 
 
 export function AppRoutes() {
@@ -148,6 +149,14 @@ export function AppRoutes() {
                 <DriverApplication />
               </ProtectedRoute>
             }
+          />
+          <Route
+          path="active-delivery"
+          element={
+            <ProtectedRoute>
+                <ActiveDelivery />
+            </ProtectedRoute>
+          }
           />
           <Route
           path="available-routes"
