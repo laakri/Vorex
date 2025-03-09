@@ -14,14 +14,8 @@ import {
   Info,
   ArrowRight,
   Calendar,
-  MoreHorizontal,
-  ChevronRight,
-  Clipboard,
-  Menu,
-  Hash,
-  ClipboardList,
+ 
 } from "lucide-react"
-import { useAuthStore } from "@/stores/auth.store"
 import { useToast } from "@/hooks/use-toast"
 import api from "@/lib/axios"
 import L from "leaflet"
@@ -45,8 +39,6 @@ import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Separator } from "@/components/ui/separator"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 // TypeScript interfaces
@@ -112,7 +104,6 @@ interface DeliveryRoute {
 }
 
 export function ActiveDelivery() {
-  const { user } = useAuthStore()
   const { toast } = useToast()
   const [activeRoute, setActiveRoute] = useState<DeliveryRoute | null>(null)
   const [loading, setLoading] = useState(true)
@@ -121,7 +112,6 @@ export function ActiveDelivery() {
   const [isCompleteDialogOpen, setIsCompleteDialogOpen] = useState(false)
   const [notes, setNotes] = useState("")
   const [refreshing, setRefreshing] = useState(false)
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [activeTab, setActiveTab] = useState("overview")
 
   // Map and marker refs
@@ -649,151 +639,104 @@ export function ActiveDelivery() {
           <TabsContent value="stops" className="mt-0">
             <div className="container py-4">
               <Card className="border shadow-sm overflow-hidden">
-                <CardHeader className="pb-3 bg-gradient-to-r from-background to-muted/30 border-b">
+                <CardHeader className="pb-3 border-b bg-background">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-lg flex items-center gap-2">
-                      <div className="bg-primary/10 p-1.5 rounded-full">
-                        <MapPin className="h-4 w-4 text-primary" />
-                      </div>
+                      <MapPin className="h-5 w-5 text-primary" />
                       Route Stops
                     </CardTitle>
-                    <div className="flex items-center gap-2">
-                      <div className="text-sm text-muted-foreground">Completion:</div>
-                      <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-primary rounded-full" 
-                          style={{ width: `${progressPercentage}%` }}
-                        ></div>
-                      </div>
-                      <Badge variant="outline" className="font-normal">
-                        {progressPercentage}%
-                      </Badge>
-                    </div>
+                    <Badge variant="outline">
+                      {completedStops.length}/{activeRoute.stops.length} Completed
+                    </Badge>
                   </div>
-                  <CardDescription className="mt-1">
-                    {completedStops.length} of {activeRoute.stops.length} stops completed on this route
-                  </CardDescription>
                 </CardHeader>
                 <CardContent className="p-0">
                   <Tabs defaultValue="pending" className="w-full">
-                    <TabsList className="w-full grid grid-cols-2 rounded-none border-b bg-muted/20">
+                    <TabsList className="w-full grid grid-cols-2 rounded-none border-b">
                       <TabsTrigger
                         value="pending"
-                        className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-background"
+                        className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary"
                       >
-                        <div className="flex items-center gap-2">
-                          <div className="size-2.5 rounded-full bg-blue-500"></div>
-                          <span className="font-medium">Pending</span>
-                          <Badge variant="secondary" className="ml-1 bg-blue-50 text-blue-700 border-blue-200">
-                            {pendingStops.length}
-                          </Badge>
-                        </div>
+                        Pending ({pendingStops.length})
                       </TabsTrigger>
                       <TabsTrigger
                         value="completed"
-                        className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-background"
+                        className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary"
                       >
-                        <div className="flex items-center gap-2">
-                          <div className="size-2.5 rounded-full bg-green-500"></div>
-                          <span className="font-medium">Completed</span>
-                          <Badge variant="secondary" className="ml-1 bg-green-50 text-green-700 border-green-200">
-                            {completedStops.length}
-                          </Badge>
-                        </div>
+                        Completed ({completedStops.length})
                       </TabsTrigger>
                     </TabsList>
 
-                    <ScrollArea className="h-[350px]">
+                    <ScrollArea className="h-[400px]">
                       <TabsContent value="pending" className="m-0 p-0">
                         {pendingStops.length === 0 ? (
                           <div className="p-8 text-center">
-                            <div className="rounded-full bg-green-50 w-16 h-16 flex items-center justify-center mx-auto mb-4">
-                              <CheckCircle2 className="h-8 w-8 text-green-500" />
-                            </div>
-                            <h3 className="text-lg font-medium">All stops completed!</h3>
-                            <p className="text-sm text-muted-foreground mt-2 max-w-xs mx-auto">
-                              Great job, you've completed all stops on this route.
-                            </p>
+                            <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-3" />
+                            <h3 className="text-lg font-medium">All stops completed</h3>
                           </div>
                         ) : (
                           <div className="divide-y">
                             {pendingStops.map((stop, index) => (
-                              <div key={stop.id} className="hover:bg-muted/20 transition-colors">
-                                <div className="p-4">
-                                  <div className="flex justify-between">
-                                    <div className="space-y-2 flex-1 mr-3">
-                                      <div className="flex items-center gap-2 flex-wrap">
-                                        <Badge
-                                          variant="outline"
-                                          className={
-                                            stop.isPickup
-                                              ? "bg-amber-50 text-amber-700 border-amber-200"
-                                              : "bg-blue-50 text-blue-700 border-blue-200"
-                                          }
-                                        >
-                                          {stop.isPickup ? "Pickup" : "Delivery"}
+                              <div key={stop.id} className="p-4 hover:bg-muted/10 transition-colors">
+                                <div className="flex items-start justify-between">
+                                  <div className="space-y-1.5 flex-1 mr-3">
+                                    <div className="flex items-center gap-2">
+                                      <Badge
+                                        variant="outline"
+                                        className={
+                                          stop.isPickup
+                                            ? "bg-amber-50 text-amber-700 border-amber-200"
+                                            : "bg-blue-50 text-blue-700 border-blue-200"
+                                        }
+                                      >
+                                        {stop.isPickup ? "Pickup" : "Delivery"}
+                                      </Badge>
+                                      {index === 0 && (
+                                        <Badge variant="secondary" className="bg-primary/10 text-primary border-none">
+                                          Next
                                         </Badge>
-                                        {index === 0 && (
-                                          <Badge variant="secondary" className="bg-primary/10 text-primary border-none">
-                                            Next Stop
-                                          </Badge>
-                                        )}
-                                        <div className="text-xs text-muted-foreground flex items-center">
-                                          <Hash className="h-3 w-3 mr-0.5" />
-                                          Stop {stop.sequenceOrder}
-                                        </div>
-                                      </div>
-                                      <p className="font-medium flex items-center gap-1.5">
-                                        <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
-                                        {stop.address}
-                                      </p>
-
-                                      {/* Order details */}
-                                      {stop.order && (
-                                        <div className="mt-2 pt-2 border-t border-dashed border-border/60">
-                                          <div className="flex items-center gap-2">
-                                            <Avatar className="h-7 w-7 border">
-                                              <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                                                {stop.order.customerName.charAt(0)}
-                                              </AvatarFallback>
-                                            </Avatar>
-                                            <div>
-                                              <div className="font-medium text-sm">{stop.order.customerName}</div>
-                                              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                                <Phone className="h-3 w-3" />
-                                                <span>{stop.order.phone}</span>
-                                              </div>
-                                            </div>
-                                          </div>
-                                          {stop.order.notes && (
-                                            <div className="flex items-start gap-1.5 text-xs bg-muted/50 p-2 rounded-md mt-2 border border-border/30">
-                                              <Info className="h-3.5 w-3.5 text-muted-foreground mt-0.5 flex-shrink-0" />
-                                              <span className="text-muted-foreground">{stop.order.notes}</span>
-                                            </div>
-                                          )}
-                                        </div>
                                       )}
                                     </div>
-                                    <div className="flex flex-col items-end gap-2">
-                                      <div className="flex items-center gap-2">
-                                        <Button
-                                          size="icon"
-                                          variant="outline"
-                                          onClick={() => startNavigation(stop)}
-                                          className="h-8 w-8 rounded-full"
-                                        >
-                                          <Navigation2 className="h-4 w-4" />
-                                        </Button>
-                                        <Button
-                                          size="icon"
-                                          variant="default"
-                                          onClick={() => handleCompleteStop(stop)}
-                                          className="h-8 w-8 rounded-full"
-                                        >
-                                          <CheckCircle2 className="h-4 w-4" />
-                                        </Button>
+                                    
+                                    <p className="font-medium">{stop.address}</p>
+                                    
+                                    {stop.order && (
+                                      <div className="flex items-center gap-2 mt-2">
+                                        <User className="h-4 w-4 text-muted-foreground" />
+                                        <span className="text-sm">{stop.order.customerName}</span>
+                                        {stop.order.phone && (
+                                          <>
+                                            <span className="text-muted-foreground">•</span>
+                                            <span className="text-sm text-muted-foreground">{stop.order.phone}</span>
+                                          </>
+                                        )}
                                       </div>
-                                    </div>
+                                    )}
+                                    
+                                    {stop.order?.notes && (
+                                      <div className="mt-2 text-sm text-muted-foreground bg-muted/30 p-2 rounded-md">
+                                        {stop.order.notes}
+                                      </div>
+                                    )}
+                                  </div>
+                                  
+                                  <div className="flex items-center gap-2">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => startNavigation(stop)}
+                                      className="h-8 w-8 p-0"
+                                    >
+                                      <Navigation2 className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="default"
+                                      onClick={() => handleCompleteStop(stop)}
+                                      className="h-8 w-8 p-0"
+                                    >
+                                      <CheckCircle2 className="h-4 w-4" />
+                                    </Button>
                                   </div>
                                 </div>
                               </div>
@@ -804,62 +747,46 @@ export function ActiveDelivery() {
 
                       <TabsContent value="completed" className="m-0 p-0">
                         {completedStops.length === 0 ? (
-                          <div className="p-8 text-center">
-                            <div className="rounded-full bg-muted w-16 h-16 flex items-center justify-center mx-auto mb-4">
-                              <ClipboardList className="h-8 w-8 text-muted-foreground" />
-                            </div>
-                            <p className="text-muted-foreground">No stops completed yet</p>
+                          <div className="p-8 text-center text-muted-foreground">
+                            No stops completed yet
                           </div>
                         ) : (
                           <div className="divide-y">
                             {completedStops.map((stop) => (
-                              <div key={stop.id} className="hover:bg-muted/20 transition-colors">
-                                <div className="p-4">
-                                  <div className="flex items-start gap-3">
-                                    <div className="mt-1 flex items-center justify-center rounded-full w-6 h-6 bg-green-100 text-green-600 flex-shrink-0">
-                                      <CheckCircle2 className="h-4 w-4" />
+                              <div key={stop.id} className="p-4 hover:bg-muted/10 transition-colors">
+                                <div className="flex items-start gap-3">
+                                  <CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
+                                  <div>
+                                    <div className="flex items-center gap-2">
+                                      <p className="font-medium">{stop.address}</p>
+                                      <Badge 
+                                        variant="outline" 
+                                        className={stop.isPickup 
+                                          ? "bg-amber-50/50 text-amber-700 border-amber-200" 
+                                          : "bg-blue-50/50 text-blue-700 border-blue-200"
+                                        }
+                                      >
+                                        {stop.isPickup ? "Pickup" : "Delivery"}
+                                      </Badge>
                                     </div>
-                                    <div className="space-y-1.5 flex-1">
-                                      <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                          <p className="font-medium">{stop.address}</p>
-                                          <div className="text-xs text-muted-foreground flex items-center">
-                                            <Hash className="h-3 w-3 mr-0.5" />
-                                            {stop.sequenceOrder}
-                                          </div>
-                                        </div>
-                                        <Badge 
-                                          variant="outline" 
-                                          className={stop.isPickup 
-                                            ? "bg-amber-50/50 text-amber-700 border-amber-200" 
-                                            : "bg-blue-50/50 text-blue-700 border-blue-200"
-                                          }
-                                        >
-                                          {stop.isPickup ? "Pickup" : "Delivery"}
-                                        </Badge>
-                                      </div>
-                                      
-                                      {stop.completedAt && (
-                                        <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-1">
-                                          <Clock className="h-3.5 w-3.5" />
-                                          Completed {format(new Date(stop.completedAt), "MMM d, h:mm a")}
-                                        </p>
-                                      )}
-                                      
-                                      {stop.order && (
-                                        <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-1">
-                                          <User className="h-3.5 w-3.5" />
-                                          <span>{stop.order.customerName}</span>
-                                        </div>
-                                      )}
-                                      
-                                      {stop.notes && (
-                                        <div className="text-sm mt-2 bg-muted/70 p-2.5 rounded-md border border-border/30">
-                                          <p className="text-xs font-medium mb-1">Notes:</p>
-                                          <p className="text-sm text-muted-foreground">{stop.notes}</p>
-                                        </div>
-                                      )}
-                                    </div>
+                                    
+                                    {stop.completedAt && (
+                                      <p className="text-sm text-muted-foreground mt-1">
+                                        Completed {format(new Date(stop.completedAt), "MMM d, h:mm a")}
+                                      </p>
+                                    )}
+                                    
+                                    {stop.order && (
+                                      <p className="text-sm mt-1">
+                                        {stop.order.customerName}
+                                      </p>
+                                    )}
+                                    
+                                    {stop.notes && (
+                                      <p className="text-sm text-muted-foreground mt-1">
+                                        {stop.notes}
+                                      </p>
+                                    )}
                                   </div>
                                 </div>
                               </div>
@@ -924,24 +851,7 @@ export function ActiveDelivery() {
                   </>
                 )}
               </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline">
-                    Actions
-                    <ChevronRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => (window.location.href = "/driver/dashboard")}>
-                    <User className="mr-2 h-4 w-4" />
-                    Dashboard
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => (window.location.href = "/driver/history")}>
-                    <Clock className="mr-2 h-4 w-4" />
-                    Delivery History
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+            
             </div>
           </div>
 
@@ -1103,13 +1013,17 @@ export function ActiveDelivery() {
               )}
 
               {/* Stops */}
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-xl flex items-center gap-2">
-                    <MapPin className="h-5 w-5 text-primary" />
-                    Stops
-                  </CardTitle>
-                  <CardDescription>{activeRoute.stops.length} total stops on this route</CardDescription>
+              <Card className="border shadow-sm overflow-hidden">
+                <CardHeader className="pb-3 border-b bg-background">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <MapPin className="h-5 w-5 text-primary" />
+                      Route Stops
+                    </CardTitle>
+                    <Badge variant="outline">
+                      {completedStops.length}/{activeRoute.stops.length} Completed
+                    </Badge>
+                  </div>
                 </CardHeader>
                 <CardContent className="p-0">
                   <Tabs defaultValue="pending" className="w-full">
@@ -1132,20 +1046,15 @@ export function ActiveDelivery() {
                       <TabsContent value="pending" className="m-0 p-0">
                         {pendingStops.length === 0 ? (
                           <div className="p-8 text-center">
-                            <div className="rounded-full bg-green-50 w-16 h-16 flex items-center justify-center mx-auto mb-4">
-                              <CheckCircle2 className="h-8 w-8 text-green-500" />
-                            </div>
-                            <h3 className="text-lg font-medium">All stops completed!</h3>
-                            <p className="text-sm text-muted-foreground mt-2 max-w-xs mx-auto">
-                              Great job, you've completed all stops on this route.
-                            </p>
+                            <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-3" />
+                            <h3 className="text-lg font-medium">All stops completed</h3>
                           </div>
                         ) : (
                           <div className="divide-y">
                             {pendingStops.map((stop, index) => (
-                              <div key={stop.id} className="p-4 hover:bg-muted/50 transition-colors">
-                                <div className="flex justify-between">
-                                  <div className="space-y-2">
+                              <div key={stop.id} className="p-4 hover:bg-muted/10 transition-colors">
+                                <div className="flex items-start justify-between">
+                                  <div className="space-y-1.5 flex-1 mr-3">
                                     <div className="flex items-center gap-2">
                                       <Badge
                                         variant="outline"
@@ -1157,38 +1066,49 @@ export function ActiveDelivery() {
                                       >
                                         {stop.isPickup ? "Pickup" : "Delivery"}
                                       </Badge>
-                                      {index === 0 && <Badge variant="secondary">Next Stop</Badge>}
+                                      {index === 0 && (
+                                        <Badge variant="secondary" className="bg-primary/10 text-primary border-none">
+                                          Next
+                                        </Badge>
+                                      )}
                                     </div>
+                                    
                                     <p className="font-medium">{stop.address}</p>
-
-                                    {/* Order details */}
+                                    
                                     {stop.order && (
-                                      <div className="mt-1 space-y-1 text-sm">
-                                        <div className="flex items-center gap-1 text-muted-foreground">
-                                          <User className="h-3 w-3" />
-                                          <span>{stop.order.customerName}</span>
-                                        </div>
-                                        <div className="flex items-center gap-1 text-muted-foreground">
-                                          <Phone className="h-3 w-3" />
-                                          <span>{stop.order.phone}</span>
-                                        </div>
+                                      <div className="flex items-center gap-2 mt-2">
+                                        <User className="h-4 w-4 text-muted-foreground" />
+                                        <span className="text-sm">{stop.order.customerName}</span>
+                                        {stop.order.phone && (
+                                          <>
+                                            <span className="text-muted-foreground">•</span>
+                                            <span className="text-sm text-muted-foreground">{stop.order.phone}</span>
+                                          </>
+                                        )}
+                                      </div>
+                                    )}
+                                    
+                                    {stop.order?.notes && (
+                                      <div className="mt-2 text-sm text-muted-foreground bg-muted/30 p-2 rounded-md">
+                                        {stop.order.notes}
                                       </div>
                                     )}
                                   </div>
-                                  <div className="flex items-start gap-2">
+                                  
+                                  <div className="flex items-center gap-2">
                                     <Button
-                                      size="icon"
+                                      size="sm"
                                       variant="outline"
                                       onClick={() => startNavigation(stop)}
-                                      className="h-8 w-8"
+                                      className="h-8 w-8 p-0"
                                     >
                                       <Navigation2 className="h-4 w-4" />
                                     </Button>
                                     <Button
-                                      size="icon"
+                                      size="sm"
                                       variant="default"
                                       onClick={() => handleCompleteStop(stop)}
-                                      className="h-8 w-8"
+                                      className="h-8 w-8 p-0"
                                     >
                                       <CheckCircle2 className="h-4 w-4" />
                                     </Button>
@@ -1202,26 +1122,18 @@ export function ActiveDelivery() {
 
                       <TabsContent value="completed" className="m-0 p-0">
                         {completedStops.length === 0 ? (
-                          <div className="p-8 text-center">
-                            <p className="text-muted-foreground">No stops completed yet</p>
+                          <div className="p-8 text-center text-muted-foreground">
+                            No stops completed yet
                           </div>
                         ) : (
                           <div className="divide-y">
                             {completedStops.map((stop) => (
-                              <div key={stop.id} className="p-4 hover:bg-muted/50 transition-colors">
+                              <div key={stop.id} className="p-4 hover:bg-muted/10 transition-colors">
                                 <div className="flex items-start gap-3">
-                                  <div className="mt-1 flex items-center justify-center rounded-full w-6 h-6 bg-green-100 text-green-600 flex-shrink-0">
-                                    <CheckCircle2 className="h-4 w-4" />
-                                  </div>
-                                  <div className="space-y-1 flex-1">
-                                    <div className="flex items-center justify-between">
-                                      <div className="flex items-center gap-2">
-                                        <p className="font-medium">{stop.address}</p>
-                                        <div className="text-xs text-muted-foreground flex items-center">
-                                          <Hash className="h-3 w-3 mr-0.5" />
-                                          {stop.sequenceOrder}
-                                        </div>
-                                      </div>
+                                  <CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
+                                  <div>
+                                    <div className="flex items-center gap-2">
+                                      <p className="font-medium">{stop.address}</p>
                                       <Badge 
                                         variant="outline" 
                                         className={stop.isPickup 
@@ -1234,21 +1146,21 @@ export function ActiveDelivery() {
                                     </div>
                                     
                                     {stop.completedAt && (
-                                      <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-1">
-                                        <Clock className="h-3.5 w-3.5" />
+                                      <p className="text-sm text-muted-foreground mt-1">
                                         Completed {format(new Date(stop.completedAt), "MMM d, h:mm a")}
                                       </p>
                                     )}
                                     
                                     {stop.order && (
-                                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-1">
-                                        <User className="h-3.5 w-3.5" />
-                                        <span>{stop.order.customerName}</span>
-                                      </div>
+                                      <p className="text-sm mt-1">
+                                        {stop.order.customerName}
+                                      </p>
                                     )}
                                     
                                     {stop.notes && (
-                                      <div className="text-sm mt-2 bg-muted p-2 rounded-md">{stop.notes}</div>
+                                      <p className="text-sm text-muted-foreground mt-1">
+                                        {stop.notes}
+                                      </p>
                                     )}
                                   </div>
                                 </div>
