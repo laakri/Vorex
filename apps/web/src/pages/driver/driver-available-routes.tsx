@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   MapPin,
   Package,
@@ -14,14 +14,22 @@ import {
   Clock,
   CheckCircle2,
   X,
+  RotateCw,
+  Route as RouteIcon,
+  Calendar,
+  ChevronRight,
+  Clock3,
+  Info,
+  Navigation,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -36,11 +44,14 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
 import api from "@/lib/axios";
 import { useAuthStore } from "@/stores/auth.store";
+import { Separator } from "@/components/ui/separator";
+import { format } from "date-fns";
 
-// API types based on backend structure
+// Type definitions
 interface Warehouse {
   id: string;
   name: string;
@@ -68,9 +79,12 @@ interface RouteStop {
   latitude: number;
   longitude: number;
   isPickup: boolean;
-  sequenceOrder: number;
   isCompleted: boolean;
-  completedAt: string | null;
+  sequenceOrder: number;
+  estimatedArrival: string | null;
+  estimatedDeparture: string | null;
+  actualArrival: string | null;
+  actualDeparture: string | null;
 }
 
 interface DeliveryRoute {
@@ -80,39 +94,50 @@ interface DeliveryRoute {
   driverId: string | null;
   totalDistance: number;
   estimatedDuration: number;
-  fromWarehouseId: string;
+  fromWarehouseId: string | null;
   toWarehouseId: string | null;
   startedAt: string | null;
   completedAt: string | null;
+  createdAt: string | number;
   batch: Batch;
-  stops: RouteStop[];
   fromWarehouse?: Warehouse;
-  toWarehouse?: Warehouse | null;
-  createdAt: number;
+  toWarehouse?: Warehouse;
+  stops: RouteStop[];
+  driver?: {
+    id: string;
+    name: string;
+  };
 }
 
-// Vehicle type mapping for display
+// Constants
 const vehicleTypeLabels = {
   MOTORCYCLE: "Motorcycle",
   CAR: "Car",
-  VAN: "Van",
+  VAN: "Van", 
   SMALL_TRUCK: "Small Truck",
-  LARGE_TRUCK: "Large Truck",
+  LARGE_TRUCK: "Large Truck"
 };
 
-// Batch type mapping for display
 const batchTypeLabels = {
   LOCAL_PICKUP: "Local Pickup",
   LOCAL_DELIVERY: "Local Delivery",
   INTERCITY: "Intercity",
   LOCAL_SELLERS_WAREHOUSE: "Seller to Warehouse",
-  LOCAL_WAREHOUSE_BUYERS: "Warehouse to Buyer",
+  LOCAL_WAREHOUSE_BUYERS: "Warehouse to Buyer"
+};
+
+const statusColors = {
+  PENDING: "bg-amber-100 text-amber-800 border-amber-200",
+  IN_PROGRESS: "bg-blue-100 text-blue-800 border-blue-200",
+  COMPLETED: "bg-green-100 text-green-800 border-green-200",
+  CANCELLED: "bg-red-100 text-red-800 border-red-200",
 };
 
 export function DriverAvailableRoutes() {
   const { user } = useAuthStore();
   const [routes, setRoutes] = useState<DeliveryRoute[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [selectedRoute, setSelectedRoute] = useState<DeliveryRoute | null>(null);
   const [showRouteDetails, setShowRouteDetails] = useState(false);
   const [activeTab, setActiveTab] = useState("all");
@@ -120,86 +145,99 @@ export function DriverAvailableRoutes() {
   const [filterVehicle, setFilterVehicle] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [acceptingRoute, setAcceptingRoute] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   // Fetch available routes
-  useEffect(() => {
-    const fetchRoutes = async () => {
-      try {
+  const fetchRoutes = useCallback(async (showRefreshIndicator = false) => {
+    try {
+      if (showRefreshIndicator) {
+        setRefreshing(true);
+      } else {
         setLoading(true);
-        
-        // Use the api instance which is already configured with the correct baseURL
-        const response = await api.get('/delivery-routes/available');
-        
-        // Ensure we always set an array
-        if (Array.isArray(response.data)) {
-          setRoutes(response.data);
-        } else {
-          console.error('Expected array response but got:', response.data);
-          setRoutes([]);
-        }
-      } catch (error) {
-        console.error('Failed to fetch routes:', error);
-        toast({
-          variant: "destructive",
-          title: "Error fetching routes",
-          description: "Could not load available routes. Please try again.",
-        });
-        setRoutes([]);
-      } finally {
-        setLoading(false);
       }
-    };
+      setError(null);
+      
+      const response = await api.get('/delivery-routes/available');
+      
+      // Ensure we always set an array
+      if (Array.isArray(response.data)) {
+        setRoutes(response.data);
+      } else {
+        console.error('Expected array response but got:', response.data);
+        setRoutes([]);
+        setError("Invalid response format from server");
+      }
+    } catch (error) {
+      console.error('Failed to fetch routes:', error);
+      setError("Could not load available routes. Please try again.");
+      toast({
+        variant: "destructive",
+        title: "Error fetching routes",
+        description: "Could not load available routes. Please try again.",
+      });
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
 
+  useEffect(() => {
     fetchRoutes();
     
     // Refresh routes every 30 seconds
-    const intervalId = setInterval(fetchRoutes, 30000);
+    const intervalId = setInterval(() => fetchRoutes(), 30000);
     return () => clearInterval(intervalId);
-  }, []);
+  }, [fetchRoutes]);
 
-  // Filter and sort routes
-  const filteredRoutes = routes
-    .filter(route => {
-      // Filter by vehicle type if not "all"
-      if (filterVehicle !== "all" && route.batch.vehicleType !== filterVehicle) {
-        return false;
-      }
-      
-      // Filter by status
-      if (activeTab === "pending" && route.status !== "PENDING") return false;
-      if (activeTab === "inProgress" && route.status !== "IN_PROGRESS") return false;
-      if (activeTab === "completed" && route.status !== "COMPLETED") return false;
-      
-      // Search query - search in addresses, warehouse names, etc.
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase();
-        const fromWarehouse = route.fromWarehouse?.name?.toLowerCase() || '';
-        const toWarehouse = route.toWarehouse?.name?.toLowerCase() || '';
-        const addresses = route.stops.map(s => s.address.toLowerCase()).join(' ');
+  // Filter and sort routes with memoization
+  const filteredRoutes = useMemo(() => {
+    return routes
+      .filter(route => {
+        // Filter by vehicle type if not "all"
+        if (filterVehicle !== "all" && route.batch.vehicleType !== filterVehicle) {
+          return false;
+        }
         
-        return (
-          fromWarehouse.includes(query) || 
-          toWarehouse.includes(query) || 
-          addresses.includes(query)
-        );
-      }
-      
-      return true;
-    })
-    .sort((a, b) => {
-      // Sort based on selected criteria
-      if (sortBy === "distance") {
-        return a.totalDistance - b.totalDistance;
-      } else if (sortBy === "duration") {
-        return a.estimatedDuration - b.estimatedDuration;
-      } else if (sortBy === "date") {
-        return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
-      } else if (sortBy === "orders") {
-        return b.batch.orderCount - a.batch.orderCount;
-      }
-      return 0;
-    });
+        // Filter by status
+        if (activeTab === "pending" && route.status !== "PENDING") return false;
+        if (activeTab === "inProgress" && route.status !== "IN_PROGRESS") return false;
+        if (activeTab === "completed" && route.status !== "COMPLETED") return false;
+        
+        // Search query - search in addresses, warehouse names, etc.
+        if (searchQuery) {
+          const query = searchQuery.toLowerCase();
+          const fromWarehouse = route.fromWarehouse?.name?.toLowerCase() || '';
+          const toWarehouse = route.toWarehouse?.name?.toLowerCase() || '';
+          const addresses = route.stops.map(s => s.address.toLowerCase()).join(' ');
+          const batchType = batchTypeLabels[route.batch.type]?.toLowerCase() || '';
+          
+          return (
+            fromWarehouse.includes(query) || 
+            toWarehouse.includes(query) || 
+            addresses.includes(query) ||
+            batchType.includes(query) ||
+            route.id.toLowerCase().includes(query)
+          );
+        }
+        
+        return true;
+      })
+      .sort((a, b) => {
+        // Sort based on selected criteria
+        if (sortBy === "distance") {
+          return a.totalDistance - b.totalDistance;
+        } else if (sortBy === "duration") {
+          return a.estimatedDuration - b.estimatedDuration;
+        } else if (sortBy === "date") {
+          return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+        } else if (sortBy === "orders") {
+          return b.batch.orderCount - a.batch.orderCount;
+        }
+        return 0; // Default case
+      });
+  }, [routes, filterVehicle, activeTab, searchQuery, sortBy]);
 
+  // Handle route acceptance
   const handleAcceptRoute = async (route: DeliveryRoute) => {
     try {
       setAcceptingRoute(true);
@@ -216,6 +254,9 @@ export function DriverAvailableRoutes() {
       
       setRoutes(routes.filter(r => r.id !== route.id));
       setShowRouteDetails(false);
+      
+      // Refresh routes list to get latest data
+      fetchRoutes(true);
     } catch (error) {
       console.error('Failed to accept route:', error);
       toast({
@@ -228,7 +269,8 @@ export function DriverAvailableRoutes() {
     }
   };
 
-  const getRouteDescription = (route: DeliveryRoute) => {
+  // Get descriptive text for route type
+  const getRouteDescription = useCallback((route: DeliveryRoute) => {
     // Determine route type description
     if (route.batch.type === 'INTERCITY') {
       return `Intercity: ${route.fromWarehouse?.city || 'Origin'} → ${route.toWarehouse?.city || 'Destination'}`;
@@ -237,7 +279,51 @@ export function DriverAvailableRoutes() {
     } else {
       return `Delivery: ${route.fromWarehouse?.name || 'Warehouse'} → ${route.stops.length - 1} stops`;
     }
-  };
+  }, []);
+
+  // Get total stats for display
+  const stats = useMemo(() => {
+    const pending = routes.filter(r => r.status === "PENDING").length;
+    const inProgress = routes.filter(r => r.status === "IN_PROGRESS").length;
+    const avgDuration = Math.round(
+      routes.reduce((acc, route) => acc + route.estimatedDuration, 0) / (routes.length || 1)
+    );
+    const uniqueWarehouses = new Set(
+      routes.map(r => r.fromWarehouseId)
+        .concat(routes.map(r => r.toWarehouseId).filter(Boolean) as string[])
+    ).size;
+    
+    return { pending, inProgress, avgDuration, uniqueWarehouses };
+  }, [routes]);
+  
+  // Render skeleton loaders during initial load
+  const renderSkeletons = () => (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 pb-6">
+      {[1, 2, 3, 4].map(i => (
+        <Card key={i} className="overflow-hidden">
+          <div className="p-4 space-y-3">
+            <div className="flex justify-between">
+              <Skeleton className="h-6 w-48" />
+              <Skeleton className="h-6 w-16" />
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {[1, 2, 3, 4].map(j => (
+                <Skeleton key={j} className="h-5 w-20" />
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <Skeleton className="h-5 w-24" />
+              <Skeleton className="h-5 w-24" />
+            </div>
+            <div className="flex justify-between">
+              <Skeleton className="h-9 w-32" />
+              <Skeleton className="h-9 w-32" />
+            </div>
+          </div>
+        </Card>
+      ))}
+    </div>
+  );
   
   return (
     <div className="h-full flex flex-col bg-background">
@@ -251,6 +337,26 @@ export function DriverAvailableRoutes() {
                 {filteredRoutes.length} routes available for your vehicle type
               </p>
             </div>
+            
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => fetchRoutes(true)}
+              disabled={refreshing}
+              className="w-full sm:w-auto"
+            >
+              {refreshing ? (
+                <>
+                  <RotateCw className="mr-2 h-4 w-4 animate-spin" />
+                  Refreshing...
+                </>
+              ) : (
+                <>
+                  <RotateCw className="mr-2 h-4 w-4" />
+                  Refresh Routes
+                </>
+              )}
+            </Button>
           </div>
 
           {/* Quick Stats */}
@@ -262,7 +368,7 @@ export function DriverAvailableRoutes() {
                 </div>
                 <div>
                   <p className="text-sm font-medium">Available</p>
-                  <p className="text-2xl font-semibold">{routes.filter(r => r.status === "PENDING").length}</p>
+                  <p className="text-2xl font-semibold">{stats.pending}</p>
                 </div>
               </div>
             </Card>
@@ -273,7 +379,7 @@ export function DriverAvailableRoutes() {
                 </div>
                 <div>
                   <p className="text-sm font-medium">In Progress</p>
-                  <p className="text-2xl font-semibold">{routes.filter(r => r.status === "IN_PROGRESS").length}</p>
+                  <p className="text-2xl font-semibold">{stats.inProgress}</p>
                 </div>
               </div>
             </Card>
@@ -285,7 +391,7 @@ export function DriverAvailableRoutes() {
                 <div>
                   <p className="text-sm font-medium">Avg. Duration</p>
                   <p className="text-2xl font-semibold">
-                    {Math.round(routes.reduce((acc, route) => acc + route.estimatedDuration, 0) / (routes.length || 1))} min
+                    {stats.avgDuration} min
                   </p>
                 </div>
               </div>
@@ -298,9 +404,7 @@ export function DriverAvailableRoutes() {
                 <div>
                   <p className="text-sm font-medium">Warehouses</p>
                   <p className="text-2xl font-semibold">
-                    {new Set(routes.map(r => r.fromWarehouseId).concat(
-                      routes.map(r => r.toWarehouseId).filter(Boolean) as string[]
-                    )).size}
+                    {stats.uniqueWarehouses}
                   </p>
                 </div>
               </div>
@@ -314,11 +418,21 @@ export function DriverAvailableRoutes() {
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search routes..."
+                  placeholder="Search routes, warehouses, addresses..."
                   className="pl-9 w-full"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
+                {searchQuery && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7 p-0"
+                    onClick={() => setSearchQuery("")}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
               <Button variant="default" size="sm" className="gap-2 hidden sm:flex">
                 <Map className="h-4 w-4" />
@@ -335,10 +449,36 @@ export function DriverAvailableRoutes() {
                 onValueChange={setActiveTab}
               >
                 <TabsList className="w-full">
-                  <TabsTrigger value="all" className="flex-1">All</TabsTrigger>
-                  <TabsTrigger value="pending" className="flex-1">Pending</TabsTrigger>
-                  <TabsTrigger value="inProgress" className="flex-1">In Progress</TabsTrigger>
-                  <TabsTrigger value="completed" className="flex-1">Completed</TabsTrigger>
+                  <TabsTrigger value="all" className="flex-1">
+                    All
+                    {activeTab === "all" && routes.length > 0 && (
+                      <Badge variant="secondary" className="ml-2">{routes.length}</Badge>
+                    )}
+                  </TabsTrigger>
+                  <TabsTrigger value="pending" className="flex-1">
+                    Pending
+                    {activeTab === "pending" && (
+                      <Badge variant="secondary" className="ml-2">
+                        {routes.filter(r => r.status === "PENDING").length}
+                      </Badge>
+                    )}
+                  </TabsTrigger>
+                  <TabsTrigger value="inProgress" className="flex-1">
+                    In Progress
+                    {activeTab === "inProgress" && (
+                      <Badge variant="secondary" className="ml-2">
+                        {routes.filter(r => r.status === "IN_PROGRESS").length}
+                      </Badge>
+                    )}
+                  </TabsTrigger>
+                  <TabsTrigger value="completed" className="flex-1">
+                    Completed
+                    {activeTab === "completed" && (
+                      <Badge variant="secondary" className="ml-2">
+                        {routes.filter(r => r.status === "COMPLETED").length}
+                      </Badge>
+                    )}
+                  </TabsTrigger>
                 </TabsList>
               </Tabs>
 
@@ -384,11 +524,18 @@ export function DriverAvailableRoutes() {
       <div className="flex-1 overflow-hidden">
         <div className="container h-full py-6">
           {loading ? (
-            <div className="flex items-center justify-center h-full">
-              <div className="flex flex-col items-center gap-2">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                <p className="text-sm text-muted-foreground">Loading routes...</p>
+            renderSkeletons()
+          ) : error ? (
+            <div className="flex flex-col items-center justify-center h-[calc(100vh-280px)] p-8">
+              <div className="bg-red-50 rounded-full p-3 mb-4">
+                <X className="h-6 w-6 text-red-500" />
               </div>
+              <h3 className="text-xl font-medium mb-2">Error Loading Routes</h3>
+              <p className="text-muted-foreground text-center mb-6">{error}</p>
+              <Button onClick={() => fetchRoutes()}>
+                <RotateCw className="mr-2 h-4 w-4" />
+                Try Again
+              </Button>
             </div>
           ) : filteredRoutes.length > 0 ? (
             <ScrollArea className="h-[calc(100vh-280px)]">
@@ -396,29 +543,35 @@ export function DriverAvailableRoutes() {
                 {filteredRoutes.map((route) => (
                   <Card 
                     key={route.id} 
-                    className="overflow-hidden hover:shadow-md transition-shadow"
+                    className={cn(
+                      "overflow-hidden hover:shadow-md transition-shadow border",
+                      route.status === "PENDING" && "border-l-4 border-l-primary"
+                    )}
                   >
-                    <div className="border-l-4 border-primary p-4">
+                    <CardContent className="p-4">
                       <div className="flex flex-col gap-3">
                         {/* Route Header */}
                         <div className="flex justify-between items-start">
                           <div>
                             <h3 className="font-medium">{getRouteDescription(route)}</h3>
-                            <p className="text-sm text-muted-foreground">
-                              {route.fromWarehouse?.name} • {new Date(route.createdAt).toLocaleDateString()}
-                            </p>
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <Warehouse className="h-3 w-3" />
+                              {route.fromWarehouse?.name} 
+                              <span className="inline-block h-1 w-1 rounded-full bg-muted-foreground"></span>
+                              <Calendar className="h-3 w-3" />
+                              {new Date(route.createdAt).toLocaleDateString()}
+                            </div>
                           </div>
-                          <Badge variant={
-                            route.status === "PENDING" ? "outline" : 
-                            route.status === "IN_PROGRESS" ? "secondary" : 
-                            "default"
-                          }>
+                          <Badge className={cn(
+                            "capitalize border",
+                            statusColors[route.status] || "bg-secondary"
+                          )}>
                             {route.status.replace('_', ' ')}
                           </Badge>
                         </div>
 
                         {/* Route Stats */}
-                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 bg-muted/30 rounded-md p-2">
                           <div className="flex items-center gap-2">
                             <Weight className="h-4 w-4 text-muted-foreground" />
                             <span className="text-sm">{Math.round(route.batch.totalWeight)} kg</span>
@@ -439,16 +592,21 @@ export function DriverAvailableRoutes() {
 
                         {/* Tags */}
                         <div className="flex flex-wrap gap-2">
-                          <Badge variant="secondary">
+                          <Badge variant="secondary" className="font-normal">
                             {batchTypeLabels[route.batch.type] || route.batch.type}
                           </Badge>
-                          <Badge variant="outline">
+                          <Badge variant="outline" className="font-normal">
                             {vehicleTypeLabels[route.batch.vehicleType] || route.batch.vehicleType}
                           </Badge>
+                          {route.stops.length > 3 && (
+                            <Badge variant="outline" className="font-normal text-blue-600 border-blue-200 bg-blue-50">
+                              {route.stops.length} stops
+                            </Badge>
+                          )}
                         </div>
 
                         {/* Action Buttons */}
-                        <div className="flex justify-between items-center">
+                        <div className="flex justify-between items-center pt-2">
                           <Button 
                             variant="outline" 
                             size="sm"
@@ -457,31 +615,50 @@ export function DriverAvailableRoutes() {
                               setShowRouteDetails(true);
                             }}
                           >
+                            <RouteIcon className="mr-2 h-4 w-4" />
                             View Details
                           </Button>
-                          <Button 
-                            size="sm"
-                            disabled={route.status !== "PENDING"}
-                            onClick={() => handleAcceptRoute(route)}
-                          >
-                            Accept Route
-                          </Button>
+                          
+                          {route.status === "PENDING" && (
+                            <Button 
+                              variant="default" 
+                              size="sm"
+                              onClick={() => {
+                                setSelectedRoute(route);
+                                setShowRouteDetails(true);
+                              }}
+                            >
+                              <CheckCircle2 className="mr-2 h-4 w-4" />
+                              Accept Route
+                            </Button>
+                          )}
                         </div>
                       </div>
-                    </div>
+                    </CardContent>
                   </Card>
                 ))}
               </div>
             </ScrollArea>
           ) : (
-            <div className="flex items-center justify-center h-full">
-              <div className="text-center">
-                <Package className="mx-auto h-12 w-12 text-muted-foreground" />
-                <h3 className="mt-4 text-lg font-medium">No routes available</h3>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  There are currently no available routes matching your criteria.
-                </p>
+            <div className="flex flex-col items-center justify-center h-[calc(100vh-280px)]">
+              <div className="bg-muted rounded-full p-3 mb-4">
+                <Truck className="h-6 w-6 text-muted-foreground" />
               </div>
+              <h3 className="text-xl font-medium mb-2">No Routes Found</h3>
+              <p className="text-muted-foreground text-center mb-6">
+                {searchQuery || filterVehicle !== "all" || activeTab !== "all" 
+                  ? "Try adjusting your filters or search query"
+                  : "There are no available routes right now. Check back later."}
+              </p>
+              {(searchQuery || filterVehicle !== "all" || activeTab !== "all") && (
+                <Button variant="outline" onClick={() => {
+                  setSearchQuery("");
+                  setFilterVehicle("all");
+                  setActiveTab("all");
+                }}>
+                  Clear Filters
+                </Button>
+              )}
             </div>
           )}
         </div>
@@ -490,138 +667,283 @@ export function DriverAvailableRoutes() {
       {/* Route Details Dialog */}
       {selectedRoute && (
         <Dialog open={showRouteDetails} onOpenChange={setShowRouteDetails}>
-          <DialogContent className="sm:max-w-[600px]">
-            <DialogHeader>
-              <DialogTitle>Route Details</DialogTitle>
-              <DialogDescription>
-                {getRouteDescription(selectedRoute)}
-              </DialogDescription>
-            </DialogHeader>
+          <DialogContent className="max-w-4xl p-0 overflow-hidden">
+            <div className="flex flex-col md:flex-row">
+              {/* Left Sidebar */}
+              <div className="w-full md:w-1/3 bg-gray-50 dark:bg-gray-900 p-6 border-r">
+                <div className="space-y-6">
+                  {/* Route ID and Status */}
+                  <div>
+                    <h3 className="text-lg font-semibold flex items-center gap-2">
+                      <RouteIcon className="h-5 w-5" />
+                      Route Details
+                    </h3>
+                    <div className="flex items-center gap-2 mt-2">
+                      <Badge 
+                        className={cn(
+                          "px-2.5 py-0.5 text-xs",
+                          selectedRoute.status === "PENDING" ? "bg-amber-100 text-amber-800" : 
+                          selectedRoute.status === "IN_PROGRESS" ? "bg-blue-100 text-blue-800" :
+                          selectedRoute.status === "COMPLETED" ? "bg-green-100 text-green-800" : 
+                          "bg-red-100 text-red-800"
+                        )}
+                      >
+                        {selectedRoute.status.replace('_', ' ')}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">
+                        ID: {selectedRoute.id.slice(0, 8)}...
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <Separator />
+                  
+                  {/* Key Stats */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                        <Navigation className="h-3.5 w-3.5" />
+                        Distance
+                      </div>
+                      <p className="font-medium">{selectedRoute.totalDistance.toFixed(1)} km</p>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                        <Clock3 className="h-3.5 w-3.5" />
+                        Duration
+                      </div>
+                      <p className="font-medium">{selectedRoute.estimatedDuration} min</p>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                        <Package className="h-3.5 w-3.5" />
+                        Orders
+                      </div>
+                      <p className="font-medium">{selectedRoute.batch.orderCount}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                        <Weight className="h-3.5 w-3.5" />
+                        Weight
+                      </div>
+                      <p className="font-medium">{Math.round(selectedRoute.batch.totalWeight)} kg</p>
+                    </div>
+                  </div>
+                  
+                  <Separator />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Left Column - Details */}
-              <div>
-                <h4 className="font-medium mb-2">Delivery Information</h4>
-                <Card className="p-4 space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-sm font-medium">Status</span>
-                    <Badge variant={
-                      selectedRoute.status === "PENDING" ? "outline" : 
-                      selectedRoute.status === "IN_PROGRESS" ? "secondary" : 
-                      "default"
-                    }>
-                      {selectedRoute.status.replace('_', ' ')}
+                  {/* Vehicle */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                      <Truck className="h-3.5 w-3.5" />
+                      Vehicle Type
+                    </div>
+                    <Badge variant="outline" className="w-full justify-center">
+                      {vehicleTypeLabels[selectedRoute.batch.vehicleType] || selectedRoute.batch.vehicleType}
                     </Badge>
                   </div>
                   
-                  <div className="flex justify-between">
-                    <span className="text-sm font-medium">Batch Type</span>
-                    <span className="text-sm">
+                  {/* Batch Type */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                      <Info className="h-3.5 w-3.5" />
+                      Batch Type
+                    </div>
+                    <Badge variant="secondary" className="w-full justify-center">
                       {batchTypeLabels[selectedRoute.batch.type] || selectedRoute.batch.type}
-                    </span>
+                    </Badge>
                   </div>
                   
-                  <div className="flex justify-between">
-                    <span className="text-sm font-medium">Vehicle Type</span>
-                    <span className="text-sm">
-                      {vehicleTypeLabels[selectedRoute.batch.vehicleType] || selectedRoute.batch.vehicleType}
-                    </span>
-                  </div>
+                  <Separator />
                   
-                  <div className="flex justify-between">
-                    <span className="text-sm font-medium">Total Distance</span>
-                    <span className="text-sm">{selectedRoute.totalDistance.toFixed(1)} km</span>
+                  {/* Created At */}
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                      <Calendar className="h-3.5 w-3.5" />
+                      Created
+                    </div>
+                    <p className="font-medium">
+                      {typeof selectedRoute.createdAt === 'string' 
+                        ? format(new Date(selectedRoute.createdAt), 'MMM d, yyyy · h:mm a')
+                        : format(new Date(selectedRoute.createdAt), 'MMM d, yyyy · h:mm a')}
+                    </p>
                   </div>
-                  
-                  <div className="flex justify-between">
-                    <span className="text-sm font-medium">Est. Duration</span>
-                    <span className="text-sm">{selectedRoute.estimatedDuration} min</span>
-                  </div>
-                  
-                  <div className="flex justify-between">
-                    <span className="text-sm font-medium">Orders</span>
-                    <span className="text-sm">{selectedRoute.batch.orderCount}</span>
-                  </div>
-                  
-                  <div className="flex justify-between">
-                    <span className="text-sm font-medium">Total Weight</span>
-                    <span className="text-sm">{Math.round(selectedRoute.batch.totalWeight)} kg</span>
-                  </div>
-                </Card>
+                </div>
               </div>
-              
-              {/* Right Column - Stops */}
-              <div>
-                <h4 className="font-medium mb-2">Route Stops</h4>
-                <ScrollArea className="h-80">
-                  <div className="space-y-3">
-                    {selectedRoute.stops.map((stop, index) => (
-                      <Card 
-                        key={stop.id} 
-                        className={cn(
-                          "p-3 border-l-4", 
-                          stop.isPickup 
-                            ? "border-l-blue-400" 
-                            : "border-l-green-400",
-                          stop.isCompleted && "bg-muted/30"
-                        )}
-                      >
-                        <div className="flex justify-between items-start">
-                          <div className="flex gap-3">
-                            {stop.isPickup 
-                              ? <Package className="h-5 w-5 text-blue-500" /> 
-                              : <MapPin className="h-5 w-5 text-green-500" />}
-                            <div>
-                              <div className="flex items-center">
-                                <span className="font-medium mr-2">Stop {index + 1}</span>
-                                <Badge variant="outline" className="text-xs">
-                                  {stop.isPickup ? "Pickup" : "Delivery"}
-                                </Badge>
-                              </div>
-                              <p className="text-sm">{stop.address}</p>
-                              {stop.orderId && (
-                                <p className="text-xs text-muted-foreground">
-                                  Order: {stop.orderId.slice(0, 8)}...
-                                </p>
+
+              {/* Main Content */}
+              <div className="flex-1 max-h-[80vh] overflow-hidden flex flex-col">
+                {/* Location Header */}
+                <div className="p-6 border-b">
+                  <div className="space-y-4">
+                    {/* From/To Header */}
+                    <div className="flex items-center gap-2 text-sm">
+                      <div className="flex items-center gap-1.5">
+                        <div className="h-6 w-6 rounded-full bg-blue-100 flex items-center justify-center">
+                          <Warehouse className="h-3.5 w-3.5 text-blue-600" />
+                        </div>
+                        <span className="font-medium">Origin</span>
+                      </div>
+                      
+                      <div className="flex-1 h-0.5 border-t border-dashed border-gray-200 mx-2"></div>
+                      
+                      <div className="flex items-center gap-1.5">
+                        <div className="h-6 w-6 rounded-full bg-green-100 flex items-center justify-center">
+                          <MapPin className="h-3.5 w-3.5 text-green-600" />
+                        </div>
+                        <span className="font-medium">Destination</span>
+                      </div>
+                    </div>
+
+                    {/* Warehouse Details */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded-lg">
+                        <p className="font-medium">{selectedRoute.fromWarehouse?.name || 'N/A'}</p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {selectedRoute.fromWarehouse?.address || 'No address available'}
+                        </p>
+                      </div>
+                      
+                      {selectedRoute.toWarehouse ? (
+                        <div className="p-3 bg-green-50 dark:bg-green-950 rounded-lg">
+                          <p className="font-medium">{selectedRoute.toWarehouse.name}</p>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {selectedRoute.toWarehouse.address}
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="p-3 bg-green-50 dark:bg-green-950 rounded-lg flex items-center justify-center text-muted-foreground text-sm">
+                          Multiple destinations
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Route Stops */}
+                <div className="flex-1 overflow-hidden">
+                  <div className="p-4 border-b bg-gray-50 dark:bg-gray-900">
+                    <h4 className="font-medium flex items-center">
+                      <MapPin className="h-4 w-4 mr-2" />
+                      Route Stops ({selectedRoute.stops.length})
+                    </h4>
+                  </div>
+                  
+                  <ScrollArea className="h-[calc(80vh-13rem)]">
+                    <div className="p-4">
+                      <div className="relative pl-6 border-l border-gray-200 dark:border-gray-800 space-y-0">
+                        {selectedRoute.stops.map((stop, index) => (
+                          <div key={stop.id} className="mb-5 last:mb-0">
+                            {/* Timeline Node */}
+                            <div 
+                              className={cn(
+                                "absolute left-0 w-6 h-6 -translate-x-3 rounded-full flex items-center justify-center",
+                                stop.isPickup 
+                                  ? "bg-blue-100 dark:bg-blue-900" 
+                                  : "bg-green-100 dark:bg-green-900",
+                                stop.isCompleted && "ring-2 ring-offset-2 ring-gray-100 dark:ring-gray-800"
                               )}
+                            >
+                              {stop.isPickup 
+                                ? <Package className={cn("h-3 w-3", stop.isCompleted ? "text-blue-600" : "text-blue-500")} /> 
+                                : <MapPin className={cn("h-3 w-3", stop.isCompleted ? "text-green-600" : "text-green-500")} />}
+                            </div>
+                            
+                            {/* Stop Card */}
+                            <div className="ml-5">
+                              <Card className={cn(
+                                "p-4 border", 
+                                stop.isCompleted ? "bg-gray-50 dark:bg-gray-900" : "bg-white dark:bg-gray-950"
+                              )}>
+                                {/* Header */}
+                                <div className="flex justify-between mb-2">
+                                  <div className="flex items-center">
+                                    <span className="font-medium mr-2">Stop {index + 1}</span>
+                                    <Badge 
+                                      variant="outline" 
+                                      className={cn(
+                                        "text-xs",
+                                        stop.isPickup 
+                                          ? "text-blue-600 bg-blue-50 dark:bg-blue-950 border-blue-200"
+                                          : "text-green-600 bg-green-50 dark:bg-green-950 border-green-200"
+                                      )}
+                                    >
+                                      {stop.isPickup ? "Pickup" : "Delivery"}
+                                    </Badge>
+                                  </div>
+                                  
+                                  {stop.isCompleted && (
+                                    <Badge variant="outline" className="text-xs bg-green-50 text-green-600 border-green-200">
+                                      <CheckCircle2 className="h-3 w-3 mr-1" />
+                                      Completed
+                                    </Badge>
+                                  )}
+                                </div>
+                                
+                                {/* Address */}
+                                <p className="text-sm mb-2">{stop.address}</p>
+                                
+                                {/* Additional Details */}
+                                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                                  {stop.orderId && (
+                                    <div className="flex items-center">
+                                      <Package className="h-3 w-3 mr-1" />
+                                      Order: {stop.orderId.slice(0, 8)}...
+                                    </div>
+                                  )}
+                                  
+                                  {stop.estimatedArrival && (
+                                    <div className="flex items-center">
+                                      <Clock3 className="h-3 w-3 mr-1" />
+                                      Est. arrival: {format(new Date(stop.estimatedArrival), 'h:mm a')}
+                                    </div>
+                                  )}
+                                </div>
+                              </Card>
                             </div>
                           </div>
-                          {stop.isCompleted && (
-                            <CheckCircle2 className="h-4 w-4 text-green-500" />
-                          )}
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
-                </ScrollArea>
+                        ))}
+                      </div>
+                    </div>
+                  </ScrollArea>
+                </div>
               </div>
             </div>
-
-            <DialogFooter>
+            
+            {/* Footer Actions */}
+            <div className="p-4 border-t flex justify-between items-center bg-gray-50 dark:bg-gray-900">
               <Button 
-                variant="outline"
+                variant="ghost"
+                size="sm"
                 onClick={() => setShowRouteDetails(false)}
               >
                 <X className="mr-2 h-4 w-4" />
                 Close
               </Button>
-              <Button
-                disabled={acceptingRoute || selectedRoute.status !== "PENDING"}
-                onClick={() => handleAcceptRoute(selectedRoute)}
-              >
-                {acceptingRoute ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 className="mr-2 h-4 w-4" />
-                    Accept Route
-                  </>
+
+              <div className="flex items-center gap-2">
+                {selectedRoute.status === "PENDING" && (
+                  <Button
+                    size="sm"
+                    disabled={acceptingRoute}
+                    onClick={() => handleAcceptRoute(selectedRoute)}
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    {acceptingRoute ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="mr-2 h-4 w-4" />
+                        Accept Route
+                      </>
+                    )}
+                  </Button>
                 )}
-              </Button>
-            </DialogFooter>
+              </div>
+            </div>
           </DialogContent>
         </Dialog>
       )}
