@@ -91,7 +91,7 @@ const issueFormSchema = z.object({
   }),
 })
 
-export function Vehicle() {
+export function DriverVehicle() {
   const { toast } = useToast()
   const [loading, setLoading] = useState(true)
   const [isReportingIssue, setIsReportingIssue] = useState(false)
@@ -235,42 +235,33 @@ export function Vehicle() {
     )
   }
 
-  if (error && !vehicle) {
+  if (error || !vehicle) {
     return (
-      <div className="container mx-auto py-6">
-        <Card className="border-red-200 bg-red-50">
-          <CardHeader>
-            <CardTitle className="text-red-800">Vehicle Information Unavailable</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-red-700 mb-4">{error}</p>
-            <p className="text-red-700">
-              Please contact your fleet manager to assign a vehicle to your account.
-            </p>
-            <Button 
-              variant="outline" 
-              className="mt-4 border-red-200 text-red-800 hover:bg-red-100"
-              onClick={() => window.location.reload()}
-            >
-              Try Again
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="container mx-auto py-12 text-center">
+        <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+        <h2 className="text-2xl font-bold mb-2">Vehicle Not Found</h2>
+        <p className="text-muted-foreground mb-6">{error || "No vehicle is assigned to your account."}</p>
+        <Button onClick={() => window.location.reload()}>Try Again</Button>
       </div>
     )
   }
 
-  if (!vehicle) return null
-
   return (
     <div className="container mx-auto py-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">My Vehicle</h1>
+        <Button variant="outline" onClick={() => window.location.reload()}>
+          Refresh Data
+        </Button>
+      </div>
+      
       {/* Issue Reporting Dialog */}
       <Dialog open={isReportingIssue} onOpenChange={setIsReportingIssue}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>Report Vehicle Issue</DialogTitle>
             <DialogDescription>
-              Report any issues or problems with your vehicle that need attention.
+              Describe the issue you're experiencing with your vehicle. High priority issues will automatically mark your vehicle for maintenance.
             </DialogDescription>
           </DialogHeader>
           
@@ -283,7 +274,7 @@ export function Vehicle() {
                   <FormItem>
                     <FormLabel>Issue Title</FormLabel>
                     <FormControl>
-                      <Input placeholder="Brief description of the issue" {...field} />
+                      <Input placeholder="E.g., Check Engine Light On" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -295,10 +286,10 @@ export function Vehicle() {
                 name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Detailed Description</FormLabel>
+                    <FormLabel>Description</FormLabel>
                     <FormControl>
                       <Textarea 
-                        placeholder="Provide details about when and how the issue occurred" 
+                        placeholder="Provide details about when the issue started and any symptoms you've noticed..." 
                         className="min-h-[100px]"
                         {...field} 
                       />
@@ -321,13 +312,13 @@ export function Vehicle() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="LOW">Low - Not urgent</SelectItem>
-                        <SelectItem value="MEDIUM">Medium - Needs attention soon</SelectItem>
-                        <SelectItem value="HIGH">High - Urgent safety concern</SelectItem>
+                        <SelectItem value="LOW">Low - Not urgent, can be addressed during next service</SelectItem>
+                        <SelectItem value="MEDIUM">Medium - Should be checked soon</SelectItem>
+                        <SelectItem value="HIGH">High - Urgent, vehicle may not be safe to drive</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormDescription>
-                      Select HIGH only for issues that affect vehicle safety or operation
+                      High priority issues will mark your vehicle for immediate maintenance.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -347,24 +338,12 @@ export function Vehicle() {
           </Form>
         </DialogContent>
       </Dialog>
-
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Vehicle Information</h1>
-          <p className="text-muted-foreground">
-            View and manage your assigned vehicle details
-          </p>
-        </div>
-        <Button onClick={() => setIsReportingIssue(true)}>
-          <AlertTriangle className="mr-2 h-4 w-4" />
-          Report Issue
-        </Button>
-      </div>
       
+      {/* Vehicle Info Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {/* Vehicle Overview Card */}
         <Card className="overflow-hidden">
-          <CardHeader className="pb-2 bg-gradient-to-r from-background to-muted/30">
+          <CardHeader className="py-4 bg-background-secondary">
             <CardTitle className="text-lg">Vehicle Overview</CardTitle>
           </CardHeader>
           <CardContent className="pt-4">
@@ -404,8 +383,8 @@ export function Vehicle() {
         
         {/* Fuel & Maintenance Card */}
         <Card className="overflow-hidden">
-          <CardHeader className="pb-2 bg-gradient-to-r from-background to-muted/30">
-            <CardTitle className="text-lg">Fuel & Maintenance</CardTitle>
+        <CardHeader className="py-4 bg-background-secondary">
+        <CardTitle className="text-lg">Fuel & Maintenance</CardTitle>
           </CardHeader>
           <CardContent className="pt-4 space-y-4">
             <div>
@@ -452,25 +431,25 @@ export function Vehicle() {
         
         {/* Insurance Card */}
         <Card className="overflow-hidden">
-          <CardHeader className="pb-2 bg-gradient-to-r from-background to-muted/30">
-            <CardTitle className="text-lg">Insurance Information</CardTitle>
+        <CardHeader className="py-4 bg-background-secondary">
+        <CardTitle className="text-lg">Insurance Information</CardTitle>
           </CardHeader>
           <CardContent className="pt-4">
             {vehicle.insurance ? (
               <div className="space-y-3">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="bg-primary/10 p-2 rounded-full">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="bg-primary/10 p-3 rounded-full">
                     <Shield className="h-5 w-5 text-primary" />
                   </div>
                   <div>
                     <h3 className="font-medium">{vehicle.insurance.provider}</h3>
-                    <p className="text-xs text-muted-foreground">Policy #{vehicle.insurance.policyNumber}</p>
+                    <p className="text-sm text-muted-foreground">{vehicle.insurance.coverage}</p>
                   </div>
                 </div>
                 
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Coverage:</span>
-                  <span>{vehicle.insurance.coverage}</span>
+                  <span className="text-muted-foreground">Policy Number:</span>
+                  <span className="font-mono">{vehicle.insurance.policyNumber}</span>
                 </div>
                 
                 <div className="flex items-center justify-between text-sm">
