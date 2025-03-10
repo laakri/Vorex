@@ -9,19 +9,19 @@ import {
   FileText, 
   CheckCircle2, 
   Fuel, 
-  Upload, 
-  Plus,
-  Shield
+  Shield,
+  Loader2
 } from "lucide-react"
+import api from "@/lib/axios"
 import { useToast } from "@/hooks/use-toast"
 
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -30,6 +30,53 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
 import { Skeleton } from "@/components/ui/skeleton"
+
+// Define vehicle interface
+interface MaintenanceRecord {
+  id: string
+  type: string
+  date: string
+  odometer: number
+  description: string
+  cost: number
+  status: string
+}
+
+interface VehicleIssue {
+  id: string
+  title: string
+  description: string
+  reportedAt: string
+  status: string
+  priority: string
+}
+
+interface Insurance {
+  provider: string
+  policyNumber: string
+  coverage: string
+  startDate: string
+  endDate: string
+}
+
+interface Vehicle {
+  id: string
+  type: string
+  make: string
+  model: string
+  year: number
+  licensePlate: string
+  vin: string
+  status: string
+  fuelType: string
+  fuelLevel: number
+  odometer: number
+  lastMaintenanceDate: string
+  nextMaintenanceDate: string
+  maintenanceRecords: MaintenanceRecord[]
+  issues: VehicleIssue[]
+  insurance: Insurance | null
+}
 
 // Form schema for reporting issues
 const issueFormSchema = z.object({
@@ -44,90 +91,12 @@ const issueFormSchema = z.object({
   }),
 })
 
-export function DriverVehicle() {
+export function Vehicle() {
   const { toast } = useToast()
   const [loading, setLoading] = useState(true)
   const [isReportingIssue, setIsReportingIssue] = useState(false)
-  const [vehicle, setVehicle] = useState({
-    id: "v-12345",
-    type: "VAN",
-    make: "Ford",
-    model: "Transit",
-    year: 2021,
-    licensePlate: "ABC-1234",
-    vin: "1FTYE2YG7HKA12345",
-    status: "ACTIVE",
-    fuelType: "DIESEL",
-    fuelLevel: 75,
-    odometer: 45678,
-    lastMaintenanceDate: "2023-10-15",
-    nextMaintenanceDate: "2024-01-15",
-    documents: [
-      {
-        id: "doc-1",
-        type: "INSURANCE",
-        number: "INS-987654",
-        issuedAt: "2023-01-01",
-        expiresAt: "2024-01-01",
-        status: "VALID"
-      },
-      {
-        id: "doc-2",
-        type: "REGISTRATION",
-        number: "REG-123456",
-        issuedAt: "2023-02-15",
-        expiresAt: "2024-02-15",
-        status: "VALID"
-      },
-      {
-        id: "doc-3",
-        type: "INSPECTION",
-        number: "INSP-456789",
-        issuedAt: "2023-05-10",
-        expiresAt: "2023-11-10",
-        status: "EXPIRED"
-      }
-    ],
-    maintenanceRecords: [
-      {
-        id: "maint-1",
-        type: "OIL_CHANGE",
-        date: "2023-10-15",
-        odometer: 42500,
-        description: "Regular oil change and filter replacement",
-        cost: 89.99,
-        status: "COMPLETED"
-      },
-      {
-        id: "maint-2",
-        type: "TIRE_ROTATION",
-        date: "2023-09-01",
-        odometer: 40000,
-        description: "Rotation of all tires and pressure check",
-        cost: 45.00,
-        status: "COMPLETED"
-      },
-      {
-        id: "maint-3",
-        type: "BRAKE_SERVICE",
-        date: "2023-07-20",
-        odometer: 38000,
-        description: "Replacement of front brake pads",
-        cost: 220.50,
-        status: "COMPLETED"
-      }
-    ],
-    issues: [
-      {
-        id: "issue-1",
-        title: "Check Engine Light On",
-        description: "The check engine light came on while driving on the highway. No noticeable performance issues.",
-        reportedAt: "2023-11-01",
-        status: "PENDING",
-        priority: "MEDIUM"
-      }
-    ]
-  })
+  const [vehicle, setVehicle] = useState<Vehicle | null>(null)
+  const [error, setError] = useState<string | null>(null)
   
   // Initialize form
   const form = useForm<z.infer<typeof issueFormSchema>>({
@@ -140,39 +109,59 @@ export function DriverVehicle() {
   })
 
   useEffect(() => {
-    // Simulate API call
-    setTimeout(() => {
-      setLoading(false)
-    }, 1000)
-  }, [])
-
-  const onSubmitIssue = (data: z.infer<typeof issueFormSchema>) => {
-    // This would be replaced with your actual API call
-    console.log("Submitting issue:", data)
-    
-    // Add the new issue to the vehicle state
-    const newIssue = {
-      id: `issue-${vehicle.issues.length + 1}`,
-      title: data.title,
-      description: data.description,
-      reportedAt: new Date().toISOString(),
-      status: "PENDING",
-      priority: data.priority
+    const fetchVehicleData = async () => {
+      try {
+        setLoading(true)
+        const response = await api.get('/vehicles/driver')
+        setVehicle(response.data)
+        setError(null)
+      } catch (err: any) {
+        console.error('Error fetching vehicle data:', err)
+        setError(err.response?.data?.message || 'Failed to load vehicle data')
+        toast({
+          title: "Error",
+          description: err.response?.data?.message || "Failed to load vehicle data",
+          variant: "destructive"
+        })
+      } finally {
+        setLoading(false)
+      }
     }
+
+    fetchVehicleData()
+  }, [toast])
+
+  const onSubmitIssue = async (data: z.infer<typeof issueFormSchema>) => {
+    if (!vehicle) return
     
-    setVehicle({
-      ...vehicle,
-      issues: [...vehicle.issues, newIssue]
-    })
-    
-    // Close the dialog and show success message
-    setIsReportingIssue(false)
-    form.reset()
-    
-    toast({
-      title: "Issue Reported",
-      description: "Your vehicle issue has been successfully reported.",
-    })
+    try {
+      setLoading(true)
+      const response = await api.post('/vehicles/issues', data)
+      
+      // Update the vehicle state with the new issue
+      setVehicle({
+        ...vehicle,
+        issues: [...vehicle.issues, response.data]
+      })
+      
+      // Close the dialog and show success message
+      setIsReportingIssue(false)
+      form.reset()
+      
+      toast({
+        title: "Issue Reported",
+        description: "Your vehicle issue has been successfully reported.",
+      })
+    } catch (err: any) {
+      console.error('Error reporting issue:', err)
+      toast({
+        title: "Error",
+        description: err.response?.data?.message || "Failed to report issue",
+        variant: "destructive"
+      })
+    } finally {
+      setLoading(false)
+    }
   }
 
   // Helper function to get days until a date
@@ -184,8 +173,8 @@ export function DriverVehicle() {
   }
 
   // Helper function to get status colors
-  const getStatusColor = (status: string) => {
-    switch (status.toUpperCase()) {
+  const getStatusColor = (status: string | undefined) => {
+    switch (status?.toUpperCase()) {
       case 'VALID':
       case 'COMPLETED':
       case 'RESOLVED':
@@ -202,8 +191,8 @@ export function DriverVehicle() {
   }
 
   // Helper function to get priority colors
-  const getPriorityColor = (priority: string) => {
-    switch (priority.toUpperCase()) {
+  const getPriorityColor = (priority: string | undefined) => {
+    switch (priority?.toUpperCase()) {
       case 'HIGH':
         return 'bg-red-100 text-red-800 border-red-200'
       case 'MEDIUM':
@@ -215,23 +204,9 @@ export function DriverVehicle() {
     }
   }
 
-  // Helper function to get document type icons
-  const getDocumentTypeIcon = (type: string) => {
-    switch (type.toUpperCase()) {
-      case 'INSURANCE':
-        return <Shield className="h-5 w-5 text-primary" />
-      case 'REGISTRATION':
-        return <FileText className="h-5 w-5 text-primary" />
-      case 'INSPECTION':
-        return <CheckCircle2 className="h-5 w-5 text-primary" />
-      default:
-        return <FileText className="h-5 w-5 text-primary" />
-    }
-  }
-
   // Helper function to get maintenance type icons
-  const getMaintenanceTypeIcon = (type: string) => {
-    switch (type.toUpperCase()) {
+  const getMaintenanceTypeIcon = (type: string | undefined) => {
+    switch (type?.toUpperCase()) {
       case 'OIL_CHANGE':
         return <Fuel className="h-5 w-5 text-primary" />
       case 'TIRE_ROTATION':
@@ -243,7 +218,7 @@ export function DriverVehicle() {
     }
   }
 
-  if (loading) {
+  if (loading && !vehicle) {
     return (
       <div className="container mx-auto py-6 space-y-6">
         <div className="flex items-center justify-between">
@@ -260,8 +235,119 @@ export function DriverVehicle() {
     )
   }
 
+  if (error && !vehicle) {
+    return (
+      <div className="container mx-auto py-6">
+        <Card className="border-red-200 bg-red-50">
+          <CardHeader>
+            <CardTitle className="text-red-800">Vehicle Information Unavailable</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-red-700 mb-4">{error}</p>
+            <p className="text-red-700">
+              Please contact your fleet manager to assign a vehicle to your account.
+            </p>
+            <Button 
+              variant="outline" 
+              className="mt-4 border-red-200 text-red-800 hover:bg-red-100"
+              onClick={() => window.location.reload()}
+            >
+              Try Again
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  if (!vehicle) return null
+
   return (
     <div className="container mx-auto py-6 space-y-6">
+      {/* Issue Reporting Dialog */}
+      <Dialog open={isReportingIssue} onOpenChange={setIsReportingIssue}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Report Vehicle Issue</DialogTitle>
+            <DialogDescription>
+              Report any issues or problems with your vehicle that need attention.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmitIssue)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="title"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Issue Title</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Brief description of the issue" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Detailed Description</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Provide details about when and how the issue occurred" 
+                        className="min-h-[100px]"
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="priority"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Priority Level</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select priority level" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="LOW">Low - Not urgent</SelectItem>
+                        <SelectItem value="MEDIUM">Medium - Needs attention soon</SelectItem>
+                        <SelectItem value="HIGH">High - Urgent safety concern</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      Select HIGH only for issues that affect vehicle safety or operation
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setIsReportingIssue(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={loading}>
+                  {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Submit Report
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Vehicle Information</h1>
@@ -269,9 +355,9 @@ export function DriverVehicle() {
             View and manage your assigned vehicle details
           </p>
         </div>
-        <Button>
-          <Wrench className="mr-2 h-4 w-4" />
-          Request Maintenance
+        <Button onClick={() => setIsReportingIssue(true)}>
+          <AlertTriangle className="mr-2 h-4 w-4" />
+          Report Issue
         </Button>
       </div>
       
@@ -364,222 +450,71 @@ export function DriverVehicle() {
           </CardContent>
         </Card>
         
-        {/* Issues & Reports Card */}
+        {/* Insurance Card */}
         <Card className="overflow-hidden">
           <CardHeader className="pb-2 bg-gradient-to-r from-background to-muted/30">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg">Issues & Reports</CardTitle>
-              <Dialog open={isReportingIssue} onOpenChange={setIsReportingIssue}>
-                <DialogTrigger asChild>
-                  <Button size="sm" variant="outline">
-                    <Plus className="h-4 w-4 mr-1" />
-                    Report Issue
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Report Vehicle Issue</DialogTitle>
-                    <DialogDescription>
-                      Describe the issue you're experiencing with your vehicle.
-                    </DialogDescription>
-                  </DialogHeader>
-                  
-                  <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmitIssue)} className="space-y-4">
-                      <FormField
-                        control={form.control}
-                        name="title"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Issue Title</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Brief description of the issue" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="description"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Detailed Description</FormLabel>
-                            <FormControl>
-                              <Textarea 
-                                placeholder="Provide details about when and how the issue occurs" 
-                                className="min-h-[100px]"
-                                {...field} 
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="priority"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Priority Level</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select priority level" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="HIGH">High - Vehicle cannot be operated</SelectItem>
-                                <SelectItem value="MEDIUM">Medium - Issue affects operation but vehicle is usable</SelectItem>
-                                <SelectItem value="LOW">Low - Minor issue, vehicle fully operational</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormDescription>
-                              Select the appropriate priority level for this issue.
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <DialogFooter>
-                        <Button type="submit">Submit Report</Button>
-                      </DialogFooter>
-                    </form>
-                  </Form>
-                </DialogContent>
-              </Dialog>
-            </div>
+            <CardTitle className="text-lg">Insurance Information</CardTitle>
           </CardHeader>
           <CardContent className="pt-4">
-            {vehicle.issues.length === 0 ? (
-              <div className="text-center py-6">
-                <CheckCircle2 className="h-8 w-8 text-green-500 mx-auto mb-2" />
-                <h3 className="font-medium">No Active Issues</h3>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Your vehicle is currently operating without any reported issues.
-                </p>
+            {vehicle.insurance ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="bg-primary/10 p-2 rounded-full">
+                    <Shield className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium">{vehicle.insurance.provider}</h3>
+                    <p className="text-xs text-muted-foreground">Policy #{vehicle.insurance.policyNumber}</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Coverage:</span>
+                  <span>{vehicle.insurance.coverage}</span>
+                </div>
+                
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Valid From:</span>
+                  <span>{format(new Date(vehicle.insurance.startDate), "MMM d, yyyy")}</span>
+                </div>
+                
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Valid Until:</span>
+                  <div className="flex items-center gap-1">
+                    <span>{format(new Date(vehicle.insurance.endDate), "MMM d, yyyy")}</span>
+                    <Badge variant="outline" className={
+                      getDaysUntil(vehicle.insurance.endDate) < 30 
+                        ? "bg-red-100 text-red-800 border-red-200" 
+                        : "bg-green-100 text-green-800 border-green-200"
+                    }>
+                      {getDaysUntil(vehicle.insurance.endDate)} days
+                    </Badge>
+                  </div>
+                </div>
               </div>
             ) : (
-              <div className="space-y-3">
-                {vehicle.issues.slice(0, 3).map((issue) => (
-                  <div key={issue.id} className="flex items-start gap-3 p-3 rounded-md bg-muted/30">
-                    <AlertTriangle className={`h-5 w-5 mt-0.5 flex-shrink-0 ${
-                      issue.priority === "HIGH" 
-                        ? "text-red-500" 
-                        : issue.priority === "MEDIUM"
-                          ? "text-amber-500"
-                          : "text-blue-500"
-                    }`} />
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-medium text-sm">{issue.title}</h4>
-                        <Badge variant="outline" className={getPriorityColor(issue.priority)}>
-                          {issue.priority}
-                        </Badge>
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Reported on {format(new Date(issue.reportedAt), "MMM d, yyyy")}
-                      </p>
-                      <Badge variant="outline" className={`mt-2 ${getStatusColor(issue.status)}`}>
-                        {issue.status.replace(/_/g, ' ')}
-                      </Badge>
-                    </div>
-                  </div>
-                ))}
-                
-                {vehicle.issues.length > 3 && (
-                  <Button variant="ghost" size="sm" className="w-full">
-                    View All {vehicle.issues.length} Issues
-                  </Button>
-                )}
+              <div className="text-center py-6">
+                <Shield className="h-10 w-10 text-muted-foreground mx-auto mb-3 opacity-50" />
+                <h3 className="font-medium">No Insurance Information</h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Insurance details are not available for this vehicle.
+                </p>
               </div>
             )}
           </CardContent>
         </Card>
       </div>
       
-      {/* Detailed Information Tabs */}
+      {/* Maintenance and Issues Tabs */}
       <Card>
-        <CardHeader>
-          <CardTitle>Vehicle Management</CardTitle>
-          <CardDescription>
-            View detailed information about your vehicle's documents, maintenance history, and reported issues
-          </CardDescription>
-        </CardHeader>
         <CardContent className="p-0">
-          <Tabs defaultValue="documents">
-            <TabsList className="w-full grid grid-cols-3 rounded-none border-b">
-              <TabsTrigger value="documents" className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary">
-                Documents
-              </TabsTrigger>
-              <TabsTrigger value="maintenance" className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary">
-                Maintenance
-              </TabsTrigger>
-              <TabsTrigger value="issues" className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary">
-                Issues
-              </TabsTrigger>
+          <Tabs defaultValue="maintenance" className="w-full">
+            <TabsList className="w-full rounded-b-none grid grid-cols-2">
+              <TabsTrigger value="maintenance">Maintenance History</TabsTrigger>
+              <TabsTrigger value="issues">Reported Issues</TabsTrigger>
             </TabsList>
             
             <ScrollArea className="h-[400px]">
-              <TabsContent value="documents" className="p-4">
-                <div className="space-y-4">
-                  {vehicle.documents.map((doc) => (
-                    <div key={doc.id} className="flex items-start gap-4 p-4 rounded-lg border">
-                      <div className="bg-primary/10 p-2 rounded-full">
-                        {getDocumentTypeIcon(doc.type)}
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <h3 className="font-medium">{doc.type.replace(/_/g, ' ')}</h3>
-                          <Badge variant="outline" className={getStatusColor(doc.status)}>
-                            {doc.status}
-                          </Badge>
-                        </div>
-                        <div className="mt-2 space-y-1 text-sm">
-                          <div className="flex items-center justify-between">
-                            <span className="text-muted-foreground">Document Number:</span>
-                            <span className="font-medium">{doc.number}</span>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-muted-foreground">Issued Date:</span>
-                            <span>{format(new Date(doc.issuedAt), "MMM d, yyyy")}</span>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-muted-foreground">Expiry Date:</span>
-                            <div className="flex items-center gap-1">
-                              <span>{format(new Date(doc.expiresAt), "MMM d, yyyy")}</span>
-                              <Badge variant="outline" className={
-                                getDaysUntil(doc.expiresAt) < 30 
-                                  ? "bg-red-100 text-red-800 border-red-200" 
-                                  : getDaysUntil(doc.expiresAt) < 90 
-                                    ? "bg-amber-100 text-amber-800 border-amber-200"
-                                    : "bg-green-100 text-green-800 border-green-200"
-                              }>
-                                {getDaysUntil(doc.expiresAt)} days
-                              </Badge>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      <Button variant="outline" size="sm" className="flex-shrink-0">
-                        <FileText className="h-4 w-4 mr-1" />
-                        View
-                      </Button>
-                    </div>
-                  ))}
-                  
-                  <div className="flex justify-center pt-2">
-                    <Button variant="outline" size="sm">
-                      <Upload className="h-4 w-4 mr-1" />
-                      Upload New Document
-                    </Button>
-                  </div>
-                </div>
-              </TabsContent>
-              
               <TabsContent value="maintenance" className="p-4">
                 <div className="space-y-4">
                   {vehicle.maintenanceRecords.map((record) => (
@@ -611,17 +546,10 @@ export function DriverVehicle() {
                       </div>
                       <Button variant="outline" size="sm" className="flex-shrink-0">
                         <FileText className="h-4 w-4 mr-1" />
-                        View Details
+                        Details
                       </Button>
                     </div>
                   ))}
-                  
-                  <div className="flex justify-center pt-2">
-                    <Button variant="outline" size="sm">
-                      <Wrench className="h-4 w-4 mr-1" />
-                      Schedule Maintenance
-                    </Button>
-                  </div>
                 </div>
               </TabsContent>
               
@@ -669,8 +597,8 @@ export function DriverVehicle() {
                   )}
                   
                   <div className="flex justify-center pt-2">
-                    <Button onClick={() => setIsReportingIssue(true)}>
-                      <Plus className="h-4 w-4 mr-1" />
+                    <Button onClick={() => setIsReportingIssue(true)} variant="outline">
+                      <AlertTriangle className="h-4 w-4 mr-1" />
                       Report New Issue
                     </Button>
                   </div>

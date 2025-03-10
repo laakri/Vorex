@@ -13,6 +13,7 @@ import { DriversModule } from './modules/drivers/drivers.module';
 import { BatchModule } from './modules/batches/batch.module';
 import { WarehouseModule } from './modules/warehouse/warehouse.module';
 import { DeliveryRoutesModule } from './modules/delivery-routes/delivery-routes.module';
+import { VehiclesModule } from './modules/vehicles/vehicles.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { DeliveryRoutesModule } from './modules/delivery-routes/delivery-routes.
     WarehouseModule,
     BatchModule,
     DeliveryRoutesModule,
+    VehiclesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
