@@ -10,10 +10,19 @@ import {
   CheckCircle2, 
   Fuel, 
   Shield,
-  Loader2
+  Loader2,
+  PlusCircle,
+  Settings,
+  Droplets,
+  Sparkles,
+  RotateCw,
+  CircleDashed
 } from "lucide-react"
 import api from "@/lib/axios"
 import { useToast } from "@/hooks/use-toast"
+import { CalendarIcon } from "@radix-ui/react-icons"
+import { Calendar as CalendarComponent } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -85,11 +94,35 @@ const issueFormSchema = z.object({
   priority: z.string().min(1, "Please select a priority level")
 })
 
+// Add this schema after your existing issueFormSchema
+const maintenanceFormSchema = z.object({
+  type: z.string().min(1, "Please select a maintenance type"),
+  date: z.date({
+    required_error: "Please select a date",
+  }),
+  odometer: z.coerce.number().min(1, "Odometer reading must be greater than 0"),
+  description: z.string().min(10, "Description must be at least 10 characters"),
+  cost: z.coerce.number().min(0, "Cost cannot be negative"),
+  status: z.string().min(1, "Please select a status")
+})
+
+// Add this array of maintenance types
+const maintenanceTypes = [
+  { value: "OIL_CHANGE", label: "Oil Change", icon: Droplets },
+  { value: "TIRE_ROTATION", label: "Tire Rotation", icon: RotateCw },
+  { value: "BRAKE_SERVICE", label: "Brake Service", icon: CircleDashed },
+  { value: "ENGINE_TUNING", label: "Engine Tuning", icon: Sparkles },
+  { value: "GENERAL_INSPECTION", label: "General Inspection", icon: Gauge },
+  { value: "FILTER_REPLACEMENT", label: "Filter Replacement", icon: Wrench },
+  { value: "OTHER", label: "Other Service", icon: Settings }
+]
+
 export default function DriverVehicle() {
   const [vehicle, setVehicle] = useState<Vehicle | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isReportingIssue, setIsReportingIssue] = useState(false)
+  const [isAddingMaintenance, setIsAddingMaintenance] = useState(false)
   const { toast } = useToast()
 
   // Initialize form
@@ -102,6 +135,19 @@ export default function DriverVehicle() {
     }
   })
 
+  // Add this form initialization after your existing issueForm
+  const maintenanceForm = useForm<z.infer<typeof maintenanceFormSchema>>({
+    resolver: zodResolver(maintenanceFormSchema),
+    defaultValues: {
+      type: "",
+      date: new Date(),
+      odometer: 0,
+      description: "",
+      cost: 0,
+      status: "COMPLETED"
+    }
+  })
+
   // Fetch vehicle data
   useEffect(() => {
     const fetchVehicle = async () => {
@@ -109,6 +155,10 @@ export default function DriverVehicle() {
         setLoading(true)
         const response = await api.get('/vehicles/driver')
         setVehicle(response.data)
+        
+        // Update the maintenance form with the current odometer reading
+        maintenanceForm.setValue('odometer', response.data.odometer)
+        
         setError(null)
       } catch (err: any) {
         console.error('Error fetching vehicle:', err)
@@ -148,6 +198,45 @@ export default function DriverVehicle() {
       toast({
         title: "Error",
         description: err.response?.data?.message || "Failed to report issue",
+        variant: "destructive"
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Add this function to handle maintenance submission
+  const onSubmitMaintenance = async (data: z.infer<typeof maintenanceFormSchema>) => {
+    if (!vehicle) return
+    
+    try {
+      setLoading(true)
+      const response = await api.post(`/vehicles/${vehicle.id}/maintenance`, {
+        ...data,
+        date: data.date.toISOString()
+      })
+      
+      // Update the vehicle state with the new maintenance record
+      setVehicle({
+        ...vehicle,
+        maintenanceRecords: [response.data, ...vehicle.maintenanceRecords],
+        lastMaintenanceDate: data.date.toISOString(),
+        nextMaintenanceDate: new Date(data.date.getTime() + 180 * 24 * 60 * 60 * 1000).toISOString()
+      })
+      
+      // Close the dialog and show success message
+      setIsAddingMaintenance(false)
+      maintenanceForm.reset()
+      
+      toast({
+        title: "Maintenance Record Added",
+        description: "Your maintenance record has been successfully added.",
+      })
+    } catch (err: any) {
+      console.error('Error adding maintenance record:', err)
+      toast({
+        title: "Error",
+        description: err.response?.data?.message || "Failed to add maintenance record",
         variant: "destructive"
       })
     } finally {
@@ -195,18 +284,11 @@ export default function DriverVehicle() {
     }
   }
 
-  // Helper function to get maintenance type icons
-  const getMaintenanceTypeIcon = (type: string | undefined) => {
-    switch (type?.toUpperCase()) {
-      case 'OIL_CHANGE':
-        return <Fuel className="h-5 w-5 text-primary" />
-      case 'TIRE_ROTATION':
-        return <Gauge className="h-5 w-5 text-primary" />
-      case 'BRAKE_SERVICE':
-        return <Wrench className="h-5 w-5 text-primary" />
-      default:
-        return <Wrench className="h-5 w-5 text-primary" />
-    }
+  // Helper function to get maintenance type icon
+  const getMaintenanceTypeIcon = (type: string) => {
+    const maintenanceType = maintenanceTypes.find(t => t.value === type)
+    const IconComponent = maintenanceType?.icon || Wrench
+    return <IconComponent className="h-5 w-5 text-primary" />
   }
 
   // Loading state
@@ -325,6 +407,177 @@ export default function DriverVehicle() {
                 <Button type="submit" disabled={loading}>
                   {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Submit Report
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Add Maintenance Dialog */}
+      <Dialog open={isAddingMaintenance} onOpenChange={setIsAddingMaintenance}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Add Maintenance Record</DialogTitle>
+            <DialogDescription>
+              Record a new maintenance service for your vehicle.
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...maintenanceForm}>
+            <form onSubmit={maintenanceForm.handleSubmit(onSubmitMaintenance)} className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={maintenanceForm.control}
+                  name="type"
+                  render={({ field }) => (
+                    <FormItem className="col-span-2">
+                      <FormLabel>Maintenance Type</FormLabel>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {maintenanceTypes.map((type) => (
+                            <SelectItem key={type.value} value={type.value}>
+                              <div className="flex items-center gap-2">
+                                <type.icon className="h-4 w-4" />
+                                <span>{type.label}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={maintenanceForm.control}
+                  name="date"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Date</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant={"outline"}
+                              className="w-full pl-3 text-left font-normal"
+                            >
+                              {field.value ? (
+                                format(field.value, "PPP")
+                              ) : (
+                                <span>Pick a date</span>
+                              )}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <CalendarComponent
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            disabled={(date) =>
+                              date > new Date() || date < new Date("1900-01-01")
+                            }
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={maintenanceForm.control}
+                  name="odometer"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Odometer (km)</FormLabel>
+                      <FormControl>
+                        <Input type="number" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={maintenanceForm.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem className="col-span-2">
+                      <FormLabel>Description</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          placeholder="Details of the maintenance performed" 
+                          className="min-h-[80px]"
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={maintenanceForm.control}
+                  name="cost"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Cost ($)</FormLabel>
+                      <FormControl>
+                        <Input type="number" step="0.01" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={maintenanceForm.control}
+                  name="status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Status</FormLabel>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select status" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="COMPLETED">Completed</SelectItem>
+                          <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
+                          <SelectItem value="SCHEDULED">Scheduled</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setIsAddingMaintenance(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={maintenanceForm.formState.isSubmitting}>
+                  {maintenanceForm.formState.isSubmitting && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  Save Record
                 </Button>
               </DialogFooter>
             </form>
@@ -532,6 +785,12 @@ export default function DriverVehicle() {
                       </div>
                     ))
                   )}
+                </div>
+                <div className="flex justify-end mb-2">
+                  <Button onClick={() => setIsAddingMaintenance(true)} size="sm" className="gap-1">
+                    <PlusCircle className="h-4 w-4" />
+                    Add Maintenance Record
+                  </Button>
                 </div>
               </TabsContent>
               

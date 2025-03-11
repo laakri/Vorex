@@ -341,6 +341,7 @@ model Vehicle {
   capacity        Float
   maxWeight       Float
   currentStatus   VehicleStatus
+  odometer        Int           @default(0)
   lastMaintenance DateTime
   nextMaintenance DateTime
   createdAt       DateTime      @default(now())

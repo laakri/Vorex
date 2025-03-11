@@ -52,7 +52,7 @@ export class VehiclesService {
       status: vehicle.currentStatus,
       fuelType: vehicle.type === 'MOTORCYCLE' ? 'GASOLINE' : 'DIESEL',
       fuelLevel: Math.floor(Math.random() * 100), // Mock data
-      odometer: Math.floor(Math.random() * 100000),
+      odometer: vehicle.odometer ,
       lastMaintenanceDate: vehicle.lastMaintenance?.toISOString() || 
                           new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
       nextMaintenanceDate: vehicle.nextMaintenance?.toISOString() || 
@@ -115,7 +115,6 @@ export class VehiclesService {
       where: { id: vehicleId },
       data: { 
         lastMaintenance: new Date(data.date),
-        // Calculate next maintenance date (e.g., 6 months later)
         nextMaintenance: new Date(new Date(data.date).getTime() + 180 * 24 * 60 * 60 * 1000)
       }
     });
