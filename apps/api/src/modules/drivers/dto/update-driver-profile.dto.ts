@@ -30,10 +30,10 @@ export class UpdateDriverProfileDto {
   governorate?: string;
 
   @IsOptional()
-  @IsPhoneNumber('EG', { message: 'Please provide a valid phone number' })
+  @IsPhoneNumber('TN', { message: 'Please provide a valid phone number' })
   phone?: string;
 
   @IsOptional()
-  @IsPhoneNumber('EG', { message: 'Please provide a valid emergency contact number' })
+  @IsPhoneNumber('TN', { message: 'Please provide a valid emergency contact number' })
   emergencyContact?: string;
 } 

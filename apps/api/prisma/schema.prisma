@@ -202,6 +202,7 @@ model Driver {
   routes           DeliveryRoute[]
   user             User            @relation(fields: [userId], references: [id])
   vehicle          Vehicle?        @relation(fields: [vehicleId], references: [id])
+  availabilityStatus DriverStatus    @default(ONLINE)
 }
 
 model Vehicle {
@@ -402,11 +403,10 @@ enum LicenseType {
 }
 
 enum DriverStatus {
-  AVAILABLE
-  ON_DELIVERY
-  OFF_DUTY
+  ONLINE
+  OFFLINE
+  BUSY
   ON_BREAK
-  MAINTENANCE
 }
 
 enum VehicleType {

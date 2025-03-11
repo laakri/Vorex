@@ -11,6 +11,7 @@ import {
 import api from "@/lib/axios"
 import { useToast } from "@/hooks/use-toast"
 import { useAuthStore } from "@/stores/auth.store"
+import { TUNISIA_GOVERNORATES } from "@/config/constants"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -484,9 +485,23 @@ export default function DriverSettings() {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Governorate</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Governorate" {...field} />
-                            </FormControl>
+                            <Select
+                              value={field.value}
+                              onValueChange={field.onChange}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select your governorate" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {TUNISIA_GOVERNORATES.map((governorate) => (
+                                  <SelectItem key={governorate} value={governorate}>
+                                    {governorate}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -835,25 +850,7 @@ export default function DriverSettings() {
               </Button>
             </div>
             
-            <Separator />
             
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-medium">Log Out Everywhere</h3>
-                <p className="text-sm text-muted-foreground">
-                  Log out from all devices except this one.
-                </p>
-              </div>
-              <Button variant="outline" className="border-destructive text-destructive" onClick={() => {
-                // Handle logout from all devices
-                toast({
-                  title: "Logged out from all devices",
-                  description: "You've been successfully logged out from all other devices.",
-                });
-              }}>
-                Log Out Everywhere
-              </Button>
-            </div>
           </CardContent>
         </Card>
       </div>

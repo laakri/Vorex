@@ -13,9 +13,8 @@ export function DriverGuard({ children }: DriverGuardProps) {
   useEffect(() => {
     if (!isAuthenticated) {
       navigate("/auth/sign-in");
-    } else if (!user?.role.includes("DRIVER")) {
-      navigate("/unauthorized");
-    } else if (!isVerifiedDriver) {
+    } 
+    else if (!isVerifiedDriver) {
       navigate("/driver/application");
     }
   }, [isAuthenticated, isVerifiedDriver, user, navigate]);

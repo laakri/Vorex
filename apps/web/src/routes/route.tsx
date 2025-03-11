@@ -34,6 +34,7 @@ import { ActiveDelivery } from "@/pages/driver/driver-active-delivery";
 import { DriverHistory } from "@/pages/driver/driver-history";
 import DriverVehicle from "@/pages/driver/driver-vehicle";
 import DriverSettings from "@/pages/driver/driver-settings";
+import { DriverGuard } from "./driver-guard";
 
 
 export function AppRoutes() {
@@ -133,7 +134,9 @@ export function AppRoutes() {
           index
           element={
             <ProtectedRoute>
+              <DriverGuard>
                 <DriverDashboard />
+              </DriverGuard>
             </ProtectedRoute>
           }
         />
@@ -141,7 +144,9 @@ export function AppRoutes() {
           path="dashboard"
           element={
             <ProtectedRoute>
+              <DriverGuard>
                 <DriverDashboard />
+              </DriverGuard>
             </ProtectedRoute>
           }
         />
@@ -149,6 +154,7 @@ export function AppRoutes() {
             path="application"
             element={
               <ProtectedRoute>
+
                 <DriverApplication />
               </ProtectedRoute>
             }
@@ -157,7 +163,9 @@ export function AppRoutes() {
           path="active-delivery"
           element={
             <ProtectedRoute>
+              <DriverGuard>
                 <ActiveDelivery />
+              </DriverGuard>
             </ProtectedRoute>
           }
           />
@@ -165,7 +173,9 @@ export function AppRoutes() {
           path="history"
           element={
             <ProtectedRoute>
+              <DriverGuard>
                 <DriverHistory />
+              </DriverGuard>
             </ProtectedRoute>
           }
           />
@@ -173,7 +183,9 @@ export function AppRoutes() {
           path="vehicle"
           element={
             <ProtectedRoute>
+              <DriverGuard>
                 <DriverVehicle />
+              </DriverGuard>
             </ProtectedRoute>
           }
           />
@@ -181,7 +193,9 @@ export function AppRoutes() {
           path="settings"
           element={
             <ProtectedRoute>
+              <DriverGuard>
                 <DriverSettings />
+              </DriverGuard>
             </ProtectedRoute>
           }
           />
@@ -189,7 +203,9 @@ export function AppRoutes() {
           path="available-routes"
           element={
             <ProtectedRoute>
+              <DriverGuard>
                 <DriverAvailableRoutes />
+              </DriverGuard>
             </ProtectedRoute>
           }
           />

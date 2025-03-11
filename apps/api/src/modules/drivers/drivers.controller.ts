@@ -41,7 +41,7 @@ export class DriversController {
   }
 
   @Patch(':id/approve')
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN , Role.SELLER)
   async approveDriver(@Param('id') driverId: string) {
     try {
       return await this.driversService.approveDriver(driverId);

@@ -404,21 +404,29 @@ export function ActiveDelivery() {
 
   if (!activeRoute) {
     return (
-      <div className="container max-w-5xl py-12">
-        <Card className="border-dashed bg-transparent">
-          <CardContent className="py-16 text-center">
-            <div className="rounded-full bg-primary/10 w-20 h-20 flex items-center justify-center mx-auto mb-6">
-              <Truck className="w-10 h-10 text-primary" />
-            </div>
-            <h2 className="text-3xl font-bold mb-3">No Active Delivery</h2>
-            <p className="text-muted-foreground mb-8 max-w-md mx-auto">
-              You don't have any active delivery routes at the moment. Check available routes to start a new delivery.
-            </p>
-            <Button onClick={() => (window.location.href = "/driver/available-routes")} size="lg" className="px-8">
-              Find Available Routes
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="container py-6 space-y-6">
+        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Active Delivery</h1>
+            <p className="text-muted-foreground">View and manage your current delivery</p>
+          </div>
+        </div>
+        
+        <div className="text-center py-12">
+          <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-3">
+            <Truck className="h-6 w-6 text-muted-foreground" />
+          </div>
+          <h3 className="text-lg font-medium mb-1">No active delivery found</h3>
+          <p className="text-muted-foreground max-w-sm mx-auto">
+            You don't have any active delivery routes at the moment.
+          </p>
+          <Button 
+            onClick={() => (window.location.href = "/driver/available-routes")} 
+            className="mt-6"
+          >
+            Find Available Routes
+          </Button>
+        </div>
       </div>
     )
   }

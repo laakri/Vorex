@@ -551,26 +551,30 @@ export function DriverAvailableRoutes() {
               </Button>
             </Card>
           ) : filteredRoutes.length === 0 ? (
-            <Card className="p-8 text-center">
-              <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-muted">
-                <RouteIcon className="h-10 w-10 text-muted-foreground" />
+            <div className="text-center py-12">
+              <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-3">
+                <RouteIcon className="h-6 w-6 text-muted-foreground" />
               </div>
-              <h3 className="mt-4 text-lg font-semibold">No Routes Found</h3>
-              <p className="mt-2 text-sm text-muted-foreground">
+              <h3 className="text-lg font-medium mb-1">No routes found</h3>
+              <p className="text-muted-foreground max-w-sm mx-auto">
                 {searchQuery || filterVehicle !== "all" || activeTab !== "all"
-                  ? "Try changing your filters or search query."
+                  ? "Try adjusting your filters to see more results"
                   : "There are no available routes at the moment."}
               </p>
               {(searchQuery || filterVehicle !== "all" || activeTab !== "all") && (
-                <Button variant="outline" onClick={() => {
-                  setSearchQuery("");
-                  setFilterVehicle("all");
-                  setActiveTab("all");
-                }} className="mt-4">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setSearchQuery("");
+                    setFilterVehicle("all");
+                    setActiveTab("all");
+                  }} 
+                  className="mt-6"
+                >
                   Clear Filters
                 </Button>
               )}
-            </Card>
+            </div>
           ) : (
             <div className={cn(
               viewType === "grid" 

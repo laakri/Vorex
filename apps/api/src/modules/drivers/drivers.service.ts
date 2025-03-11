@@ -81,23 +81,23 @@ export class DriversService {
     return result;
   }
 
-  async approveDriver(driverId: string) {
-    const driver = await this.prisma.driver.findUnique({
-      where: { id: driverId },
-      include: { user: true },
+  async approveDriver(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { driver: true },
     });
 
-    if (!driver) {
+    if (!user || !user.driver) {
       throw new NotFoundException('Driver not found');
     }
 
-    // Update the driver's verification status
+    // Update the user's verification status
     await this.prisma.user.update({
-      where: { id: driver.userId },
+      where: { id: userId },
       data: { isVerifiedDriver: true },
     });
 
-    return driver;
+    return { user, driver: user.driver };
   }
 
   async rejectDriver(driverId: string, reason: string) {
@@ -211,23 +211,14 @@ export class DriversService {
     if (!driver) {
       throw new NotFoundException('Driver profile not found');
     }
-
-    // Let's check what fields are available on the driver model
-    console.log('Available fields on driver model:', Object.keys(driver));
     
-    // Try using the enum directly
-    const updatedDriver = await this.prisma.$executeRaw`
-      UPDATE "Driver" 
-      SET "availabilityStatus" = ${status}:::"DriverStatus" 
-      WHERE "id" = ${driver.id}
-    `;
-
-    // Fetch the updated driver
-    const updatedDriverData = await this.prisma.driver.findUnique({
-      where: { id: driver.id }
+    // Update driver with standard Prisma update - avoid raw SQL
+    const updatedDriver = await this.prisma.driver.update({
+      where: { id: driver.id },
+      data: { availabilityStatus: status }
     });
 
-    return updatedDriverData;
+    return updatedDriver;
   }
 
   private async notifyAdminsNewDriver(data: { driver: any; vehicle: any; user: any }) {
