@@ -1,16 +1,20 @@
 import {
   Controller,
   Post,
+  Get,
+  Patch,
   Body,
   UseGuards,
   HttpCode,
   BadRequestException,
-  Patch,
   Param,
 } from '@nestjs/common';
 import { DriversService } from './drivers.service';
 import { CreateDriverDto } from './dto/create-driver.dto';
 import { CreateVehicleDto } from './dto/create-vehicle.dto';
+import { UpdateDriverProfileDto } from './dto/update-driver-profile.dto';
+import { UpdateDriverVehicleDto } from './dto/update-driver-vehicle.dto';
+import { UpdateDriverAvailabilityDto } from './dto/update-driver-availability.dto';
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { RolesGuard } from '@/common/guards/roles.guard';
 import { Roles } from '@/common/decorators/roles.decorator';
@@ -54,6 +58,58 @@ export class DriversController {
   ) {
     try {
       return await this.driversService.rejectDriver(driverId, reason);
+    } catch (error) {
+      throw new BadRequestException(error.message);
+    }
+  }
+
+  @Get('profile')
+  @Roles(Role.DRIVER)
+  async getDriverProfile(@GetUser('id') userId: string) {
+    try {
+      return await this.driversService.getDriverProfile(userId);
+    } catch (error) {
+      throw new BadRequestException(error.message);
+    }
+  }
+
+  @Patch('profile')
+  @Roles(Role.DRIVER)
+  async updateDriverProfile(
+    @GetUser('id') userId: string,
+    @Body() updateDriverDto: UpdateDriverProfileDto
+  ) {
+    try {
+      return await this.driversService.updateDriverProfile(userId, updateDriverDto);
+    } catch (error) {
+      throw new BadRequestException(error.message);
+    }
+  }
+
+  @Patch('vehicle')
+  @Roles(Role.DRIVER)
+  async updateDriverVehicle(
+    @GetUser('id') userId: string,
+    @Body() updateVehicleDto: UpdateDriverVehicleDto
+  ) {
+    try {
+      return await this.driversService.updateDriverVehicle(userId, updateVehicleDto);
+    } catch (error) {
+      throw new BadRequestException(error.message);
+    }
+  }
+
+  @Patch('availability')
+  @Roles(Role.DRIVER)
+  async updateDriverAvailability(
+    @GetUser('id') userId: string,
+    @Body() updateAvailabilityDto: UpdateDriverAvailabilityDto
+  ) {
+    try {
+      return await this.driversService.updateDriverAvailability(
+        userId, 
+        updateAvailabilityDto.status
+      );
     } catch (error) {
       throw new BadRequestException(error.message);
     }

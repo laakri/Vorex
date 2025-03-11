@@ -33,6 +33,7 @@ import { DriverDashboard } from "@/pages/driver/driver-dashboard";
 import { ActiveDelivery } from "@/pages/driver/driver-active-delivery";
 import { DriverHistory } from "@/pages/driver/driver-history";
 import DriverVehicle from "@/pages/driver/driver-vehicle";
+import DriverSettings from "@/pages/driver/driver-settings";
 
 
 export function AppRoutes() {
@@ -177,13 +178,22 @@ export function AppRoutes() {
           }
           />
           <Route
+          path="settings"
+          element={
+            <ProtectedRoute>
+                <DriverSettings />
+            </ProtectedRoute>
+          }
+          />
+          <Route
           path="available-routes"
           element={
             <ProtectedRoute>
                 <DriverAvailableRoutes />
             </ProtectedRoute>
           }
-        />
+          />
+
         
         
       </Route>

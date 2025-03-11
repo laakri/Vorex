@@ -2,7 +2,9 @@ import { Injectable, BadRequestException, NotFoundException } from '@nestjs/comm
 import { PrismaService } from 'prisma/prisma.service';
 import { CreateDriverDto } from './dto/create-driver.dto';
 import { CreateVehicleDto } from './dto/create-vehicle.dto';
-import { DriverStatus,  } from '@prisma/client';
+import { UpdateDriverProfileDto } from './dto/update-driver-profile.dto';
+import { UpdateDriverVehicleDto } from './dto/update-driver-vehicle.dto';
+import { DriverStatus, LicenseType } from '@prisma/client';
 import { EmailService } from '../email/email.service';
 import { EmailTemplate } from '../email/email.service';
 import { Role } from '@/common/enums/role.enum';
@@ -115,6 +117,117 @@ export class DriversService {
     });
 
     return driver;
+  }
+
+  async getDriverProfile(userId: string) {
+    const driver = await this.prisma.driver.findUnique({
+      where: { userId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            fullName: true,
+            isVerifiedDriver: true,
+            role: true
+          }
+        },
+        vehicle: true
+      }
+    });
+
+    if (!driver) {
+      throw new NotFoundException('Driver profile not found');
+    }
+
+    return {
+      driver: {
+        id: driver.id,
+        licenseNumber: driver.licenseNumber,
+        licenseType: driver.licenseType,
+        licenseExpiry: driver.licenseExpiry,
+        address: driver.address,
+        city: driver.city,
+        postalCode: driver.postalCode,
+        governorate: driver.governorate,
+        phone: driver.phone,
+        emergencyContact: driver.emergencyContact,
+      },
+      user: driver.user,
+      vehicle: driver.vehicle
+    };
+  }
+
+  async updateDriverProfile(userId: string, updateDriverDto: UpdateDriverProfileDto) {
+    const driver = await this.prisma.driver.findUnique({
+      where: { userId }
+    });
+
+    if (!driver) {
+      throw new NotFoundException('Driver profile not found');
+    }
+
+    const updatedDriver = await this.prisma.driver.update({
+      where: { id: driver.id },
+      data: {
+        licenseNumber: updateDriverDto.licenseNumber,
+        licenseType: updateDriverDto.licenseType as LicenseType,
+        licenseExpiry: updateDriverDto.licenseExpiry,
+        address: updateDriverDto.address,
+        city: updateDriverDto.city,
+        postalCode: updateDriverDto.postalCode,
+        governorate: updateDriverDto.governorate,
+        phone: updateDriverDto.phone,
+        emergencyContact: updateDriverDto.emergencyContact,
+      }
+    });
+
+    return updatedDriver;
+  }
+
+  async updateDriverVehicle(userId: string, updateVehicleDto: UpdateDriverVehicleDto) {
+    const driver = await this.prisma.driver.findUnique({
+      where: { userId },
+      include: { vehicle: true }
+    });
+
+    if (!driver || !driver.vehicle) {
+      throw new NotFoundException('Driver vehicle not found');
+    }
+
+    const updatedVehicle = await this.prisma.vehicle.update({
+      where: { id: driver.vehicle.id },
+      data: updateVehicleDto
+    });
+
+    return updatedVehicle;
+  }
+
+  async updateDriverAvailability(userId: string, status: DriverStatus) {
+    const driver = await this.prisma.driver.findUnique({
+      where: { userId }
+    });
+
+    if (!driver) {
+      throw new NotFoundException('Driver profile not found');
+    }
+
+    // Let's check what fields are available on the driver model
+    console.log('Available fields on driver model:', Object.keys(driver));
+    
+    // Try using the enum directly
+    const updatedDriver = await this.prisma.$executeRaw`
+      UPDATE "Driver" 
+      SET "availabilityStatus" = ${status}:::"DriverStatus" 
+      WHERE "id" = ${driver.id}
+    `;
+
+    // Fetch the updated driver
+    const updatedDriverData = await this.prisma.driver.findUnique({
+      where: { id: driver.id }
+    });
+
+    return updatedDriverData;
   }
 
   private async notifyAdminsNewDriver(data: { driver: any; vehicle: any; user: any }) {

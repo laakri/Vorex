@@ -786,7 +786,7 @@ export default function DriverVehicle() {
                     ))
                   )}
                 </div>
-                <div className="flex justify-end mb-2">
+                <div className="flex justify-center  my-4 ">
                   <Button onClick={() => setIsAddingMaintenance(true)} size="sm" className="gap-1">
                     <PlusCircle className="h-4 w-4" />
                     Add Maintenance Record
