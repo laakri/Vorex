@@ -32,7 +32,7 @@ import { ProtectedRoute } from "./protected-route";
 import { DriverDashboard } from "@/pages/driver/driver-dashboard";
 import { ActiveDelivery } from "@/pages/driver/driver-active-delivery";
 import { DriverHistory } from "@/pages/driver/driver-history";
-import { DriverVehicle } from "@/pages/driver/driver-vehicle";
+import DriverVehicle from "@/pages/driver/driver-vehicle";
 
 
 export function AppRoutes() {

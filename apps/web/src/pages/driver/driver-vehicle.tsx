@@ -31,7 +31,7 @@ import { useForm } from "react-hook-form"
 import * as z from "zod"
 import { Skeleton } from "@/components/ui/skeleton"
 
-// Define vehicle interface
+// Define interfaces for the data
 interface MaintenanceRecord {
   id: string
   type: string
@@ -78,59 +78,50 @@ interface Vehicle {
   insurance: Insurance | null
 }
 
-// Form schema for reporting issues
+// Define the form schema for reporting issues
 const issueFormSchema = z.object({
-  title: z.string().min(5, {
-    message: "Title must be at least 5 characters.",
-  }),
-  description: z.string().min(10, {
-    message: "Description must be at least 10 characters.",
-  }),
-  priority: z.string({
-    required_error: "Please select a priority level.",
-  }),
+  title: z.string().min(5, "Title must be at least 5 characters"),
+  description: z.string().min(10, "Description must be at least 10 characters"),
+  priority: z.string().min(1, "Please select a priority level")
 })
 
-export function DriverVehicle() {
-  const { toast } = useToast()
-  const [loading, setLoading] = useState(true)
-  const [isReportingIssue, setIsReportingIssue] = useState(false)
+export default function DriverVehicle() {
   const [vehicle, setVehicle] = useState<Vehicle | null>(null)
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  
+  const [isReportingIssue, setIsReportingIssue] = useState(false)
+  const { toast } = useToast()
+
   // Initialize form
   const form = useForm<z.infer<typeof issueFormSchema>>({
     resolver: zodResolver(issueFormSchema),
     defaultValues: {
       title: "",
       description: "",
-      priority: "MEDIUM",
-    },
+      priority: "MEDIUM"
+    }
   })
 
+  // Fetch vehicle data
   useEffect(() => {
-    const fetchVehicleData = async () => {
+    const fetchVehicle = async () => {
       try {
         setLoading(true)
         const response = await api.get('/vehicles/driver')
         setVehicle(response.data)
         setError(null)
       } catch (err: any) {
-        console.error('Error fetching vehicle data:', err)
-        setError(err.response?.data?.message || 'Failed to load vehicle data')
-        toast({
-          title: "Error",
-          description: err.response?.data?.message || "Failed to load vehicle data",
-          variant: "destructive"
-        })
+        console.error('Error fetching vehicle:', err)
+        setError(err.response?.data?.message || "Failed to load vehicle data")
       } finally {
         setLoading(false)
       }
     }
 
-    fetchVehicleData()
-  }, [toast])
+    fetchVehicle()
+  }, [])
 
+  // Handle issue submission
   const onSubmitIssue = async (data: z.infer<typeof issueFormSchema>) => {
     if (!vehicle) return
     
@@ -141,7 +132,7 @@ export function DriverVehicle() {
       // Update the vehicle state with the new issue
       setVehicle({
         ...vehicle,
-        issues: [...vehicle.issues, response.data]
+        issues: [response.data, ...vehicle.issues]
       })
       
       // Close the dialog and show success message
@@ -218,6 +209,7 @@ export function DriverVehicle() {
     }
   }
 
+  // Loading state
   if (loading && !vehicle) {
     return (
       <div className="container mx-auto py-6 space-y-6">
@@ -235,6 +227,7 @@ export function DriverVehicle() {
     )
   }
 
+  // Error state
   if (error || !vehicle) {
     return (
       <div className="container mx-auto py-12 text-center">
@@ -383,8 +376,8 @@ export function DriverVehicle() {
         
         {/* Fuel & Maintenance Card */}
         <Card className="overflow-hidden">
-        <CardHeader className="py-4 bg-background-secondary">
-        <CardTitle className="text-lg">Fuel & Maintenance</CardTitle>
+          <CardHeader className="py-4 bg-background-secondary">
+            <CardTitle className="text-lg">Fuel & Maintenance</CardTitle>
           </CardHeader>
           <CardContent className="pt-4 space-y-4">
             <div>
@@ -431,8 +424,8 @@ export function DriverVehicle() {
         
         {/* Insurance Card */}
         <Card className="overflow-hidden">
-        <CardHeader className="py-4 bg-background-secondary">
-        <CardTitle className="text-lg">Insurance Information</CardTitle>
+          <CardHeader className="py-4 bg-background-secondary">
+            <CardTitle className="text-lg">Insurance Information</CardTitle>
           </CardHeader>
           <CardContent className="pt-4">
             {vehicle.insurance ? (
@@ -496,39 +489,49 @@ export function DriverVehicle() {
             <ScrollArea className="h-[400px]">
               <TabsContent value="maintenance" className="p-4">
                 <div className="space-y-4">
-                  {vehicle.maintenanceRecords.map((record) => (
-                    <div key={record.id} className="flex items-start gap-4 p-4 rounded-lg border">
-                      <div className="bg-primary/10 p-2 rounded-full">
-                        {getMaintenanceTypeIcon(record.type)}
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <h3 className="font-medium">{record.type.replace(/_/g, ' ')}</h3>
-                          <Badge variant="outline" className={getStatusColor(record.status)}>
-                            {record.status}
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-muted-foreground mt-1">{record.description}</p>
-                        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm">
-                          <div className="flex items-center gap-1">
-                            <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-                            <span>{format(new Date(record.date), "MMM d, yyyy")}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Gauge className="h-3.5 w-3.5 text-muted-foreground" />
-                            <span>{record.odometer.toLocaleString()} km</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <span className="font-medium">${record.cost.toFixed(2)}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <Button variant="outline" size="sm" className="flex-shrink-0">
-                        <FileText className="h-4 w-4 mr-1" />
-                        Details
-                      </Button>
+                  {vehicle.maintenanceRecords.length === 0 ? (
+                    <div className="text-center py-8">
+                      <Wrench className="h-10 w-10 text-muted-foreground mx-auto mb-3 opacity-50" />
+                      <h3 className="font-medium">No Maintenance Records</h3>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        No maintenance records are available for this vehicle.
+                      </p>
                     </div>
-                  ))}
+                  ) : (
+                    vehicle.maintenanceRecords.map((record) => (
+                      <div key={record.id} className="flex items-start gap-4 p-4 rounded-lg border">
+                        <div className="bg-primary/10 p-2 rounded-full">
+                          {getMaintenanceTypeIcon(record.type)}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between">
+                            <h3 className="font-medium">{record.type.replace(/_/g, ' ')}</h3>
+                            <Badge variant="outline" className={getStatusColor(record.status)}>
+                              {record.status}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground mt-1">{record.description}</p>
+                          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                            <div className="flex items-center gap-1">
+                              <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                              <span>{format(new Date(record.date), "MMM d, yyyy")}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Gauge className="h-3.5 w-3.5 text-muted-foreground" />
+                              <span>{record.odometer.toLocaleString()} km</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <span className="font-medium">${record.cost.toFixed(2)}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <Button variant="outline" size="sm" className="flex-shrink-0">
+                          <FileText className="h-4 w-4 mr-1" />
+                          Details
+                        </Button>
+                      </div>
+                    ))
+                  )}
                 </div>
               </TabsContent>
               
