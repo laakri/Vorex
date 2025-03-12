@@ -24,17 +24,21 @@ services:
       context: ./apps/api
       dockerfile: Dockerfile
     environment:
-      DATABASE_URL: postgresql://admin:admin@postgres:5432/vorex_db?schema=public
-      NODE_ENV: production
-      JWT_SECRET: 8f4c9d6a2e7b1f5n8q3w9p4m7k2j5h8g1t6y3r9c4v7b2n5x8z1l6s3d9g4h7j
-      JWT_EXPIRES_IN: 7d
-      PORT: 3000
-      ALLOWED_ORIGINS: "http://40.67.192.108,http://40.67.192.108:80,http://localhost:80"
-      CORS_ENABLED: "true"
-      EMAIL_HOST: "smtp.gmail.com"
-      EMAIL_PORT: 587
-      EMAIL_USER: "glassisaif@gmail.com"
-      EMAIL_PASSWORD: "pofdmdrpyihzpdvt"
+      DATABASE_URL: ${DATABASE_URL}
+      NODE_ENV: ${NODE_ENV}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN}
+      PORT: ${PORT}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
+      CORS_ENABLED: ${CORS_ENABLED}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      GOOGLE_CALLBACK_URL: ${GOOGLE_CALLBACK_URL}
+      EMAIL_HOST: ${EMAIL_HOST}
+      EMAIL_PORT: ${EMAIL_PORT}
+      EMAIL_USER: ${EMAIL_USER}
+      EMAIL_PASSWORD: ${EMAIL_PASSWORD}
     ports:
       - "3000:3000"
     depends_on:

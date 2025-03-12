@@ -45,13 +45,21 @@ jobs:
     - name: Create env files
       run: |
         # API Environment Variables
-        echo "DATABASE_URL=postgresql://admin:admin@postgres:5432/vorex_db?schema=public" > apps/api/.env
-        echo "JWT_SECRET=8f4c9d6a2e7b1f5n8q3w9p4m7k2j5h8g1t6y3r9c4v7b2n5x8z1l6s3d9g4h7j" >> apps/api/.env
-        echo "JWT_EXPIRES_IN=7d" >> apps/api/.env
-        echo "PORT=3000" >> apps/api/.env
-        echo "NODE_ENV=production" >> apps/api/.env
-        echo "ALLOWED_ORIGINS=http://40.67.192.108,http://40.67.192.108:80" >> apps/api/.env
-        echo "CORS_ENABLED=true" >> apps/api/.env
+        echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >
+        echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >>
+        echo "JWT_EXPIRES_IN=${{ secrets.JWT_EXPIRES_IN }}" >>
+        echo "PORT=${{ secrets.PORT }}" >>
+        echo "NODE_ENV=${{ secrets.NODE_ENV }}" >>
+        echo "ALLOWED_ORIGINS=${{ secrets.ALLOWED_ORIGINS }}" >>
+        echo "CORS_ENABLED=${{ secrets.CORS_ENABLED }}" >>
+        echo "GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}" >>
+        echo "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" >>
+        echo "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}" >>
+        echo "GOOGLE_CALLBACK_URL=${{ secrets.GOOGLE_CALLBACK_URL }}" >>
+        echo "EMAIL_HOST=${{ secrets.EMAIL_HOST }}" >>
+        echo "EMAIL_PORT=${{ secrets.EMAIL_PORT }}" >>
+        echo "EMAIL_USER=${{ secrets.EMAIL_USER }}" >>
+        echo "EMAIL_PASSWORD=${{ secrets.EMAIL_PASSWORD }}" >>
         
         # Web Environment Variables
         echo "VITE_API_URL=http://40.67.192.108/api" > apps/web/.env
