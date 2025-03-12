@@ -1,12 +1,27 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
-  Truck,
+  Wallet,
   Package,
   Navigation2,
   CheckCircle,
-  Route as RouteIcon,
-  Wallet,
+  Truck,
+  Info,
+  BarChart,
+  Route,
+  Boxes,
+  RotateCw,
 } from "lucide-react";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  ResponsiveContainer,
+  Tooltip as RechartsTooltip,
+} from "recharts";
+import api from "@/lib/axios";
+
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -16,138 +31,120 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  ResponsiveContainer,
-} from "recharts";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
-
-// Dummy data structure
-const DUMMY_DASHBOARD_DATA = {
-  deliveryMetrics: {
-    completed: 156,
-    totalDistance: 2347,
-    totalTime: 189,
-    earnings: 4520,
-  },
-  vehicleInfo: {
-    type: "VAN",
-    status: "ACTIVE",
-    lastMaintenance: "2024-03-01",
-    fuelLevel: 75,
-    nextMaintenanceDate: "2024-04-01",
-    registrationNumber: "123 TN 4567",
-  },
-  earningsData: {
-    daily: [
-      { date: "2024-03-01", earnings: 650, deliveries: 12 },
-      { date: "2024-03-02", earnings: 720, deliveries: 15 },
-      { date: "2024-03-03", earnings: 550, deliveries: 10 },
-      { date: "2024-03-04", earnings: 830, deliveries: 18 },
-      { date: "2024-03-05", earnings: 690, deliveries: 14 },
-      { date: "2024-03-06", earnings: 780, deliveries: 16 },
-      { date: "2024-03-07", earnings: 300, deliveries: 8 },
-    ],
-    byType: [
-      { name: "Local Delivery", percentage: 45, count: 70, earnings: 2034 },
-      { name: "Local Pickup", percentage: 30, count: 47, earnings: 1356 },
-      { name: "Intercity", percentage: 25, count: 39, earnings: 1130 },
-    ],
-  },
-  recentDeliveries: [
-    {
-      id: "del_1",
-      route: "Tunis Center → La Marsa",
-      packages: 8,
-      distance: 15.4,
-      status: "COMPLETED",
-      earnings: 45,
-      timestamp: "2024-03-07T14:30:00Z",
-      customerName: "Ahmed Ben Salem",
-    },
-    {
-      id: "del_2",
-      route: "Ariana → El Menzah",
-      packages: 12,
-      distance: 8.7,
-      status: "COMPLETED",
-      earnings: 35,
-      timestamp: "2024-03-07T12:15:00Z",
-      customerName: "Sarra Mansouri",
-    },
-    {
-      id: "del_3",
-      route: "La Soukra → Carthage",
-      packages: 5,
-      distance: 12.3,
-      status: "COMPLETED",
-      earnings: 40,
-      timestamp: "2024-03-07T10:00:00Z",
-      customerName: "Yassine Karoui",
-    },
-    {
-      id: "del_4",
-      route: "Les Berges du Lac → Sidi Bou Said",
-      packages: 15,
-      distance: 18.9,
-      status: "COMPLETED",
-      earnings: 55,
-      timestamp: "2024-03-07T08:30:00Z",
-      customerName: "Leila Ben Ammar",
-    },
-  ],
-  performanceStats: {
-    rating: 4.8,
-    onTimeDelivery: 95,
-    successRate: 98,
-    customerFeedback: [
-      { type: "Positive", count: 142 },
-      { type: "Neutral", count: 12 },
-      { type: "Negative", count: 2 },
-    ],
-    monthlyStats: {
-      totalHours: 168,
-      averageDeliveriesPerDay: 12,
-      fuelConsumption: 280,
-      maintenanceCount: 1,
-    },
-  },
-  currentStatus: {
-    status: "AVAILABLE",
-    lastActive: "2024-03-07T15:00:00Z",
-    currentLocation: {
-      latitude: 36.8065,
-      longitude: 10.1815,
-      address: "Downtown Tunis",
-    },
-    shiftInfo: {
-      type: "MORNING",
-      startTime: "2024-03-07T06:00:00Z",
-      endTime: "2024-03-07T14:00:00Z",
-      breaksLeft: 1,
-    },
-  }
-};
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 
 export function DriverDashboard() {
   const [timeRange, setTimeRange] = useState<string>("7d");
+  const { toast } = useToast();
   
-  // Use dummy data directly
-  const {
-    deliveryMetrics,
-    vehicleInfo,
-    earningsData,
-    recentDeliveries,
-    performanceStats
-  } = DUMMY_DASHBOARD_DATA;
-
-  const hasDeliveries = deliveryMetrics.completed > 0;
-
+  // Fetch dashboard data from API
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["driverDashboard", timeRange],
+    queryFn: async () => {
+      try {
+        const response = await api.get(`/drivers/dashboard?timeRange=${timeRange}`);
+        return response.data;
+      } catch (err) {
+        toast({
+          title: "Error loading dashboard",
+          description: "Failed to load dashboard data. Please try again.",
+          variant: "destructive"
+        });
+        throw err;
+      }
+    }
+  });
+  
+  // Destructure data for easier access
+  const { 
+    deliveryMetrics = {}, 
+    vehicleInfo = {},
+    earningsData = { daily: [], byType: [] },
+    recentDeliveries = [],
+    performanceStats = {}
+  } = data || {};
+  
+  const hasDeliveries = recentDeliveries.length > 0;
+  
+  // If loading, show skeleton UI
+  if (isLoading) {
+    return (
+      <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
+        <div className="flex items-center justify-between space-y-2">
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight">Driver Dashboard</h2>
+            <p className="text-muted-foreground">
+              Your delivery performance overview
+            </p>
+          </div>
+          <Skeleton className="h-10 w-[180px]" />
+        </div>
+        
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {Array(4).fill(null).map((_, i) => (
+            <Card key={i}>
+              <CardContent className="p-6">
+                <Skeleton className="h-20 w-full" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+          <Card className="col-span-4">
+            <CardHeader>
+              <Skeleton className="h-6 w-40 mb-2" />
+              <Skeleton className="h-4 w-60" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-[300px] w-full" />
+            </CardContent>
+          </Card>
+          
+          <Card className="col-span-3">
+            <CardHeader>
+              <Skeleton className="h-6 w-40 mb-2" />
+              <Skeleton className="h-4 w-60" />
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {Array(3).fill(null).map((_, i) => (
+                  <Skeleton key={i} className="h-16 w-full" />
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+  
+  // If there's an error, show a simple error message
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <EmptyState
+          icon={<Info className="h-10 w-10 text-destructive" />}
+          title="Failed to load dashboard"
+          description="There was an error loading your dashboard data. Please try refreshing the page."
+        >
+          <Button 
+            onClick={() => window.location.reload()}
+            className="mt-4"
+          >
+            <RotateCw className="mr-2 h-4 w-4" />
+            Refresh
+          </Button>
+        </EmptyState>
+      </div>
+    );
+  }
+  
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       <div className="flex items-center justify-between space-y-2">
@@ -160,10 +157,10 @@ export function DriverDashboard() {
         <div className="flex items-center gap-2">
           <Select
             value={timeRange}
-            onValueChange={(value: string) => setTimeRange(value)}
+            onValueChange={setTimeRange}
           >
             <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Select timeframe" />
+              <SelectValue placeholder="Select time range" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="7d">Last 7 days</SelectItem>
@@ -186,23 +183,23 @@ export function DriverDashboard() {
             {[
               {
                 title: "Total Earnings",
-                value: `${deliveryMetrics.earnings.toLocaleString()} DT`,
-                icon: Wallet,
+                value: `${deliveryMetrics.earnings?.toLocaleString() || '0'} DT`,
+                icon: <Wallet className="h-5 w-5 text-primary" />,
               },
               {
                 title: "Completed Deliveries",
-                value: deliveryMetrics.completed.toString(),
-                icon: Package,
+                value: deliveryMetrics.completed?.toString() || '0',
+                icon: <Package className="h-5 w-5 text-primary" />,
               },
               {
                 title: "Total Distance",
-                value: `${deliveryMetrics.totalDistance} km`,
-                icon: Navigation2,
+                value: `${deliveryMetrics.totalDistance || '0'} km`,
+                icon: <Navigation2 className="h-5 w-5 text-primary" />,
               },
               {
                 title: "Success Rate",
-                value: `${performanceStats.successRate}%`,
-                icon: CheckCircle,
+                value: `${performanceStats.successRate || '0'}%`,
+                icon: <CheckCircle className="h-5 w-5 text-primary" />,
               }
             ].map((metric) => (
               <Card key={metric.title}>
@@ -215,7 +212,7 @@ export function DriverDashboard() {
                       <p className="text-2xl font-bold">{metric.value}</p>
                     </div>
                     <div className="p-2 bg-primary/10 rounded-full">
-                      <metric.icon className="h-5 w-5 text-primary" />
+                      {metric.icon}
                     </div>
                   </div>
                 </CardContent>
@@ -232,7 +229,7 @@ export function DriverDashboard() {
                 <CardDescription>Daily earnings and delivery count</CardDescription>
               </CardHeader>
               <CardContent>
-                {hasDeliveries ? (
+                {hasDeliveries && earningsData.daily?.length > 0 ? (
                   <div className="h-[300px]">
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={earningsData.daily}>
@@ -250,6 +247,27 @@ export function DriverDashboard() {
                           axisLine={false}
                           tickFormatter={(value) => `${value} DT`}
                         />
+                        <RechartsTooltip
+                          content={({ active, payload }) => {
+                            if (active && payload && payload.length) {
+                              return (
+                                <div className="rounded-lg border bg-background p-2 shadow-sm">
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <div className="flex flex-col">
+                                      <span className="text-xs text-muted-foreground">Earnings</span>
+                                      <span className="font-bold text-sm">{payload[0].value} DT</span>
+                                    </div>
+                                    <div className="flex flex-col">
+                                      <span className="text-xs text-muted-foreground">Deliveries</span>
+                                      <span className="font-bold text-sm">{payload[0].payload.deliveries}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            }
+                            return null;
+                          }}
+                        />
                         <Line
                           type="monotone"
                           dataKey="earnings"
@@ -262,7 +280,7 @@ export function DriverDashboard() {
                   </div>
                 ) : (
                   <EmptyState
-                    icon={<Wallet />}
+                    icon={<Wallet className="h-10 w-10 text-muted-foreground" />}
                     title="No Earnings Data"
                     description="Complete deliveries to see your earnings trend"
                     className="h-[300px]"
@@ -280,31 +298,31 @@ export function DriverDashboard() {
               <CardContent>
                 {hasDeliveries ? (
                   <div className="space-y-8">
-                    {recentDeliveries.map((delivery) => (
+                    {recentDeliveries.map((delivery: any) => (
                       <div key={delivery.id} className="flex items-center">
                         <div className="space-y-1 flex-1">
                           <p className="text-sm font-medium leading-none">
-                            {delivery.route}
+                            {delivery.route || 'Route ID: ' + delivery.id.substring(0, 8)}
                           </p>
                           <div className="flex items-center text-sm text-muted-foreground gap-2">
                             <Package className="h-4 w-4" />
-                            <span>{delivery.packages} packages</span>
+                            <span>{delivery.packages || 0} packages</span>
                             <span>•</span>
-                            <span>{delivery.distance} km</span>
+                            <span>{delivery.distance || 0} km</span>
                           </div>
                         </div>
                         <div className="flex items-center gap-4">
                           <Badge variant="default">
-                            {delivery.status}
+                            {delivery.status || 'COMPLETED'}
                           </Badge>
-                          <span className="font-bold">{delivery.earnings} DT</span>
+                          <span className="font-bold">{delivery.earnings || 0} DT</span>
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
                   <EmptyState
-                    icon={<Package/>}
+                    icon={<Package className="h-10 w-10 text-muted-foreground" />}
                     title="No Recent Deliveries"
                     description="Your recent deliveries will appear here"
                   />
@@ -325,26 +343,44 @@ export function DriverDashboard() {
                 <CardDescription>Current vehicle information</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Type</span>
-                    <Badge variant="outline">{vehicleInfo.type}</Badge>
+                {vehicleInfo ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">Type</span>
+                      <Badge variant="outline">{vehicleInfo.type || 'N/A'}</Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">Status</span>
+                      <Badge 
+                        variant={vehicleInfo.status === 'ACTIVE' ? 'default' : 'destructive'}
+                      >
+                        {vehicleInfo.status || 'UNKNOWN'}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">Last Maintenance</span>
+                      <span className="text-sm">
+                        {vehicleInfo.lastMaintenance 
+                          ? new Date(vehicleInfo.lastMaintenance).toLocaleDateString() 
+                          : 'Not available'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">Next Maintenance</span>
+                      <span className="text-sm font-medium">
+                        {vehicleInfo.nextMaintenance
+                          ? new Date(vehicleInfo.nextMaintenance).toLocaleDateString()
+                          : 'N/A'}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Status</span>
-                    <Badge 
-                      variant={vehicleInfo.status === 'ACTIVE' ? 'default' : 'destructive'}
-                    >
-                      {vehicleInfo.status}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Last Maintenance</span>
-                    <span className="text-sm">
-                      {new Date(vehicleInfo.lastMaintenance).toLocaleDateString()}
-                    </span>
-                  </div>
-                </div>
+                ) : (
+                  <EmptyState
+                    icon={<Truck className="h-10 w-10 text-muted-foreground" />}
+                    title="No Vehicle Data"
+                    description="Vehicle information not available"
+                  />
+                )}
               </CardContent>
             </Card>
 
@@ -355,29 +391,37 @@ export function DriverDashboard() {
                 <CardDescription>Delivery performance metrics</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm">Rating</span>
-                      <span className="font-medium">{performanceStats.rating}/5</span>
+                {performanceStats ? (
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm">Rating</span>
+                        <span className="font-medium">{performanceStats.rating || 0}/5</span>
+                      </div>
+                      <Progress value={(performanceStats.rating || 0) * 20} />
                     </div>
-                    <Progress value={performanceStats.rating * 20} />
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm">On-time Delivery</span>
-                      <span className="font-medium">{performanceStats.onTimeDelivery}%</span>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm">On-time Delivery</span>
+                        <span className="font-medium">{performanceStats.onTimeDelivery || 0}%</span>
+                      </div>
+                      <Progress value={performanceStats.onTimeDelivery || 0} />
                     </div>
-                    <Progress value={performanceStats.onTimeDelivery} />
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm">Success Rate</span>
-                      <span className="font-medium">{performanceStats.successRate}%</span>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm">Success Rate</span>
+                        <span className="font-medium">{performanceStats.successRate || 0}%</span>
+                      </div>
+                      <Progress value={performanceStats.successRate || 0} />
                     </div>
-                    <Progress value={performanceStats.successRate} />
                   </div>
-                </div>
+                ) : (
+                  <EmptyState
+                    icon={<BarChart className="h-10 w-10 text-muted-foreground" />}
+                    title="No Performance Data"
+                    description="Complete deliveries to see performance metrics"
+                  />
+                )}
               </CardContent>
             </Card>
 
@@ -388,33 +432,55 @@ export function DriverDashboard() {
                 <CardDescription>Distribution by type</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {earningsData.byType.map((type) => (
-                    <div key={type.name} className="flex items-center justify-between">
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium leading-none">
-                          {type.name}
-                        </p>
-                        <div className="flex items-center gap-2">
-                          <Progress value={type.percentage} className="w-[60px]" />
-                          <span className="text-sm text-muted-foreground">
-                            {type.percentage}%
-                          </span>
+                {earningsData?.byType?.length > 0 ? (
+                  <div className="space-y-4">
+                    {earningsData.byType.map((type:any) => (
+                      <div key={type.name} className="flex items-center justify-between">
+                        <div className="space-y-1">
+                          <p className="text-sm font-medium leading-none">
+                            {type.name}
+                          </p>
+                          <div className="flex items-center gap-2">
+                            <Progress value={type.percentage} className="w-[60px]" />
+                            <span className="text-sm text-muted-foreground">
+                              {type.percentage}%
+                            </span>
+                          </div>
+                        </div>
+                        <div className="font-bold">
+                          {type.count} deliveries
                         </div>
                       </div>
-                      <div className="font-bold">
-                        {type.count} deliveries
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <EmptyState
+                    icon={<Boxes className="h-10 w-10 text-muted-foreground" />}
+                    title="No Delivery Types"
+                    description="Complete deliveries to see type distribution"
+                  />
+                )}
               </CardContent>
             </Card>
           </div>
         </TabsContent>
 
         <TabsContent value="stats">
-          {/* Add detailed statistics content here */}
+          <div className="grid gap-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Detailed Statistics</CardTitle>
+                <CardDescription>More detailed delivery and performance analytics</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <EmptyState
+                  icon={<BarChart className="h-10 w-10 text-muted-foreground" />}
+                  title="Coming Soon"
+                  description="Detailed statistics will be available in a future update"
+                />
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
     </div>

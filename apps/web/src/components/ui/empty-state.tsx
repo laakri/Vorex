@@ -11,6 +11,7 @@ interface EmptyStateProps {
   title: string;
   description: string;
   className?: string;
+  children?: ReactNode;
 }
 
 const iconMap = {
@@ -24,7 +25,8 @@ export function EmptyState({
   icon, 
   title, 
   description, 
-  className = "" 
+  className = "",
+  children
 }: EmptyStateProps) {
   const IconComponent = icon || iconMap.default;
 
@@ -41,6 +43,7 @@ export function EmptyState({
       <p className="mt-2 text-sm text-muted-foreground/70">
         {description}
       </p>
+      {children && <div className="mt-4">{children}</div>}
     </div>
   );
 } 

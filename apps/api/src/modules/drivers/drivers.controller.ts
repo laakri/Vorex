@@ -8,6 +8,8 @@ import {
   HttpCode,
   BadRequestException,
   Param,
+  Query,
+  Request,
 } from '@nestjs/common';
 import { DriversService } from './drivers.service';
 import { CreateDriverDto } from './dto/create-driver.dto';
@@ -113,5 +115,14 @@ export class DriversController {
     } catch (error) {
       throw new BadRequestException(error.message);
     }
+  }
+
+  @Get('dashboard')
+  @Roles(Role.DRIVER)
+  async getDriverDashboard(
+    @Request() req,
+    @Query('timeRange') timeRange: string = '7d'
+  ) {
+    return this.driversService.getDriverDashboard(req.user.id, timeRange);
   }
 } 
