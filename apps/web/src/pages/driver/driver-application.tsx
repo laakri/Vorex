@@ -192,7 +192,7 @@ export function DriverApplication() {
           isValid = false;
         }
         if (!formData.year) {
-          errorMessage = "Year is required.";
+          errorMessage = "Years is required.";
           isValid = false;
         }
         if (!formData.plateNumber) {
