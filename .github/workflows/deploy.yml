@@ -42,33 +42,23 @@ jobs:
       with:
         bun-version: latest
         
-    - name: Create env files
-      run: |
-        # Create the .env file for the API
-        echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" > apps/api/.env
-        echo "NODE_ENV=${{ secrets.NODE_ENV }}" >> apps/api/.env
-        echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> apps/api/.env
-        echo "JWT_EXPIRES_IN=${{ secrets.JWT_EXPIRES_IN }}" >> apps/api/.env
-        echo "PORT=${{ secrets.PORT }}" >> apps/api/.env
-        echo "ALLOWED_ORIGINS=${{ secrets.ALLOWED_ORIGINS }}" >> apps/api/.env
-        echo "CORS_ENABLED=${{ secrets.CORS_ENABLED }}" >> apps/api/.env
-        echo "GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}" >> apps/api/.env
-        echo "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" >> apps/api/.env
-        echo "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}" >> apps/api/.env
-        echo "GOOGLE_CALLBACK_URL=${{ secrets.GOOGLE_CALLBACK_URL }}" >> apps/api/.env
-        echo "EMAIL_HOST=${{ secrets.EMAIL_HOST }}" >> apps/api/.env
-        echo "EMAIL_PORT=${{ secrets.EMAIL_PORT }}" >> apps/api/.env
-        echo "EMAIL_USER=${{ secrets.EMAIL_USER }}" >> apps/api/.env
-        echo "EMAIL_PASSWORD=${{ secrets.EMAIL_PASSWORD }}" >> apps/api/.env
-        
-        # Web Environment Variables
-        echo "VITE_API_URL=http://40.67.192.108/api" > apps/web/.env
-        echo "VITE_APP_NAME=Vorex" >> apps/web/.env
-        
     - name: Deploy with Docker Compose
       env:
-        DOCKER_BUILDKIT: 1
-        COMPOSE_DOCKER_CLI_BUILD: 1
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        NODE_ENV: ${{ secrets.NODE_ENV }}
+        JWT_SECRET: ${{ secrets.JWT_SECRET }}
+        JWT_EXPIRES_IN: ${{ secrets.JWT_EXPIRES_IN }}
+        PORT: ${{ secrets.PORT }}
+        ALLOWED_ORIGINS: ${{ secrets.ALLOWED_ORIGINS }}
+        CORS_ENABLED: ${{ secrets.CORS_ENABLED }}
+        GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+        GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+        GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+        GOOGLE_CALLBACK_URL: ${{ secrets.GOOGLE_CALLBACK_URL }}
+        EMAIL_HOST: ${{ secrets.EMAIL_HOST }}
+        EMAIL_PORT: ${{ secrets.EMAIL_PORT }}
+        EMAIL_USER: ${{ secrets.EMAIL_USER }}
+        EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
       run: |
         # Build with no-cache to ensure fresh builds
         docker compose build --no-cache --parallel
