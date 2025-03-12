@@ -44,22 +44,22 @@ jobs:
         
     - name: Create env files
       run: |
-        # API Environment Variables
-        echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >
-        echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >>
-        echo "JWT_EXPIRES_IN=${{ secrets.JWT_EXPIRES_IN }}" >>
-        echo "PORT=${{ secrets.PORT }}" >>
-        echo "NODE_ENV=${{ secrets.NODE_ENV }}" >>
-        echo "ALLOWED_ORIGINS=${{ secrets.ALLOWED_ORIGINS }}" >>
-        echo "CORS_ENABLED=${{ secrets.CORS_ENABLED }}" >>
-        echo "GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}" >>
-        echo "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" >>
-        echo "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}" >>
-        echo "GOOGLE_CALLBACK_URL=${{ secrets.GOOGLE_CALLBACK_URL }}" >>
-        echo "EMAIL_HOST=${{ secrets.EMAIL_HOST }}" >>
-        echo "EMAIL_PORT=${{ secrets.EMAIL_PORT }}" >>
-        echo "EMAIL_USER=${{ secrets.EMAIL_USER }}" >>
-        echo "EMAIL_PASSWORD=${{ secrets.EMAIL_PASSWORD }}" >>
+        # Create the .env file for the API
+        echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" > apps/api/.env
+        echo "NODE_ENV=${{ secrets.NODE_ENV }}" >> apps/api/.env
+        echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> apps/api/.env
+        echo "JWT_EXPIRES_IN=${{ secrets.JWT_EXPIRES_IN }}" >> apps/api/.env
+        echo "PORT=${{ secrets.PORT }}" >> apps/api/.env
+        echo "ALLOWED_ORIGINS=${{ secrets.ALLOWED_ORIGINS }}" >> apps/api/.env
+        echo "CORS_ENABLED=${{ secrets.CORS_ENABLED }}" >> apps/api/.env
+        echo "GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}" >> apps/api/.env
+        echo "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" >> apps/api/.env
+        echo "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}" >> apps/api/.env
+        echo "GOOGLE_CALLBACK_URL=${{ secrets.GOOGLE_CALLBACK_URL }}" >> apps/api/.env
+        echo "EMAIL_HOST=${{ secrets.EMAIL_HOST }}" >> apps/api/.env
+        echo "EMAIL_PORT=${{ secrets.EMAIL_PORT }}" >> apps/api/.env
+        echo "EMAIL_USER=${{ secrets.EMAIL_USER }}" >> apps/api/.env
+        echo "EMAIL_PASSWORD=${{ secrets.EMAIL_PASSWORD }}" >> apps/api/.env
         
         # Web Environment Variables
         echo "VITE_API_URL=http://40.67.192.108/api" > apps/web/.env
