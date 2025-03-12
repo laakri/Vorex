@@ -7,17 +7,13 @@ import {
   BarChart3,
   Shield,
   Clock,
-  Package,
   CheckCircle2,
   User,
   ArrowRight,
-  Globe,
   Zap,
   Box,
   Map,
-  MessageSquare,
 } from "lucide-react";
-import heroBg from "@/assets/hero-bg.jpg";
 import warehouse from "@/assets/warehouse.jpg";
 
 export function MainHomePage() {
@@ -360,29 +356,6 @@ const updatedStats = [
   { label: "Service Areas", value: "650+", trend: 15 },
 ];
 
-// Original data - keep for the rest of the page
-const deliverySteps = [
-  {
-    title: "Request Pickup",
-    description: "Schedule a pickup from your location",
-    icon: Package,
-  },
-  {
-    title: "Warehouse Processing",
-    description: "Package sorting and route optimization",
-    icon: Warehouse,
-  },
-  {
-    title: "In Transit",
-    description: "Real-time tracking of your delivery",
-    icon: Truck,
-  },
-  {
-    title: "Delivered",
-    description: "Confirmation and delivery proof",
-    icon: CheckCircle2,
-  },
-];
 
 const stats = [
   { value: "20K+", label: "Active Users" },
