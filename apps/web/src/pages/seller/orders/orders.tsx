@@ -33,6 +33,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { CancelOrderDialog } from "./cancel-order-dialog";
 
 // Enums
 export enum OrderStatus {
@@ -107,6 +108,8 @@ export function OrdersPage(): JSX.Element {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<OrderStatus | 'all'>('all');
   const [isAddOrderOpen, setIsAddOrderOpen] = useState<boolean>(false);
+  const [cancelOrderId, setCancelOrderId] = useState<string | null>(null);
+  const [isCancelDialogOpen, setIsCancelDialogOpen] = useState<boolean>(false);
 
   // Queries
   const { 
@@ -168,6 +171,12 @@ export function OrdersPage(): JSX.Element {
     OrderStatus.CITY_DELIVERED,
     OrderStatus.CANCELLED
   ];
+
+  // Function to handle cancel button click
+  const handleCancelOrder = (orderId: string) => {
+    setCancelOrderId(orderId);
+    setIsCancelDialogOpen(true);
+  };
 
   return (
     <div className="container py-6 space-y-6">
@@ -266,12 +275,13 @@ export function OrdersPage(): JSX.Element {
               <TableHead>Items</TableHead>
               <TableHead className="text-right">Amount</TableHead>
               <TableHead>Date</TableHead>
+              <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-10">
+                <TableCell colSpan={7} className="text-center py-10">
                   <div className="flex justify-center">
                     <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
                   </div>
@@ -279,13 +289,13 @@ export function OrdersPage(): JSX.Element {
               </TableRow>
             ) : error ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-10">
+                <TableCell colSpan={7} className="text-center py-10">
                   <div className="text-red-500">Error loading orders</div>
                 </TableCell>
               </TableRow>
             ) : filteredOrders.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-10">
+                <TableCell colSpan={7} className="text-center py-10">
                   <div className="text-muted-foreground">No orders found</div>
                 </TableCell>
               </TableRow>
@@ -297,7 +307,7 @@ export function OrdersPage(): JSX.Element {
                 return (
                   <React.Fragment key={status}>
                     <TableRow className="bg-primary/5">
-                      <TableCell colSpan={6} className="py-2">
+                      <TableCell colSpan={7} className="py-2">
                         <span className="font-semibold text-primary">
                           {ORDER_STATUSES[status].label}
                         </span>
@@ -337,6 +347,17 @@ export function OrdersPage(): JSX.Element {
                         <TableCell>
                           {format(new Date(order.createdAt), "dd MMM yyyy HH:mm")}
                         </TableCell>
+                        <TableCell>
+                          {order.status === OrderStatus.PENDING && (
+                            <Button 
+                              variant="destructive" 
+                              size="sm"
+                              onClick={() => handleCancelOrder(order.id)}
+                            >
+                              Cancel
+                            </Button>
+                          )}
+                        </TableCell>
                       </TableRow>
                     ))}
                   </React.Fragment>
@@ -352,6 +373,15 @@ export function OrdersPage(): JSX.Element {
         onOpenChange={setIsAddOrderOpen}
         onOrderAdded={() => refetch()}
       />
+      
+      {cancelOrderId && (
+        <CancelOrderDialog
+          orderId={cancelOrderId}
+          open={isCancelDialogOpen}
+          onOpenChange={setIsCancelDialogOpen}
+          onOrderCancelled={() => refetch()}
+        />
+      )}
     </div>
   );
 } 

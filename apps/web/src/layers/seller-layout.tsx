@@ -9,6 +9,7 @@ import {
   Store,
   LogOut,
   ChevronLeft,
+  ChevronRight,
   Brain,
   Bell,
   X,
@@ -23,7 +24,7 @@ import {
   Video,
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { AiChat } from "@/pages/seller/ai-chat";
 import { useAuthStore } from "@/stores/auth.store";
@@ -72,6 +73,29 @@ export function SellerLayout() {
   const notificationsCount = 1;
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isAIChatOpen, setIsAIChatOpen] = useState(false);
+  const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(true);
+
+  // Add responsive behavior
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 768) {
+        setCollapsed(true);
+        setShowInfoCard(false);
+      } else {
+        setCollapsed(false);
+        setShowInfoCard(true);
+      }
+    };
+
+    // Initial check
+    handleResize();
+    
+    // Add event listener
+    window.addEventListener('resize', handleResize);
+    
+    // Cleanup
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const getInitials = (name?: string) => {
     if (!name) return "U";
@@ -93,11 +117,12 @@ export function SellerLayout() {
 
   return (
     <div className="flex h-screen overflow-hidden">
-      {/* Sidebar - Fixed height */}
+      {/* Sidebar - Fixed height with responsive classes */}
       <aside
         className={cn(
           "border-r bg-background-secondary transition-all duration-300 flex flex-col h-screen",
-          collapsed ? "w-[70px]" : "w-64"
+          collapsed ? "w-[70px]" : "w-64",
+          "md:static absolute z-20"
         )}
       >
         {/* Header - Fixed height */}
@@ -151,9 +176,9 @@ export function SellerLayout() {
           </div>
         </nav>
 
-        {/* Informational Card about Driver Role */}
+        {/* Informational Card about Driver Role - Hide on small screens */}
         {showInfoCard && (
-          <div className="px-3 py-2">
+          <div className="px-3 py-2 hidden md:block">
             <Card className="p-4 bg-card shadow-md relative">
               <h2 className="text-md font-semibold">Did you know?</h2>
               <p className="text-sm text-muted-foreground mb-2">
@@ -175,23 +200,21 @@ export function SellerLayout() {
           </div>
         )}
 
-        {/* Notification Button with Count - Full Width */}
-        <div className="flex items-center justify-center p-3">
-          <Button variant="secondary" className="flex items-center gap-2 w-full">
+        {/* Notification Button - Responsive */}
+        <div className={cn("flex items-center justify-center p-3", collapsed && "p-2")}>
+          <Button variant="secondary" className={cn("flex items-center gap-2", collapsed ? "w-auto p-2" : "w-full")}>
             <Bell className="h-5 w-5" />
-            <span className="text-sm">Notifications</span>
+            {!collapsed && <span className="text-sm">Notifications</span>}
             {notificationsCount > 0 && (
-              <span className="ml-1 bg-red-500 text-white rounded-full px-2 text-xs">
+              <span className={cn("bg-red-500 text-white rounded-full px-2 text-xs", !collapsed && "ml-1")}>
                 {notificationsCount}
               </span>
             )}
           </Button>
         </div>
 
-       
-
-        {/* Platform Selector - Improved UI and Position */}
-        <div className="px-3 py-2">
+        {/* Platform Selector - Improved UI and Position, Hide when collapsed */}
+        <div className={cn("px-3 py-2", collapsed && "hidden")}>
           <Select onValueChange={handlePlatformChange} defaultValue="seller">
             <SelectTrigger>
               <SelectValue placeholder="Change platform" />
@@ -260,12 +283,51 @@ export function SellerLayout() {
         </div>
       </aside>
 
-      {/* Main Content  */}
-      <div className="flex-1 flex overflow-hidden">
-        <main className="flex-1 overflow-auto relative">
+      {/* Mobile sidebar toggle button - Only visible on small screens */}
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => setCollapsed(!collapsed)}
+        className="fixed top-4 left-4 z-30 h-8 w-8 p-0 rounded-full shadow-md border bg-background md:hidden"
+      >
+        <ChevronRight
+          className={cn(
+            "h-4 w-4 transition-transform duration-200",
+            !collapsed && "rotate-180"
+          )}
+        />
+      </Button>
+
+      {/* Main Content - Add backdrop for mobile */}
+      <div className="flex-1 flex overflow-hidden relative">
+        {/* Backdrop for mobile sidebar */}
+        {!collapsed && (
+          <div 
+            className="fixed inset-0 bg-black/30 z-10 md:hidden" 
+            onClick={() => setCollapsed(true)}
+          />
+        )}
+        
+        <main className={cn("flex-1 overflow-auto relative", !isRightSidebarOpen && "w-full")}>
           <div className="p-6">
             <Outlet />
           </div>
+
+          {/* Toggle Right Sidebar Button */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsRightSidebarOpen(!isRightSidebarOpen)}
+            className="fixed top-4 right-4 h-8 w-8 p-0 rounded-full shadow-md border z-10 bg-background"
+            title={isRightSidebarOpen ? "Close sidebar" : "Open sidebar"}
+          >
+            <ChevronRight
+              className={cn(
+                "h-4 w-4 transition-transform duration-200",
+                !isRightSidebarOpen && "rotate-180"
+              )}
+            />
+          </Button>
 
           {/* AI Chat Sheet */}
           <Sheet open={isAIChatOpen} onOpenChange={setIsAIChatOpen}>
@@ -295,8 +357,13 @@ export function SellerLayout() {
         </main>
 
         {/* Enhanced Right Sidebar */}
-        <aside className="w-80 border-l border-border/90 bg-background overflow-y-auto">
-          <div className="p-4 space-y-6">
+        <aside 
+          className={cn(
+            "border-l border-border/90 bg-background overflow-y-auto transition-all duration-300",
+            isRightSidebarOpen ? "w-80" : "w-0 border-l-0"
+          )}
+        >
+          <div className={cn("p-4 space-y-6", !isRightSidebarOpen && "hidden")}>
             {/* Activity Overview */}
             <div className="space-y-3">
               <h3 className="text-sm font-medium flex items-center gap-2 text-muted-foreground">

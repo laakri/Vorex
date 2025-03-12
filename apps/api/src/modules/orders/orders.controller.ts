@@ -18,9 +18,10 @@ import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { RolesGuard } from '@/common/guards/roles.guard';
 import { Roles } from '@/common/decorators/roles.decorator';
 import { Role } from '@/common/enums/role.enum';
-import { OrderStatus } from '@/common/enums/order-status.enum';
+import { OrderStatus } from '@prisma/client';
 import { GetUser } from '@/common/decorators/get-user.decorator';
 import { PrismaService } from 'prisma/prisma.service';
+import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 
 @Controller('sellers/orders')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -95,13 +96,24 @@ export class OrdersController {
   findOne(@GetUser('id') sellerId: string, @Param('id') id: string) {
     return this.ordersService.findOne(sellerId, id);
   }
-
+  @Get(':trackingId')
+  async getTrackingInfo(@Param('trackingId') trackingId: string) {
+    try {
+      return await this.ordersService.getPublicTrackingInfo(trackingId);
+    } catch (error) {
+      console.error('Error fetching tracking information:', error);
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to fetch tracking information');
+    }
+  }
   @Patch(':id/status')
   updateStatus(
-    @GetUser('id') sellerId: string,
-    @Param('id') id: string,
-    @Body('status') status: OrderStatus,
+    @GetUser('id') userId: string,
+    @Param('id') orderId: string,
+    @Body() updateOrderStatusDto: UpdateOrderStatusDto,
   ) {
-    return this.ordersService.updateStatus(sellerId, id, status);
+    return this.ordersService.updateStatus(userId, orderId, updateOrderStatusDto.status);
   }
 } 
