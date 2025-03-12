@@ -10,6 +10,12 @@ import {
   Package,
   CheckCircle2,
   User,
+  ArrowRight,
+  Globe,
+  Zap,
+  Box,
+  Map,
+  MessageSquare,
 } from "lucide-react";
 import heroBg from "@/assets/hero-bg.jpg";
 import warehouse from "@/assets/warehouse.jpg";
@@ -17,67 +23,173 @@ import warehouse from "@/assets/warehouse.jpg";
 export function MainHomePage() {
   return (
     <>
-      <section className="relative min-h-screen flex items-center">
-        {/* Background with overlay */}
-        <div className="absolute inset-0 z-0">
-          <div className="absolute inset-0 bg-gradient-to-r from-background/90 to-background/50" />
-          <img
-            src={heroBg}
-            alt="Logistics Background"
-            className="w-full h-full object-cover"
-          />
+      <section className="relative min-h-screen overflow-hidden bg-gradient-to-b from-background to-background/90">
+        {/* 3D-like mesh grid background */}
+        <div className="absolute inset-0 z-0 bg-[radial-gradient(circle_at_center,_rgba(var(--primary-rgb),0.03)_1px,_transparent_1px)] bg-[length:24px_24px]"></div>
+        
+        {/* Abstract shapes */}
+        <div className="absolute -left-64 -top-64 w-[40rem] h-[40rem] rounded-full bg-primary/5 blur-3xl"></div>
+        <div className="absolute -right-64 top-1/3 w-[30rem] h-[30rem] rounded-full bg-blue-500/5 blur-3xl"></div>
+        <div className="absolute left-1/3 bottom-0 w-[35rem] h-[35rem] rounded-full bg-purple-500/5 blur-3xl"></div>
+        
+        {/* Animated particles */}
+        <div className="particle-container absolute inset-0 z-0 opacity-40">
+          {[...Array(20)].map((_, i) => (
+            <div 
+              key={i}
+              className="absolute rounded-full bg-primary/20"
+              style={{
+                width: `${Math.random() * 10 + 5}px`,
+                height: `${Math.random() * 10 + 5}px`,
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 100}%`,
+                animationDuration: `${Math.random() * 20 + 10}s`,
+                animationDelay: `${Math.random() * 5}s`
+              }}
+            ></div>
+          ))}
         </div>
 
         {/* Hero content */}
-        <div className="container mx-auto max-w-7xl relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center justify-center pt-24">
-          <div className="space-y-6 ">
-            <h1 className="font-bold text-4xl sm:text-5xl md:text-6xl lg:text-7xl tracking-tight">
-              Ship smarter,
-              <br />
-              deliver{" "}
-              <span className="text-primary relative">
-                faster
-                <span className="absolute bottom-2 left-0 w-full h-2 bg-primary/20 -z-10 rounded-lg" />
-              </span>
-            </h1>
-            <p className="text-lg md:text-xl text-muted-foreground max-w-[600px]">
-              Transform your delivery operations with our intelligent logistics
-              platform. Connect with reliable carriers, optimize routes, and
-              delight your customers.
-            </p>
-            <div className="flex gap-4">
-              <Button asChild size="lg" className="text-base">
-                <Link to="/register">Get started</Link>
-              </Button>
-              <Button asChild size="lg" variant="outline" className="text-base">
-                <Link to="/network">View our network</Link>
-              </Button>
+        <div className="container relative z-10 mx-auto max-w-7xl px-4 py-20">
+          {/* Navbar indicator */}
+          <div className="mb-24 flex justify-between items-center">
+            <div className="text-xl font-bold text-primary">VOREX</div>
+            <div className="flex items-center gap-2 text-sm">
+              <span className="h-1.5 w-1.5 rounded-full bg-green-500"></span>
+              Platform Status: Operational
             </div>
           </div>
-
-          {/* Delivery Status Stepper */}
-          <div className=" w-max">
-            <h3 className="font-semibold text-xl mb-6">How it works</h3>
-            <div className="space-y-8">
-              {deliverySteps.map((step, index) => (
-                <div key={step.title} className="flex gap-4  w-max">
-                  <div className="flex flex-col items-center">
-                    <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-                      <step.icon className="w-4 h-4 text-primary" />
-                    </div>
-                    {index !== deliverySteps.length - 1 && (
-                      <div className="w-0.5 h-full bg-border mt-2" />
-                    )}
+          
+          <div className="grid grid-cols-1 gap-16 lg:grid-cols-2 items-center">
+            {/* Left content */}
+            <div className="space-y-10">
+              <div>
+                <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-sm font-medium text-primary">
+                  <Zap className="h-3.5 w-3.5" />
+                  Next-Gen Logistics Platform
+                </div>
+                
+                <h1 className="mt-6 font-bold text-5xl md:text-6xl lg:text-7xl tracking-tight leading-[1.1]">
+                  Logistics at{" "}
+                  <span className="relative">
+                    <span className="relative z-10 bg-gradient-to-r from-primary to-blue-500 bg-clip-text text-transparent">
+                      lightspeed
+                    </span>
+                    <span className="absolute bottom-1 left-0 z-0 h-3 w-full bg-gradient-to-r from-primary/30 to-blue-500/30 rounded-lg"></span>
+                  </span>
+                </h1>
+                
+                <p className="mt-6 text-xl text-muted-foreground leading-relaxed">
+                  Experience the future of delivery infrastructure. Our AI-powered platform connects businesses with carriers through one unified dashboard.
+                </p>
+              </div>
+              
+              <div className="flex flex-wrap gap-3">
+                {updatedClientLogos.map((logo, i) => (
+                  <div key={i} className="flex h-10 items-center justify-center rounded-lg border bg-background/50 px-6 backdrop-blur-sm">
+                    <span className="text-sm text-muted-foreground">{logo}</span>
                   </div>
-                  <div className="space-y-1">
-                    <h4 className="font-medium">{step.title}</h4>
-                    <p className="text-sm text-muted-foreground">
-                      {step.description}
-                    </p>
+                ))}
+              </div>
+              
+              <div className="flex flex-col sm:flex-row gap-5">
+                <Button size="lg" className="h-14 rounded-xl text-base font-medium px-10 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 shadow-lg shadow-primary/20">
+                  <Link to="/register" className="flex items-center gap-2">
+                    Start shipping now
+                    <ArrowRight className="h-5 w-5" />
+                  </Link>
+                </Button>
+                <Button variant="outline" size="lg" className="h-14 rounded-xl text-base font-medium px-8 border-2">
+                  <Link to="/demo">Watch demo</Link>
+                </Button>
+              </div>
+            </div>
+            
+            {/* Right content - Interactive 3D-like shipping card */}
+            <div className="relative aspect-[4/3] w-full">
+              <div className="absolute -right-4 -top-4 h-full w-full rounded-2xl border-2 border-primary/10 bg-background/50 backdrop-blur-xl"></div>
+              <div className="absolute -left-4 -bottom-4 h-full w-full rounded-2xl border-2 border-muted bg-muted/30 backdrop-blur-xl"></div>
+              
+              <div className="relative h-full w-full rounded-2xl border-2 border-border bg-background p-6 shadow-2xl">
+                <div className="absolute -top-3 -right-3 rounded-lg bg-primary px-4 py-1 text-xs font-medium text-primary-foreground">
+                  Live Tracking
+                </div>
+                
+                <div className="flex h-full flex-col">
+                  <div className="mb-6 flex items-center justify-between">
+                    <h3 className="font-semibold text-xl">Package Tracker</h3>
+                    <div className="flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full bg-green-500"></span>
+                      <span className="text-xs text-muted-foreground">Active</span>
+                    </div>
+                  </div>
+                  
+                  {/* Interactive map component */}
+                  <div className="relative flex-1 rounded-lg bg-muted/40 overflow-hidden">
+                    <div className="absolute inset-0 flex items-center justify-center opacity-10">
+                      <Map className="h-full w-full stroke-[0.5]" />
+                    </div>
+                    
+                    {/* Route visualization */}
+                    <div className="absolute inset-0 p-4">
+                      <div className="relative h-full w-full">
+                        <div className="absolute top-1/4 left-1/5 h-3 w-3 rounded-full bg-blue-500 animate-pulse"></div>
+                        <div className="absolute top-1/3 left-2/5 h-3 w-3 rounded-full bg-blue-500 animate-pulse"></div>
+                        <div className="absolute top-1/2 right-2/5 h-3 w-3 rounded-full bg-blue-500 animate-pulse"></div>
+                        <div className="absolute bottom-1/4 right-1/5 h-3 w-3 rounded-full bg-blue-500 animate-pulse"></div>
+                        
+                        <div className="absolute top-[28%] left-[25%] w-[15%] h-0.5 bg-blue-500/50"></div>
+                        <div className="absolute top-[33%] left-[40%] w-[20%] h-0.5 bg-blue-500/50"></div>
+                        <div className="absolute top-[42%] right-[40%] w-[15%] h-0.5 bg-blue-500/50"></div>
+                        
+                        <div className="absolute w-4 h-4 bg-primary rounded-full top-1/2 right-1/4 shadow-lg shadow-primary/30 animate-ping"></div>
+                        <div className="absolute w-3 h-3 bg-primary rounded-full top-1/2 right-1/4 shadow-lg shadow-primary/30 z-10"></div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Shipping data */}
+                  <div className="mt-6 grid grid-cols-2 gap-6">
+                    {trackingData.map((item, i) => (
+                      <div key={i} className="space-y-1">
+                        <p className="text-xs text-muted-foreground">{item.label}</p>
+                        <p className="font-medium">{item.value}</p>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {/* Delivery steps */}
+                  <div className="mt-6 flex justify-between">
+                    {updatedDeliverySteps.map((step, i) => (
+                      <div key={i} className="flex flex-col items-center text-center">
+                        <div className={`h-10 w-10 rounded-full flex items-center justify-center ${i <= 2 ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground'}`}>
+                          <step.icon className="h-5 w-5" />
+                        </div>
+                        <p className="mt-2 text-xs font-medium">{step.label}</p>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              ))}
+              </div>
             </div>
+          </div>
+          
+          {/* Key metrics */}
+          <div className="mt-24 grid grid-cols-2 gap-4 md:grid-cols-4">
+            {updatedStats.map((stat, i) => (
+              <div key={i} className="flex flex-col space-y-2 rounded-2xl border bg-background/50 p-6 backdrop-blur-sm">
+                <p className="text-sm text-muted-foreground">{stat.label}</p>
+                <div className="flex items-end gap-2">
+                  <h3 className="text-3xl font-bold">{stat.value}</h3>
+                  {stat.trend && (
+                    <div className={`text-xs ${stat.trend > 0 ? 'text-green-500' : 'text-red-500'}`}>
+                      {stat.trend > 0 ? '+' : ''}{stat.trend}%
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -217,6 +329,38 @@ export function MainHomePage() {
   );
 }
 
+// Updated data
+const updatedClientLogos = [
+  "Amazon",
+  "Shopify",
+  "Walmart",
+  "Target",
+  "FedEx",
+  "DHL"
+];
+
+const trackingData = [
+  { label: "Order Number", value: "VOX-9385-721" },
+  { label: "Status", value: "In Transit" },
+  { label: "Origin", value: "San Francisco, CA" },
+  { label: "Destination", value: "New York, NY" },
+];
+
+const updatedDeliverySteps = [
+  { label: "Pickup", icon: Box },
+  { label: "Processing", icon: Warehouse },
+  { label: "In Transit", icon: Truck },
+  { label: "Delivered", icon: CheckCircle2 },
+];
+
+const updatedStats = [
+  { label: "Active Users", value: "32K+", trend: 12 },
+  { label: "Daily Deliveries", value: "87K+", trend: 8 },
+  { label: "Service Uptime", value: "99.99%", trend: 0.5 },
+  { label: "Service Areas", value: "650+", trend: 15 },
+];
+
+// Original data - keep for the rest of the page
 const deliverySteps = [
   {
     title: "Request Pickup",

@@ -15,6 +15,8 @@ import api from "@/lib/axios"
 import { LICENSE_TYPE_DETAILS, VEHICLE_TYPE_DETAILS } from "@/types/driver"
 import ImageToText from '@/components/ImageToText'
 import { useAuthStore } from "@/stores/auth.store"
+import { useToast } from "@/hooks/use-toast"
+import { ToastAction } from "@/components/ui/toast"
 
 interface DriverFormData {
   fullName: string;
@@ -99,6 +101,8 @@ export function DriverApplication() {
   const progress = ((currentStep + 1) / steps.length) * 100
   // const [extractedText, setExtractedText] = useState<string>("")
   // const [isTextValid, setIsTextValid] = useState<boolean>(false)
+
+  const { toast } = useToast()
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -265,11 +269,46 @@ export function DriverApplication() {
         if (user && user.role.includes("DRIVER") && !user.isVerifiedDriver) {
           useAuthStore.getState().setVerifiedDriver(true);
         }
+        
+        // Success toast
+        toast({
+          title: "Registration Successful!",
+          description: "Your driver account has been created and verified.",
+          variant: "default",
+          duration: 5000,
+        });
+        
+        // Redirect after a successful registration
+        setTimeout(() => {
+          window.location.href = "/driver/dashboard";
+        }, 2000);
       }
 
       console.log('Driver registered successfully:', response.data);
     } catch (error: any) {
-      console.error('Error registering driver:', error.response.data);
+      console.error('Error registering driver:', error.response?.data);
+      
+      // Handle plate number errors specifically
+      if (error.response?.data?.message?.includes('plate')) {
+        setError("");
+        toast({
+          title: "Registration Failed",
+          description: "A vehicle with this plate number already exists in our system.",
+          variant: "destructive",
+          action: <ToastAction altText="Try Again">Try Again</ToastAction>,
+        });
+        // Go back to vehicle information step
+        setCurrentStep(3);
+      } else {
+        // General error toast
+        setError("");
+        toast({
+          title: "Registration Error",
+          description: error.response?.data?.message || "Failed to register. Please try again.",
+          variant: "destructive",
+          action: <ToastAction altText="Try Again">Try Again</ToastAction>,
+        });
+      }
     }
   };
 
@@ -617,6 +656,28 @@ export function DriverApplication() {
     }
   }
 
+  const handleNext = () => {
+    if (validateStep()) {
+      if (currentStep === steps.length - 1) {
+        // Show processing toast
+        toast({
+          title: "Processing Registration",
+          description: "Please wait while we create your driver account...",
+          duration: 3000,
+        });
+        handleComplete();
+      } else {
+        setCurrentStep((prev) => prev + 1);
+        setError("");
+      }
+    }
+  };
+
+  const handlePrevious = () => {
+    setCurrentStep((prev) => Math.max(0, prev - 1));
+    setError("");
+  };
+
   return (
     <div className="  mt-10">
       <div className="container max-w-3xl py-16">
@@ -647,21 +708,13 @@ export function DriverApplication() {
           <div className="flex justify-between">
             <Button
               variant="outline"
-              onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
+              onClick={handlePrevious}
               disabled={currentStep === 0}
             >
               Previous
             </Button>
             <Button
-              onClick={() => {
-                if (validateStep()) {
-                  if (currentStep < steps.length - 1) {
-                    setCurrentStep(currentStep + 1)
-                  } else {
-                    handleComplete()
-                  }
-                }
-              }}
+              onClick={handleNext}
             >
               {currentStep === steps.length - 1
                 ? "Apply"

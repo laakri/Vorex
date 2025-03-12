@@ -1,10 +1,8 @@
-import { IsString, IsEnum, IsArray, IsDate, IsOptional } from 'class-validator';
+import { IsString, IsEnum, IsDate, IsOptional } from 'class-validator';
 import { Type } from 'class-transformer';
 import { LicenseType } from '@prisma/client';
 
 export class CreateDriverDto {
- 
-
   @IsString()
   licenseNumber: string;
 

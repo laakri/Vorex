@@ -41,35 +41,35 @@ interface BatchGroup {
 export class BatchService {
   private readonly logger = new Logger(BatchService.name);
   private readonly batchConfig: BatchConfig = {
-    maxOrdersPerBatch: 15,
-    minOrdersForBatch: 3,
-    maxWeightPerBatch: 500,
-    maxVolumePerBatch: 3000,
+    maxOrdersPerBatch: 20,
+    minOrdersForBatch: 2,               
+    maxWeightPerBatch: 800,             
+    maxVolumePerBatch: 300000,          
     timeWindow: 120,
     maxWaitTime: 180,
     vehicleTypeThresholds: {
-      MOTORCYCLE: { maxWeight: 50, maxVolume: 100 },
-      CAR: { maxWeight: 200, maxVolume: 400 },
-      VAN: { maxWeight: 800, maxVolume: 1500 },
-      SMALL_TRUCK: { maxWeight: 2000, maxVolume: 4000 },
-      LARGE_TRUCK: { maxWeight: 5000, maxVolume: 10000 }
+      MOTORCYCLE: { maxWeight: 50, maxVolume: 10000 },       
+      CAR: { maxWeight: 200, maxVolume: 40000 },             
+      VAN: { maxWeight: 800, maxVolume: 150000 },            
+      SMALL_TRUCK: { maxWeight: 2000, maxVolume: 400000 },   
+      LARGE_TRUCK: { maxWeight: 5000, maxVolume: 1000000 }   
     }
   };
 
   private readonly intercityBatchConfig: IntercityBatchConfig = {
     maxOrdersPerBatch: 30,
-    minOrdersForBatch: 5,
+    minOrdersForBatch: 2,               
     maxWeightPerBatch: 2000,
     maxVolumePerBatch: 1000000,
     timeWindow: 240,
     maxWaitTime: 360,
-    minDistanceForIntercity: 50,
+    minDistanceForIntercity: 30,        
     vehicleTypeThresholds: {
       MOTORCYCLE: { maxWeight: 0, maxVolume: 0 },
       CAR: { maxWeight: 0, maxVolume: 0 },
-      VAN: { maxWeight: 1000, maxVolume: 2000 },
-      SMALL_TRUCK: { maxWeight: 4000, maxVolume: 8000 },
-      LARGE_TRUCK: { maxWeight: 10000, maxVolume: 20000 }
+      VAN: { maxWeight: 1000, maxVolume: 200000 },         
+      SMALL_TRUCK: { maxWeight: 4000, maxVolume: 800000 }, 
+      LARGE_TRUCK: { maxWeight: 10000, maxVolume: 2000000 }
     }
   };
 

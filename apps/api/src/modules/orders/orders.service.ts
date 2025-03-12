@@ -634,20 +634,30 @@ export class OrdersService {
     }));
   }
 
-  async updateStatus(sellerId: string, orderId: string, status: OrderStatus) {
-    // First check if the order exists and belongs to the seller
+  async updateStatus(userId: string, orderId: string, status: OrderStatus) {
+    // First check if this order belongs to the seller
+    const seller = await this.prisma.seller.findUnique({
+      where: { userId },
+      select: { id: true }
+    });
+    
+    if (!seller) {
+      throw new NotFoundException('Seller not found');
+    }
+    
+    // Get the existing order and check ownership
     const existingOrder = await this.prisma.order.findFirst({
       where: {
         id: orderId,
-        sellerId: sellerId
+        sellerId: seller.id
       }
     });
     
     if (!existingOrder) {
-      throw new NotFoundException(`Order with ID ${orderId} not found or does not belong to this seller`);
+      throw new NotFoundException(`Order with ID ${orderId} not found or doesn't belong to this seller`);
     }
     
-    // Validate status transitions
+    // Use the existing validation method
     this.validateStatusTransition(existingOrder.status, status);
     
     // Update the order status

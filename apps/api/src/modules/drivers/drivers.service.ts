@@ -43,55 +43,73 @@ export class DriversService {
       throw new BadRequestException('User is already a driver');
     }
 
-    const result = await this.prisma.$transaction(async (prisma) => {
-      // Create vehicle first
-      const vehicle = await prisma.vehicle.create({
-        data: {
-          plateNumber: createVehicleDto.plateNumber,
-          type: createVehicleDto.type,
-          make: createVehicleDto.make,
-          model: createVehicleDto.model,
-          year: createVehicleDto.year,
-          capacity: createVehicleDto.capacity,
-          maxWeight: createVehicleDto.maxWeight,
-          currentStatus: 'ACTIVE',          
-          lastMaintenance: createVehicleDto.lastMaintenance,
-          nextMaintenance: createVehicleDto.nextMaintenance,
-        }
+    try {
+      // Check if plate number already exists
+      const existingVehicle = await this.prisma.vehicle.findUnique({
+        where: { plateNumber: createVehicleDto.plateNumber }
+      });
+      
+      if (existingVehicle) {
+        throw new BadRequestException('Vehicle with this plate number already exists');
+      }
+
+      const result = await this.prisma.$transaction(async (prisma) => {
+        // Create vehicle first
+        const vehicle = await prisma.vehicle.create({
+          data: {
+            plateNumber: createVehicleDto.plateNumber,
+            type: createVehicleDto.type,
+            make: createVehicleDto.make,
+            model: createVehicleDto.model,
+            year: createVehicleDto.year,
+            capacity: createVehicleDto.capacity,
+            maxWeight: createVehicleDto.maxWeight,
+            currentStatus: 'ACTIVE',
+            lastMaintenance: createVehicleDto.lastMaintenance,
+            nextMaintenance: createVehicleDto.nextMaintenance,
+          }
+        });
+
+        // Create driver profile
+        const driver = await prisma.driver.create({
+          data: {
+            userId,
+            licenseNumber: createDriverDto.licenseNumber,
+            licenseType: createDriverDto.licenseType,
+            licenseExpiry: createDriverDto.licenseExpiry,
+            vehicleId: vehicle.id,
+            address: createDriverDto.address,
+            city: createDriverDto.city,
+            postalCode: createDriverDto.postalCode,
+            governorate: createDriverDto.governorate,
+            phone: createDriverDto.phone,
+            emergencyContact: createDriverDto.emergencyContact,
+            availabilityStatus: DriverStatus.ONLINE,
+          }
+        });
+
+        // Update user role to include DRIVER and set isVerifiedDriver to true
+        const updatedUser = await prisma.user.update({
+          where: { id: userId },
+          data: {
+            role: [...new Set([...existingUser.role, Role.DRIVER])],
+            isVerifiedDriver: true
+          }
+        });
+
+        return { driver, vehicle, user: updatedUser };
       });
 
-      // Create driver profile without availabilityStatus
-      const driver = await prisma.driver.create({
-        data: {
-          userId,
-          licenseNumber: createDriverDto.licenseNumber,
-          licenseType: createDriverDto.licenseType,
-          licenseExpiry: createDriverDto.licenseExpiry,
-          vehicleId: vehicle.id,
-          address: createDriverDto.address,
-          city: createDriverDto.city,
-          postalCode: createDriverDto.postalCode,
-          governorate: createDriverDto.governorate,
-          phone: createDriverDto.phone,
-          emergencyContact: createDriverDto.emergencyContact,
-        }
-      });
+      // Notify admins about new driver registration
+      await this.notifyAdminsNewDriver(result);
 
-      // Update user role to include DRIVER only upon approval
-      const updatedUser = await prisma.user.update({
-        where: { id: userId },
-        data: {
-          role: [...new Set([...existingUser.role, Role.DRIVER])] 
-        }
-      });
-
-      return { driver, vehicle, user: updatedUser };
-    });
-
-    // Notify admins about new driver registration
-    await this.notifyAdminsNewDriver(result);
-
-    return result;
+      return result;
+    } catch (error) {
+      if (error.code === 'P2002' && error.meta?.target?.includes('plateNumber')) {
+        throw new BadRequestException('Vehicle with this plate number already exists');
+      }
+      throw error;
+    }
   }
 
   async approveDriver(userId: string) {
