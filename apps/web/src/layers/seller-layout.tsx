@@ -12,21 +12,15 @@ import {
   Brain,
   Bell,
   X,
-  CheckSquare,
-  FileText,
   Settings,
   HelpCircle,
-  Lightbulb,
   Zap,
-  Clock,
   Activity,
   TrendingUp,
   Calendar,
   CheckCircle2,
-  AlertCircle,
   BookOpen,
   Video,
-  MessageSquare
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useState } from "react";
@@ -78,7 +72,6 @@ export function SellerLayout() {
   const notificationsCount = 1;
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isAIChatOpen, setIsAIChatOpen] = useState(false);
-  const [showAllNotifications, setShowAllNotifications] = useState(false);
 
   const getInitials = (name?: string) => {
     if (!name) return "U";

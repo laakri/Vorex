@@ -7,12 +7,9 @@ import { CalendarIcon,  } from "@radix-ui/react-icons"
 import { 
   Loader2,
 } from "lucide-react"
-
 import api from "@/lib/axios"
 import { useToast } from "@/hooks/use-toast"
-import { useAuthStore } from "@/stores/auth.store"
 import { TUNISIA_GOVERNORATES } from "@/config/constants"
-
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
@@ -22,7 +19,6 @@ import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
 
 // Define interfaces
@@ -103,7 +99,6 @@ export default function DriverSettings() {
   const [savingVehicle, setSavingVehicle] = useState(false)
   const [savingNotifications, setSavingNotifications] = useState(false)
   const { toast } = useToast()
-  const { logout } = useAuthStore()
 
   // Initialize forms
   const personalForm = useForm<z.infer<typeof personalInfoSchema>>({
@@ -299,7 +294,7 @@ export default function DriverSettings() {
     }
   }
 
-  const onSubmitNotifications = async (data: z.infer<typeof notificationSchema>) => {
+  const onSubmitNotifications = async () => {
     try {
       setSavingNotifications(true)
       // Mock API call - would need a real endpoint
@@ -353,15 +348,7 @@ export default function DriverSettings() {
     }
   }
 
-  // Helper function to get initials
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
-  }
+
 
   // Add a status selector component in the personal tab
   const StatusSelector = () => {

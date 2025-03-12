@@ -336,7 +336,7 @@ export default function DriverVehicle() {
           <DialogHeader>
             <DialogTitle>Report Vehicle Issue</DialogTitle>
             <DialogDescription>
-              Describee the issue you're experiencing with your vehicle. High priority issues will automatically mark your vehicle for maintenance.
+              Describe the issue you're experiencing with your vehicle. High priority issues will automatically mark your vehicle for maintenance.
             </DialogDescription>
           </DialogHeader>
           

@@ -36,7 +36,7 @@ import MapPicker from '@/components/map-picker';
 import { useState } from "react";
 import { toast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
-import { Governorate, isLocalDelivery, TUNISIA_GOVERNORATES } from '@/config/constants';
+import { Governorate, TUNISIA_GOVERNORATES } from '@/config/constants';
 
 interface Product {
   id: string;

@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Input } from "@/components/ui/input"
-import { useNavigate } from "react-router-dom"
 import {
   Select,
   SelectContent,
@@ -97,9 +96,7 @@ export function DriverApplication() {
     nextMaintenance: new Date(),
   })
   const [error, setError] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
   const progress = ((currentStep + 1) / steps.length) * 100
-  const navigate = useNavigate()
   const [extractedText, setExtractedText] = useState<string>("")
   const [isTextValid, setIsTextValid] = useState<boolean>(false)
 
@@ -651,7 +648,7 @@ export function DriverApplication() {
             <Button
               variant="outline"
               onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
-              disabled={currentStep === 0 || isLoading}
+              disabled={currentStep === 0}
             >
               Previous
             </Button>
@@ -665,11 +662,8 @@ export function DriverApplication() {
                   }
                 }
               }}
-              disabled={isLoading}
             >
-              {isLoading
-                ? "Submitting..."
-                : currentStep === steps.length - 1
+              {currentStep === steps.length - 1
                 ? "Apply"
                 : "Next"}
             </Button>
