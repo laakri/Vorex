@@ -273,7 +273,7 @@ export function DriverApplication() {
     }
   };
 
-  const handleTextExtracted = (text: string) => {
+  const handleTextExtracted = () => {
     // setExtractedText(text)
     // const isValid = validateLicenseText(text)
     // setIsTextValid(isValid)
