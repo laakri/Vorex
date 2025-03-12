@@ -8,7 +8,6 @@ import {
   Truck,
   Info,
   BarChart,
-  Route,
   Boxes,
   RotateCw,
 } from "lucide-react";

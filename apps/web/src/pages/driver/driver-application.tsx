@@ -97,8 +97,8 @@ export function DriverApplication() {
   })
   const [error, setError] = useState("")
   const progress = ((currentStep + 1) / steps.length) * 100
-  const [extractedText, setExtractedText] = useState<string>("")
-  const [isTextValid, setIsTextValid] = useState<boolean>(false)
+  // const [extractedText, setExtractedText] = useState<string>("")
+  // const [isTextValid, setIsTextValid] = useState<boolean>(false)
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -274,19 +274,19 @@ export function DriverApplication() {
   };
 
   const handleTextExtracted = (text: string) => {
-    setExtractedText(text)
-    const isValid = validateLicenseText(text)
-    setIsTextValid(isValid)
+    // setExtractedText(text)
+    // const isValid = validateLicenseText(text)
+    // setIsTextValid(isValid)
   }
 
-  const validateLicenseText = (text: string): boolean => {
-    const hasValidKeywords = text.includes("PERMIS DE CONDUIRE") || text.includes("REPUBLIQUE TUNISIENNE");
-    const datePattern = /\b\d{2}-\d{2}-\d{4}\b/g;
-    const dates = text.match(datePattern);
-    const hasValidDates = Array.isArray(dates) && dates.length >= 2;
+  // const validateLicenseText = (text: string): boolean => {
+  //   const hasValidKeywords = text.includes("PERMIS DE CONDUIRE") || text.includes("REPUBLIQUE TUNISIENNE");
+  //   const datePattern = /\b\d{2}-\d{2}-\d{4}\b/g;
+  //   const dates = text.match(datePattern);
+  //   const hasValidDates = Array.isArray(dates) && dates.length >= 2;
 
-    return hasValidKeywords && hasValidDates !== undefined; 
-  }
+  //   return hasValidKeywords && hasValidDates !== undefined; 
+  // }
 
   const renderFormFields = () => {
     switch (currentStep) {
