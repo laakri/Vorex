@@ -109,15 +109,6 @@ const DeliveryMapTimeline = ({ orderData }: DeliveryMapTimelineProps) => {
     // Store markers in ref
     markersRef.current = markers;
     
-    // Create a polyline connecting all stops
-    if (coordinates.length > 1) {
-      const polyline = L.polyline(coordinates, { 
-        color: 'var(--primary, #6366f1)', 
-        weight: 3,
-        opacity: 0.7,
-        dashArray: '5, 10'
-      }).addTo(mapInstance);
-    }
     
     // Fit map to show all markers
     if (markers.length > 0) {
