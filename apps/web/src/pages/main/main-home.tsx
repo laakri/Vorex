@@ -48,16 +48,9 @@ export function MainHomePage() {
 
         {/* Hero content */}
         <div className="container relative z-10 mx-auto max-w-7xl px-4 py-20">
-          {/* Navbar indicator */}
-          <div className="mb-24 flex justify-between items-center">
-            <div className="text-xl font-bold text-primary">VOREX</div>
-            <div className="flex items-center gap-2 text-sm">
-              <span className="h-1.5 w-1.5 rounded-full bg-green-500"></span>
-              Platform Status: Operational
-            </div>
-          </div>
+         
           
-          <div className="grid grid-cols-1 gap-16 lg:grid-cols-2 items-center">
+          <div className="grid grid-cols-1 gap-16 lg:grid-cols-2 items-center mt-20">
             {/* Left content */}
             <div className="space-y-10">
               <div>
