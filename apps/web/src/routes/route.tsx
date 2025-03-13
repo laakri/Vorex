@@ -33,8 +33,8 @@ import { DriverHistory } from "@/pages/driver/driver-history";
 import DriverVehicle from "@/pages/driver/driver-vehicle";
 import DriverSettings from "@/pages/driver/driver-settings";
 import { DriverGuard } from "./driver-guard";
-import { TrackOrderPage } from "@/pages/track/track-order";
 import { TrackPage } from "@/pages/track/track";
+import TrackOrderPage from "@/pages/track/track-order";
 
 
 export function AppRoutes() {
