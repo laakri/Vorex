@@ -5,7 +5,6 @@ import { MainHomePage } from "@/pages/main/main-home";
 import { MainPricing } from "@/pages/main/main-pricing";
 import { MainNetwork } from "@/pages/main/main-network";
 import { MainAbout } from "@/pages/main/main-about";
-import { MainTrack } from "@/pages/main/main-track";
 import { MainContact } from "@/pages/main/main-contact";
 // Auth layers
 import { AuthLayout } from "@/layers/auth-layout";
@@ -19,7 +18,6 @@ import { SellerDashboard } from "@/pages/seller/seller-dashboard";
 import { ProductsPage } from "@/pages/seller/products/products";
 import { OrdersPage } from "@/pages/seller/orders/orders";
 import { StoreSettingsPage } from "@/pages/seller/settings/store-settings";
-import OrderPage from "@/pages/seller/orders/order-page";
 // Driver layers
 import  {DriverLayout}  from "@/layers/driver-layout";
 import { DriverApplication } from "@/pages/driver/driver-application";
@@ -35,6 +33,8 @@ import { DriverHistory } from "@/pages/driver/driver-history";
 import DriverVehicle from "@/pages/driver/driver-vehicle";
 import DriverSettings from "@/pages/driver/driver-settings";
 import { DriverGuard } from "./driver-guard";
+import { TrackOrderPage } from "@/pages/track/track-order";
+import { TrackPage } from "@/pages/track/track";
 
 
 export function AppRoutes() {
@@ -46,9 +46,9 @@ export function AppRoutes() {
         <Route path="pricing" element={<MainPricing />} />
         <Route path="about" element={<MainAbout />} />
         <Route path="network" element={<MainNetwork />} />
-        <Route path="track" element={<MainTrack />} />
         <Route path="contact" element={<MainContact />} />
-        <Route path="order/:orderId" element={<OrderPage />} />
+        <Route path="/track" element={<TrackPage />} />
+        <Route path="/track/:trackingId" element={<TrackOrderPage />} />
        
       </Route>
 

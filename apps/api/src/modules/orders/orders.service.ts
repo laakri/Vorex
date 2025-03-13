@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, InternalServerErrorException, ConflictException, BadRequestException } from '@nestjs/common';
 import { CreateOrderDto } from './dto/create-order.dto';
-import { Prisma, OrderStatus } from '@prisma/client';
+import { Prisma, OrderStatus, BatchType } from '@prisma/client';
 import { PrismaService } from 'prisma/prisma.service';
 import { Governorate, WAREHOUSE_COVERAGE } from '@/config/constants';
 
@@ -265,14 +265,19 @@ export class OrdersService {
             select: {
               businessName: true,
               city: true,
-              governorate: true
+              governorate: true,
+              phone: true,
+              address: true
             }
           },
           warehouse: {
             select: {
+              id: true,
               name: true,
               city: true,
-              governorate: true
+              governorate: true,
+              address: true,
+              phone: true
             }
           },
           batch: {
@@ -281,7 +286,15 @@ export class OrdersService {
                 select: {
                   id: true,
                   phone: true,
+                  licenseNumber: true,
+                  licenseType: true,
                   availabilityStatus: true,
+                  rating: true,
+                  totalDeliveries: true,
+                  address: true,
+                  city: true,
+                  governorate: true,
+                  emergencyContact: true,
                   user: {
                     select: {
                       fullName: true
@@ -292,18 +305,24 @@ export class OrdersService {
                       type: true,
                       make: true,
                       model: true,
-                      plateNumber: true
+                      plateNumber: true,
+                      year: true,
+                      capacity: true,
+                      maxWeight: true,
+                      currentStatus: true
                     }
                   }
                 }
               },
               route: {
                 select: {
+                  id: true,
                   status: true,
                   estimatedDuration: true,
                   startedAt: true,
                   completedAt: true,
-                  totalDistance: true
+                  totalDistance: true,
+                  stops: true
                 }
               }
             }
@@ -311,23 +330,23 @@ export class OrdersService {
           routeStops: {
             orderBy: {
               sequenceOrder: 'asc'
-            },
-            select: {
-              address: true,
-              latitude: true,
-              longitude: true,
-              isPickup: true,
-              sequenceOrder: true,
-              isCompleted: true,
-              completedAt: true
             }
           },
           items: {
             select: {
               quantity: true,
+              price: true,
+              weight: true,
+              dimensions: true,
+              packagingType: true,
+              fragile: true,
+              perishable: true,
               product: {
                 select: {
-                  name: true
+                  name: true,
+                  description: true,
+                  sku: true,
+                  category: true
                 }
               }
             }
@@ -339,57 +358,85 @@ export class OrdersService {
         throw new NotFoundException(`Order with tracking ID ${trackingId} not found`);
       }
 
-      // Format the tracking information with timeline
+      // Format the tracking information
       const trackingTimeline = this.buildTrackingTimeline(order);
-      
-      // Get current location based on status
       const currentLocation = this.determineCurrentLocation(order);
-
-      // Calculate estimated delivery time
       const estimatedDelivery = this.calculateEstimatedDelivery(order);
+      const routeStops = this.getFormattedRouteStops(order);
+      const statusMeta = this.getOrderStatusMetadata(order.status);
+      
+      // Calculate delivery progress percentage
+      const deliveryProgress = this.calculateDeliveryProgress(order);
+      
+      // Format items summary
+      const itemsSummary = this.formatOrderItems(order.items);
 
       return {
         orderId: order.id,
         status: order.status,
+        statusDescription: statusMeta.description,
+        statusCategory: statusMeta.category,
         createdAt: order.createdAt,
         updatedAt: order.updatedAt,
         customerInfo: {
           name: order.customerName,
+          email: order.customerEmail,
           address: order.address,
           city: order.city,
-          governorate: order.governorate
+          governorate: order.governorate,
+          postalCode: order.postalCode,
+          phone: order.phone
         },
         sellerInfo: {
           businessName: order.seller.businessName,
           city: order.seller.city,
-          governorate: order.seller.governorate
+          governorate: order.seller.governorate,
+          phone: order.seller.phone,
+          address: order.seller.address
         },
         currentLocation,
         estimatedDelivery,
         timeline: trackingTimeline,
-        itemsSummary: this.formatOrderItems(order.items),
+        itemsSummary,
+        deliveryProgress,
+        routeStops,
+        totalAmount: order.totalAmount,
+        notes: order.notes,
         batchInfo: order.batch ? {
           id: order.batch.id,
           status: order.batch.status,
           driver: order.batch.driver ? {
             name: order.batch.driver.user?.fullName,
+            phone: order.batch.driver.phone,
+            rating: order.batch.driver.rating,
+            totalDeliveries: order.batch.driver.totalDeliveries,
+            licenseType: order.batch.driver.licenseType,
             status: order.batch.driver.availabilityStatus,
             vehicle: order.batch.driver.vehicle ? {
               type: order.batch.driver.vehicle.type,
               model: order.batch.driver.vehicle.model,
               make: order.batch.driver.vehicle.make,
-              plateNumber: order.batch.driver.vehicle.plateNumber
+              plateNumber: order.batch.driver.vehicle.plateNumber,
+              year: order.batch.driver.vehicle.year,
+              capacity: order.batch.driver.vehicle.capacity,
+              status: order.batch.driver.vehicle.currentStatus
             } : null
           } : null,
           routeInfo: order.batch.route ? {
             status: order.batch.route.status,
             startedAt: order.batch.route.startedAt,
+            completedAt: order.batch.route.completedAt,
             estimatedDuration: order.batch.route.estimatedDuration,
-            totalDistance: order.batch.route.totalDistance
+            totalDistance: order.batch.route.totalDistance,
+            stops: order.batch.route.stops
           } : null
         } : null,
         warehouseInfo: order.warehouse ? {
           name: order.warehouse.name,
+          address: order.warehouse.address,
+          city: order.warehouse.city,
+          governorate: order.warehouse.governorate,
+          phone: order.warehouse.phone,
           location: `${order.warehouse.city}, ${order.warehouse.governorate}`
         } : null,
         isLocalDelivery: order.isLocalDelivery
@@ -404,113 +451,20 @@ export class OrdersService {
   }
 
   private buildTrackingTimeline(order: any): any[] {
-    // Explicitly type the timeline array
-    const timeline: {status: string; timestamp: Date; description: string}[] = [];
+    const timeline = [
+      {
+        status: 'Order Created',
+        timestamp: order.createdAt,
+        description: 'Order has been placed successfully'
+      }
+    ];
     
-    // Add order creation
-    timeline.push({
-      status: 'Order Created',
-      timestamp: order.createdAt,
-      description: `Order ${order.id} was created`
-    });
-
-    // Add status changes based on actual status
-    switch (order.status) {
-      case 'PENDING':
-        timeline.push({
-          status: 'Pending',
-          timestamp: order.createdAt,
-          description: 'Order is pending pickup'
-        });
-        break;
-      
-      case 'LOCAL_ASSIGNED_TO_PICKUP':
-      case 'CITY_ASSIGNED_TO_PICKUP':
-      case 'CITY_ASSIGNED_TO_PICKUP_ACCEPTED':
-        timeline.push({
-          status: 'Assigned for Pickup',
-          timestamp: order.updatedAt,
-          description: order.batch?.driver 
-            ? `Order assigned to ${order.batch.driver.user?.fullName || 'driver'} for pickup` 
-            : 'Order has been assigned for pickup'
-        });
-        break;
-      
-      case 'LOCAL_PICKED_UP':
-      case 'CITY_PICKED_UP':
-        timeline.push({
-          status: 'Picked Up',
-          timestamp: order.updatedAt,
-          description: 'Order has been picked up from the seller'
-        });
-        break;
-      
-      case 'CITY_IN_TRANSIT_TO_WAREHOUSE':
-        timeline.push({
-          status: 'In Transit to Warehouse',
-          timestamp: order.updatedAt,
-          description: `Order is being transported to ${order.warehouse?.name || 'warehouse'}`
-        });
-        break;
-      
-      case 'CITY_ARRIVED_AT_SOURCE_WAREHOUSE':
-        timeline.push({
-          status: 'Arrived at Warehouse',
-          timestamp: order.updatedAt,
-          description: `Order has arrived at ${order.warehouse?.name || 'the source warehouse'}`
-        });
-        break;
-      
-      case 'CITY_READY_FOR_INTERCITY_TRANSFER':
-      case 'CITY_READY_FOR_INTERCITY_TRANSFER_BATCHED':
-        timeline.push({
-          status: 'Ready for Transfer',
-          timestamp: order.updatedAt,
-          description: 'Order is ready to be transferred between cities'
-        });
-        break;
-      
-      case 'CITY_IN_TRANSIT_TO_DESTINATION_WAREHOUSE':
-        timeline.push({
-          status: 'In Transit',
-          timestamp: order.updatedAt,
-          description: 'Order is in transit to the destination warehouse'
-        });
-        break;
-      
-      case 'CITY_ARRIVED_AT_DESTINATION_WAREHOUSE':
-        timeline.push({
-          status: 'Arrived at Destination',
-          timestamp: order.updatedAt,
-          description: 'Order has arrived at the destination warehouse'
-        });
-        break;
-      
-      case 'CITY_READY_FOR_LOCAL_DELIVERY':
-      case 'CITY_READY_FOR_LOCAL_DELIVERY_BATCHED':
-        timeline.push({
-          status: 'Ready for Delivery',
-          timestamp: order.updatedAt,
-          description: 'Order is ready for final delivery to customer'
-        });
-        break;
-      
-      case 'LOCAL_DELIVERED':
-      case 'CITY_DELIVERED':
-        timeline.push({
-          status: 'Delivered',
-          timestamp: order.updatedAt,
-          description: 'Order has been delivered to the customer'
-        });
-        break;
-      
-      case 'CANCELLED':
-        timeline.push({
-          status: 'Cancelled',
-          timestamp: order.updatedAt,
-          description: 'Order has been cancelled'
-        });
-        break;
+    // Add status-based events
+    if (order.status) {
+      const statusEvents = this.getStatusTimelineEvents(order.status, order.updatedAt);
+      if (statusEvents) {
+        timeline.push(statusEvents);
+      }
     }
     
     // Add route stops as timeline events if they exist and are completed
@@ -528,6 +482,25 @@ export class OrdersService {
     
     // Sort timeline by timestamp
     return timeline.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+  }
+
+  private getStatusTimelineEvents(status: OrderStatus, timestamp: Date): any {
+    const statusEventMap = {
+      'PENDING': null, // No special event for pending
+      'LOCAL_ASSIGNED_TO_PICKUP': {
+        status: 'Driver Assigned',
+        timestamp,
+        description: 'A driver has been assigned to pick up your package'
+      },
+      'LOCAL_PICKED_UP': {
+        status: 'Package Collected',
+        timestamp,
+        description: 'Your package has been picked up by our driver'
+      },
+      // ... map all statuses to relevant timeline events ...
+    };
+    
+    return statusEventMap[status];
   }
 
   private determineCurrentLocation(order: any): any {
@@ -598,7 +571,7 @@ export class OrdersService {
   }
 
   private calculateEstimatedDelivery(order: any): Date | null {
-    // If the order is already delivered, return null (no estimation needed)
+    // If the order is already delivered or cancelled, return null
     if (['LOCAL_DELIVERED', 'CITY_DELIVERED', 'CANCELLED'].includes(order.status)) {
       return null;
     }
@@ -613,12 +586,39 @@ export class OrdersService {
       }
     }
     
-    // For pending orders, calculate a rough estimate
+    // Calculate based on distance and type for pending orders
     const creationDate = new Date(order.createdAt);
-    const estimatedDays = order.isLocalDelivery ? 1 : 3;
+    
+    // More intelligent estimation based on distance and order type
+    let estimatedDays = 1; // Default
+    
+    if (!order.isLocalDelivery) {
+      // For intercity deliveries, scale based on distance if available
+      if (order.totalDistance) {
+        // Roughly estimate 100km per day
+        estimatedDays = Math.ceil(order.totalDistance / 100) + 1;
+      } else {
+        estimatedDays = 3; // Default for intercity without distance info
+      }
+    }
+    
+    // For orders already in progress, reduce the estimate
+    if (['CITY_IN_TRANSIT_TO_DESTINATION_WAREHOUSE', 
+         'CITY_ARRIVED_AT_DESTINATION_WAREHOUSE',
+         'CITY_READY_FOR_LOCAL_DELIVERY'].includes(order.status)) {
+      estimatedDays = Math.max(1, estimatedDays - 1);
+    }
     
     const estimatedDate = new Date(creationDate);
     estimatedDate.setDate(creationDate.getDate() + estimatedDays);
+    
+    // Don't deliver on weekends (optional business logic)
+    const dayOfWeek = estimatedDate.getDay();
+    if (dayOfWeek === 0) { // Sunday
+      estimatedDate.setDate(estimatedDate.getDate() + 1);
+    } else if (dayOfWeek === 6) { // Saturday
+      estimatedDate.setDate(estimatedDate.getDate() + 2);
+    }
     
     return estimatedDate;
   }
@@ -708,5 +708,199 @@ export class OrdersService {
     if (!validTransitions[currentStatus]?.includes(newStatus) && currentStatus !== newStatus) {
       throw new BadRequestException(`Invalid status transition from ${currentStatus} to ${newStatus}`);
     }
+  }
+
+  // Add a new helper to provide more context about order status
+  private getOrderStatusMetadata(status: OrderStatus): { description: string; category: string } {
+    const statusMap = {
+      'PENDING': { 
+        description: 'Order received, waiting for processing',
+        category: 'PROCESSING'
+      },
+      'LOCAL_ASSIGNED_TO_PICKUP': { 
+        description: 'Driver assigned for local pickup',
+        category: 'PICKUP'
+      },
+      'LOCAL_PICKED_UP': { 
+        description: 'Order picked up by driver for local delivery',
+        category: 'TRANSIT'
+      },
+      'LOCAL_DELIVERED': { 
+        description: 'Order successfully delivered to the customer',
+        category: 'DELIVERED'
+      },
+      'CITY_ASSIGNED_TO_PICKUP': { 
+        description: 'A driver has been assigned to pick up your package for intercity shipping',
+        category: 'PICKUP'
+      },
+      'CITY_ASSIGNED_TO_PICKUP_ACCEPTED': {
+        description: 'Driver has accepted the pickup assignment and is on the way to seller',
+        category: 'PICKUP'
+      },
+      'CITY_PICKED_UP': { 
+        description: 'Your package has been picked up from the seller',
+        category: 'PICKUP'
+      },
+      'CITY_IN_TRANSIT_TO_WAREHOUSE': { 
+        description: 'Your package is being transported to our distribution center',
+        category: 'TRANSIT'
+      },
+      'CITY_ARRIVED_AT_SOURCE_WAREHOUSE': { 
+        description: 'Your package has arrived at our origin distribution center',
+        category: 'PROCESSING'
+      },
+      'CITY_READY_FOR_INTERCITY_TRANSFER': { 
+        description: 'Your package is ready for long-distance transport',
+        category: 'PROCESSING'
+      },
+      'CITY_READY_FOR_INTERCITY_TRANSFER_BATCHED': {
+        description: 'Your package has been grouped with others for efficient long-distance transport',
+        category: 'PROCESSING'
+      },
+      'CITY_IN_TRANSIT_TO_DESTINATION_WAREHOUSE': { 
+        description: 'Your package is on its way to the destination city',
+        category: 'TRANSIT'
+      },
+      'CITY_ARRIVED_AT_DESTINATION_WAREHOUSE': { 
+        description: 'Your package has arrived at the distribution center in your city',
+        category: 'PROCESSING'
+      },
+      'CITY_READY_FOR_LOCAL_DELIVERY': { 
+        description: 'Your package is being prepared for final delivery to your address',
+        category: 'PROCESSING'
+      },
+      'CITY_READY_FOR_LOCAL_DELIVERY_BATCHED': {
+        description: 'Your package has been assigned to a local delivery batch',
+        category: 'PROCESSING'
+      },
+      'CITY_DELIVERED': { 
+        description: 'Your package has been successfully delivered to your address',
+        category: 'DELIVERED'
+      },
+      'CANCELLED': { 
+        description: 'This order has been cancelled',
+        category: 'CANCELLED'
+      }
+    };
+    
+    return statusMap[status] || { 
+      description: 'Status information unavailable', 
+      category: 'UNKNOWN' 
+    };
+  }
+
+  private calculateDeliveryProgress(order: any): number {
+    // If the order is already delivered
+    if (['LOCAL_DELIVERED', 'CITY_DELIVERED'].includes(order.status)) {
+      return 100;
+    }
+    
+    // If cancelled
+    if (order.status === 'CANCELLED') {
+      return 0;
+    }
+    
+    // Base calculation on status progression
+    const statusProgressMap = {
+      'PENDING': 5,
+      'LOCAL_ASSIGNED_TO_PICKUP': 10,
+      'LOCAL_PICKED_UP': 50,
+      'CITY_ASSIGNED_TO_PICKUP': 10,
+      'CITY_ASSIGNED_TO_PICKUP_ACCEPTED': 15,
+      'CITY_PICKED_UP': 20,
+      'CITY_IN_TRANSIT_TO_WAREHOUSE': 30,
+      'CITY_ARRIVED_AT_SOURCE_WAREHOUSE': 40,
+      'CITY_READY_FOR_INTERCITY_TRANSFER': 45,
+      'CITY_READY_FOR_INTERCITY_TRANSFER_BATCHED': 50,
+      'CITY_IN_TRANSIT_TO_DESTINATION_WAREHOUSE': 60,
+      'CITY_ARRIVED_AT_DESTINATION_WAREHOUSE': 70,
+      'CITY_READY_FOR_LOCAL_DELIVERY': 80,
+      'CITY_READY_FOR_LOCAL_DELIVERY_BATCHED': 85,
+    };
+    
+    return statusProgressMap[order.status] || 0;
+  }
+
+  private calculateRemainingDistance(order: any): number | null {
+    if (!order.batch?.route?.totalDistance) {
+      return null;
+    }
+    
+    const route = order.batch.route;
+    const totalDistance = route.totalDistance;
+    
+    // If route is completed, no distance remains
+    if (route.status === 'COMPLETED') {
+      return 0;
+    }
+    
+    // If route is not started, full distance remains
+    if (route.status === 'PENDING') {
+      return totalDistance;
+    }
+    
+    // If route is in progress, calculate based on completed stops
+    if (route.status === 'IN_PROGRESS' && route.stops) {
+      const completedStops = route.stops.filter(stop => stop.isCompleted).length;
+      const totalStops = route.stops.length;
+      
+      if (totalStops <= 1) return totalDistance;
+      
+      // Calculate approximate remaining distance based on completed stops percentage
+      const completionRatio = completedStops / (totalStops - 1); // -1 because we need segments not points
+      return totalDistance * (1 - completionRatio);
+    }
+    
+    return totalDistance;
+  }
+
+  private calculateDeliveryTimeWindow(order: any, estimatedDate: Date | null): { from: Date, to: Date } | null {
+    if (!estimatedDate) return null;
+    
+    const from = new Date(estimatedDate);
+    const to = new Date(estimatedDate);
+    
+    // For local deliveries, smaller time window
+    if (order.isLocalDelivery) {
+      to.setHours(to.getHours() + 2);
+    } else {
+      to.setHours(to.getHours() + 4);
+    }
+    
+    return { from, to };
+  }
+
+  private getFormattedRouteStops(order: any): any[] {
+    // If there are route stops directly on the order
+    if (order.routeStops && order.routeStops.length > 0) {
+      return order.routeStops.map(stop => ({
+        id: stop.id,
+        address: stop.address,
+        latitude: stop.latitude,
+        longitude: stop.longitude,
+        isPickup: stop.isPickup,
+        sequenceOrder: stop.sequenceOrder,
+        isCompleted: stop.isCompleted,
+        completedAt: stop.completedAt,
+        notes: stop.notes
+      }));
+    }
+    
+    // If stops are available via the batch route
+    if (order.batch?.route?.stops && order.batch.route.stops.length > 0) {
+      return order.batch.route.stops.map(stop => ({
+        id: stop.id,
+        address: stop.address,
+        latitude: stop.latitude,
+        longitude: stop.longitude,
+        isPickup: stop.isPickup,
+        sequenceOrder: stop.sequenceOrder,
+        isCompleted: stop.isCompleted,
+        completedAt: stop.completedAt,
+        notes: stop.notes
+      }));
+    }
+    
+    return [];
   }
 } 

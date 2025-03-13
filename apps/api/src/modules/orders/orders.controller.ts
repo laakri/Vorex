@@ -23,6 +23,27 @@ import { GetUser } from '@/common/decorators/get-user.decorator';
 import { PrismaService } from 'prisma/prisma.service';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 
+@Controller('orders')
+export class PublicOrdersController {
+  constructor(private readonly ordersService: OrdersService) {}
+
+  @Get('track/:trackingId')
+  async getTrackingInfo(@Param('trackingId') trackingId: string) {
+    console.log(`Tracking request received for ID: ${trackingId}`);
+    try {
+      const result = await this.ordersService.getPublicTrackingInfo(trackingId);
+      console.log(`Successfully retrieved tracking for order: ${trackingId}`);
+      return result;
+    } catch (error) {
+      console.error('Error fetching tracking information:', error);
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to fetch tracking information');
+    }
+  }
+}
+
 @Controller('sellers/orders')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(Role.SELLER)
@@ -93,21 +114,10 @@ export class OrdersController {
   }
 
   @Get(':id')
-  findOne(@GetUser('id') sellerId: string, @Param('id') id: string) {
-    return this.ordersService.findOne(sellerId, id);
+  findOne(@GetUser('id') userId: string, @Param('id') id: string) {
+    return this.ordersService.findOne(userId, id);
   }
-  @Get(':trackingId')
-  async getTrackingInfo(@Param('trackingId') trackingId: string) {
-    try {
-      return await this.ordersService.getPublicTrackingInfo(trackingId);
-    } catch (error) {
-      console.error('Error fetching tracking information:', error);
-      if (error instanceof NotFoundException) {
-        throw error;
-      }
-      throw new InternalServerErrorException('Failed to fetch tracking information');
-    }
-  }
+
   @Patch(':id/status')
   updateStatus(
     @GetUser('id') userId: string,
