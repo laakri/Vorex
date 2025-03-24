@@ -14,6 +14,7 @@ import { BatchModule } from './modules/batches/batch.module';
 import { WarehouseModule } from './modules/warehouse/warehouse.module';
 import { DeliveryRoutesModule } from './modules/delivery-routes/delivery-routes.module';
 import { VehiclesModule } from './modules/vehicles/vehicles.module';
+import { AdminModule } from './modules/admin/admin.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { VehiclesModule } from './modules/vehicles/vehicles.module';
     BatchModule,
     DeliveryRoutesModule,
     VehiclesModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [AppService],

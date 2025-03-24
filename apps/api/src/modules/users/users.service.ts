@@ -16,7 +16,14 @@ export class UsersService {
         createdAt: true,
         seller: true,
         driver: true,
-        warehouseManager: true,
+        warehouseManager: {
+          select: {
+            id: true,
+            warehouseId: true,
+            employeeId: true,
+            securityClearance: true,
+          }
+        },
       },
     });
 
@@ -24,11 +31,17 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
 
-    return user;
+    // Add warehouseId to the user object if they are a warehouse manager
+    const result = {
+      ...user,
+      warehouseId: user.warehouseManager?.warehouseId || null
+    };
+
+    return result;
   }
 
   async findByEmail(email: string) {
-    return this.prisma.user.findUnique({
+    const user = await this.prisma.user.findUnique({
       where: { email },
       select: {
         id: true,
@@ -36,8 +49,55 @@ export class UsersService {
         fullName: true,
         role: true,
         createdAt: true,
+        warehouseManager: {
+          select: {
+            id: true,
+            warehouseId: true
+          }
+        }
       },
     });
+
+    if (!user) return null;
+
+    // Add warehouseId to the user object if they are a warehouse manager
+    return {
+      ...user,
+      warehouseId: user.warehouseManager?.warehouseId || null
+    };
+  }
+
+  async getUsers() {
+    try {
+      const users = await this.prisma.user.findMany({
+        select: {
+          id: true, 
+          email: true, 
+          fullName: true, 
+          role: true, 
+          createdAt: true,
+          // Include warehouseManager to check if they're already assigned
+          warehouseManager: {
+            select: {
+              id: true,
+              warehouseId: true
+            }
+          }
+        }
+      });
+      
+      // Transform the users to include warehouseId at the top level
+      const transformedUsers = users.map(user => ({
+        ...user,
+        warehouseId: user.warehouseManager?.warehouseId || null
+      }));
+      
+      console.log(`Retrieved ${transformedUsers.length} users`);
+      return transformedUsers;
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      throw error;
+    }
   }
 
   async getProfile(userId: string) {
@@ -70,6 +130,15 @@ export class UsersService {
             id: true,
             employeeId: true,
             securityClearance: true,
+            warehouseId: true,
+            warehouse: {
+              select: {
+                id: true,
+                name: true,
+                city: true,
+                governorate: true
+              }
+            }
           },
         },
       },
@@ -79,6 +148,10 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
 
-    return user;
+    // Add warehouseId to the user object if they are a warehouse manager
+    return {
+      ...user,
+      warehouseId: user.warehouseManager?.warehouseId || null
+    };
   }
 }

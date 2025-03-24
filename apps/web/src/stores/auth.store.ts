@@ -9,6 +9,7 @@ interface User {
   role: ("ADMIN" | "SELLER" | "WAREHOUSE_MANAGER" | "DRIVER")[];
   isVerifiedSeller?: boolean;
   isVerifiedDriver?: boolean;
+  warehouseId?:string;
 }
 
 interface AuthState {
@@ -17,6 +18,7 @@ interface AuthState {
   isAuthenticated: boolean;
   isVerifiedSeller: boolean;
   isVerifiedDriver: boolean;
+  warehouseId: string | null;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (data: {
     firstName: string;
@@ -34,11 +36,12 @@ interface AuthState {
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
-      token: null,
-      user: null,
+      token: null as string | null,
+      user: null as User | null,
       isAuthenticated: false,
       isVerifiedSeller: false,
       isVerifiedDriver: false,
+      warehouseId: null as string | null,
 
       setVerifiedSeller: (status: boolean) => {
         set((state) => ({
@@ -65,6 +68,7 @@ export const useAuthStore = create<AuthState>()(
           isAuthenticated: true,
           isVerifiedSeller: response.data.user.isVerifiedSeller || false,
           isVerifiedDriver: response.data.user.isVerifiedDriver || false,
+          warehouseId: response.data.user.warehouseId || null,
         });
         api.defaults.headers.common["Authorization"] = `Bearer ${response.data.token}`;
       },
@@ -81,6 +85,7 @@ export const useAuthStore = create<AuthState>()(
           isAuthenticated: true,
           isVerifiedSeller: false,
           isVerifiedDriver: false,
+          warehouseId: response.data.user.warehouseId || null,
         });
         api.defaults.headers.common["Authorization"] = `Bearer ${response.data.token}`;
       },
@@ -92,6 +97,7 @@ export const useAuthStore = create<AuthState>()(
           isAuthenticated: false,
           isVerifiedSeller: false,
           isVerifiedDriver: false,
+          warehouseId: null,
         });
         delete api.defaults.headers.common["Authorization"];
       },

@@ -68,6 +68,12 @@ export class AuthService {
         password: true,
         isVerifiedSeller: true,
         isVerifiedDriver: true,
+        warehouseManager: {
+          select: {
+            id: true,
+            warehouseId: true,
+          }
+        },
       },
     });
 
@@ -93,6 +99,8 @@ export class AuthService {
         fullName: user.fullName,
         role: user.role,
         isVerifiedSeller: user.isVerifiedSeller,
+        isVerifiedDriver: user.isVerifiedDriver,
+        warehouseId: user.warehouseManager?.warehouseId || null,
       },
       token,
     };

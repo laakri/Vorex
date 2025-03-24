@@ -13,6 +13,7 @@ import { Menu, X, Package } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { navigationMenuTriggerStyle } from "@/components/ui/navigation-menu";
 import { Logo } from "@/components/logo";
+import { ModeToggle } from "@/components/mode-toggle";
 
 const solutions = [
   {
@@ -191,6 +192,7 @@ export function MainNav() {
               >
                 <Link to="/auth/sign-up">Start shipping</Link>
               </Button>
+              <ModeToggle />
             </div>
 
             {/* Mobile Menu Button */}

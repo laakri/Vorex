@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsNumber } from 'class-validator';
+import { IsString, IsNotEmpty, IsNumber, IsArray, Min } from 'class-validator';
 
 export class CreateWarehouseDto {
   @IsString()
@@ -26,6 +26,7 @@ export class CreateWarehouseDto {
   phone: string;
 
   @IsNumber()
+  @Min(0)
   capacity: number;
 
   @IsNumber()
@@ -33,4 +34,8 @@ export class CreateWarehouseDto {
 
   @IsNumber()
   longitude: number;
+
+  @IsArray()
+  @IsString({ each: true })
+  coverageGovernorate: string[];
 }

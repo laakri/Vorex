@@ -35,6 +35,12 @@ import DriverSettings from "@/pages/driver/driver-settings";
 import { DriverGuard } from "./driver-guard";
 import { TrackPage } from "@/pages/track/track";
 import TrackOrderPage from "@/pages/track/track-order";
+import { WarehouseLayout } from "@/layers/warehouse-layout";
+import { WarehouseDashboard } from "@/pages/warehouse/warehouse-dashboard";
+import { AdminLayout } from "@/layers/admin-layout";
+import { AdminWarehouseManagersPage } from "@/pages/admin/warehouse-managers";
+import { WarehouseSectionsPage } from "@/pages/warehouse/warehouse-sections";
+import { WarehouseGuard } from "./warehouse-guard";
 
 
 export function AppRoutes() {
@@ -121,13 +127,22 @@ export function AppRoutes() {
       {/* Unauthorized Route */}
       <Route path="/unauthorized" element={<Unauthorized />} />
 
+      {/* Admin Platform */}
+      <Route path="/admin" element={<AdminLayout />}>
+          <Route path="warehouses-managers" element={<AdminWarehouseManagersPage/>}/>
+          <Route path="users" element={<div>Users Management</div>} />
+      </Route>
+
+
       {/* Warehouse Platform */}
-      <Route path="warehouse">
-        <Route index element={<div>Warehouse Dashboard</div>} />
+      <Route path="/warehouse" element={ <WarehouseGuard><WarehouseLayout /></WarehouseGuard>}>
+        <Route index element={<WarehouseDashboard /> } />
+        <Route path="sections" element={<WarehouseGuard><WarehouseSectionsPage/></WarehouseGuard>} />
         <Route path="inventory" element={<div>Inventory Management</div>} />
         <Route path="sections" element={<div>Sections Management</div>} />
       </Route>
 
+     
       {/* Driver Platform */}
       <Route path="/driver" element={<DriverLayout />}>
       <Route
@@ -213,6 +228,10 @@ export function AppRoutes() {
         
         
       </Route>
+      
+
+
+
     </Routes>
   );
 }
