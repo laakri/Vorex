@@ -116,6 +116,7 @@ export const useAuthStore = create<AuthState>()(
           isAuthenticated: true,
           isVerifiedSeller: response.data.isVerifiedSeller || false,
           isVerifiedDriver: response.data.isVerifiedDriver || false,
+          warehouseId: response.data.warehouseId || null,
         });
         api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
       },

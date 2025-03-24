@@ -134,6 +134,25 @@ export class AuthService {
       throw new UnauthorizedException('No user from Google');
     }
 
+    // Fetch the complete user profile including warehouseManager
+    const userProfile = await this.prisma.user.findUnique({
+      where: { id: user.id },
+      select: {
+        id: true,
+        email: true,
+        fullName: true,
+        role: true,
+        isVerifiedSeller: true,
+        isVerifiedDriver: true,
+        warehouseManager: {
+          select: {
+            id: true,
+            warehouseId: true,
+          }
+        },
+      },
+    });
+
     // Use same token generation as regular login
     const token = this.jwtService.sign({
       sub: user.id,
@@ -147,6 +166,9 @@ export class AuthService {
         email: user.email,
         fullName: user.fullName,
         role: user.role,
+        isVerifiedSeller: user.isVerifiedSeller,
+        isVerifiedDriver: user.isVerifiedDriver,
+        warehouseId: user.warehouseManager?.warehouseId || null,
       },
       token,
     };
