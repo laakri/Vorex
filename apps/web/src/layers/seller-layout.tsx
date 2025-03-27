@@ -113,8 +113,10 @@ export function SellerLayout() {
     } else if (value === "seller") {
       navigate("/seller");
     }
+    else if (value === "warehouse") {
+      navigate("/warehouse");
+    }
   };
-
   return (
     <div className="flex h-screen overflow-hidden">
       {/* Sidebar - Fixed height with responsive classes */}
@@ -221,10 +223,13 @@ export function SellerLayout() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="seller" className="text-default hover:bg-muted">
-                Seller Platform
+                Seller 
               </SelectItem>
               <SelectItem value="driver" className="text-default hover:bg-muted">
-                Driver Platform
+                Driver 
+              </SelectItem>
+              <SelectItem value="warehouse" className="text-default hover:bg-muted">
+                Warehouse 
               </SelectItem>
             </SelectContent>
           </Select>

@@ -12,7 +12,7 @@ interface Message {
 export class AiService {
   private readonly logger = new Logger(AiService.name);
   private readonly apiKey = process.env.GOOGLE_API_KEY;
-  private readonly apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
+  private readonly apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
 
   constructor(
     private prisma: PrismaService,
@@ -41,8 +41,6 @@ export class AiService {
       // Get dashboard data for last 30 days
       const dashboardData = await this.sellersService.getDashboardData(userId, '30d');
 
-      const lastMessage = history.length > 0 ? history[history.length - 1].content : '';
-
       const contextPrompt = `
         You're an AI assistant analyzing ${seller.businessName}'s performance data:
         - Orders: ${dashboardData.orderMetrics.total} (${dashboardData.orderMetrics.pending} pending)
@@ -66,35 +64,45 @@ export class AiService {
         Respond naturally and suggest a specific area to improve.
       `;
 
-      const response = await axios.post(
-        `${this.apiUrl}?key=${this.apiKey}`,
-        {
-          contents: [{
-            parts: [{
-              text: contextPrompt
-            }]
-          }],
-          generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 150,
-            topP: 0.8,
-            topK: 40
+      try {
+        const response = await axios.post(
+          `${this.apiUrl}?key=${this.apiKey}`,
+          {
+            contents: [{
+              role: "user",
+              parts: [{
+                text: contextPrompt
+              }]
+            }],
+            generationConfig: {
+              temperature: 0.7,
+              maxOutputTokens: 150,
+              topP: 0.8,
+              topK: 40
+            }
+          },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+            }
           }
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-          }
-        }
-      );
+        );
 
-      const aiResponse = response.data.candidates[0].content.parts[0].text;
+        const aiResponse = response.data.candidates[0].content.parts[0].text;
 
-      return {
-        role: 'assistant' as const,
-        content: aiResponse,
-      };
-
+        return {
+          role: 'assistant' as const,
+          content: aiResponse,
+        };
+      } catch (apiError) {
+        this.logger.error('API Error:', apiError.response?.data || apiError.message);
+        
+        // Fallback response if API fails
+        return {
+          role: 'assistant' as const,
+          content: "I'm sorry, I couldn't analyze your business data at the moment. Please try again later.",
+        };
+      }
     } catch (error) {
       this.logger.error('Error generating business advice:', error);
       throw error;

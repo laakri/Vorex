@@ -114,20 +114,13 @@ export class WarehouseController {
     }
   }
 
-  @Get(':id/incoming-orders')
+  @Get(':id/orders/incoming-warehouse')
   @Roles(Role.WAREHOUSE_MANAGER)
-  async getIncomingOrders(
-    @Param('id') warehouseId: string,
+  async getIncomingWarehouseOrders(
+    @Param('id') id: string,
     @Query('status') status?: string
   ) {
-    try {
-      return await this.warehouseService.getIncomingWarehouseOrders(warehouseId, status);
-    } catch (error) {
-      if (error instanceof NotFoundException) {
-        throw error;
-      }
-      throw new InternalServerErrorException('Failed to fetch incoming orders');
-    }
+    return this.warehouseService.getIncomingWarehouseOrders(id, status);
   }
 
   @Get(':id/outgoing-orders')

@@ -80,6 +80,9 @@ export function DriverLayout() {
     } else if (value === "seller") {
       navigate("/seller");
     }
+    else if (value === "warehouse") {
+      navigate("/warehouse");
+    }
   };
 
   return (
@@ -160,6 +163,9 @@ export function DriverLayout() {
               </SelectItem>
               <SelectItem value="seller" className="text-default hover:bg-muted">
                 Seller
+              </SelectItem>
+              <SelectItem value="warehouse" className="text-default hover:bg-muted">
+                warehouse
               </SelectItem>
             </SelectContent>
           </Select>

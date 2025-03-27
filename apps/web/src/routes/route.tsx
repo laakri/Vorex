@@ -41,6 +41,8 @@ import { AdminLayout } from "@/layers/admin-layout";
 import { AdminWarehouseManagersPage } from "@/pages/admin/warehouse-managers";
 import { WarehouseSectionsPage } from "@/pages/warehouse/warehouse-sections";
 import { WarehouseGuard } from "./warehouse-guard";
+import WarehouseInventoryPage from "@/pages/warehouse/warehouse-inventory";
+import IncomingOrdersPage from "@/pages/warehouse/incoming-orders";
 
 
 export function AppRoutes() {
@@ -138,8 +140,8 @@ export function AppRoutes() {
       <Route path="/warehouse" element={ <WarehouseGuard><WarehouseLayout /></WarehouseGuard>}>
         <Route index element={<WarehouseDashboard /> } />
         <Route path="sections" element={<WarehouseGuard><WarehouseSectionsPage/></WarehouseGuard>} />
-        <Route path="inventory" element={<div>Inventory Management</div>} />
-        <Route path="sections" element={<div>Sections Management</div>} />
+        <Route path="inventory" element={<WarehouseGuard><WarehouseInventoryPage/></WarehouseGuard>} />
+        <Route path="incoming-orders" element={<WarehouseGuard><IncomingOrdersPage/></WarehouseGuard>} />
       </Route>
 
      

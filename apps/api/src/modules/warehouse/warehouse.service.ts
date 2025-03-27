@@ -176,19 +176,33 @@ export class WarehouseService {
     // Verify warehouse exists
     await this.getWarehouseById(warehouseId);
 
-    // Build the query
+    // Build the query for both source and destination warehouse orders
     const whereClause: Prisma.OrderWhereInput = {
-      warehouseId,
-      // Orders that are arriving at this warehouse
       OR: [
-        { status: OrderStatus.CITY_IN_TRANSIT_TO_WAREHOUSE },
-        { status: OrderStatus.CITY_ARRIVED_AT_SOURCE_WAREHOUSE },
-        { status: OrderStatus.CITY_READY_FOR_INTERCITY_TRANSFER },
-        { status: OrderStatus.CITY_READY_FOR_INTERCITY_TRANSFER_BATCHED }
+        // Orders coming to this warehouse as source warehouse
+        {
+          warehouseId,
+          status: {
+            in: [
+              OrderStatus.CITY_IN_TRANSIT_TO_WAREHOUSE,
+              OrderStatus.CITY_ARRIVED_AT_SOURCE_WAREHOUSE
+            ]
+          }
+        },
+        // Orders coming to this warehouse as destination warehouse
+        {
+          secondaryWarehouseId: warehouseId,
+          status: {
+            in: [
+              OrderStatus.CITY_IN_TRANSIT_TO_DESTINATION_WAREHOUSE,
+              OrderStatus.CITY_ARRIVED_AT_DESTINATION_WAREHOUSE
+            ]
+          }
+        }
       ]
     };
 
-    // Add status filter if provided
+    // Add specific status filter if provided
     if (status) {
       whereClause.status = status as OrderStatus;
     }

@@ -40,6 +40,10 @@ export class DriversService {
     }
 
     if (existingUser.driver) {
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: { isVerifiedDriver: true }
+      });
       throw new BadRequestException('User is already a driver');
     }
 
