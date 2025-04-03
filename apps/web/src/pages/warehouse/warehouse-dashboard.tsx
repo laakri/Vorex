@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -31,7 +32,6 @@ import {
 } from "recharts";
 import api from "@/lib/axios";
 import { useAuthStore } from "@/stores/auth.store";
-import { format } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -67,12 +67,12 @@ interface OrderStats {
   readyForDelivery: number;
 }
 
-interface Audit {
+interface ActivityItem {
   id: string;
   date: string;
-  action: string;
-  findings: string;
-  managerName: string;
+  type: string;
+  status: string;
+  description: string;
 }
 
 interface Batch {
@@ -103,10 +103,10 @@ interface DashboardData {
   warehouse: WarehouseInfo;
   sections: WarehouseSection[];
   orderStats: OrderStats;
-  recentAudits: Audit[];
+  recentActivity: ActivityItem[];
   activeBatches: Batch[];
   managers: Manager[];
-  dailyOrderData: DailyOrderData[];
+  dailyOrders: DailyOrderData[];
 }
 
 // Chart data types
@@ -115,33 +115,19 @@ interface PieChartData {
   value: number;
 }
 
-interface BarChartData {
-  name: string;
-  value: number;
-}
-
-export function WarehouseDashboard(): JSX.Element {
+export default function WarehouseDashboard() {
+  const { toast } = useToast();
   const [timeRange, setTimeRange] = useState<string>("7d");
   const { user } = useAuthStore();
   
-  const { data, isLoading, error } = useQuery<DashboardData>({
-    queryKey: ['warehouseDashboard', timeRange, user?.warehouseId],
-    queryFn: async () => {
-      if (!user?.warehouseId) throw new Error("No warehouse ID found");
-      const response = await api.get(`/warehouse/${user.warehouseId}/dashboard?timeRange=${timeRange}`);
-      return response.data as DashboardData;
-    },
-    enabled: !!user?.warehouseId
-  });
-
-  // Create a safe version of the dashboard data
-  const dashboardData: DashboardData = data || {
+  // Default empty dashboard data
+  const emptyDashboardData: DashboardData = {
     warehouse: {
-      id: '',
-      name: '',
-      address: '',
-      city: '',
-      governorate: '',
+      id: "",
+      name: "",
+      address: "",
+      city: "",
+      governorate: "",
       capacity: 0,
       currentLoad: 0,
       capacityUtilization: 0
@@ -152,169 +138,217 @@ export function WarehouseDashboard(): JSX.Element {
       outgoingOrders: 0,
       readyForDelivery: 0
     },
-    recentAudits: [],
+    recentActivity: [],
     activeBatches: [],
     managers: [],
-    dailyOrderData: []
+    dailyOrders: []
   };
-
-  // Calculate utilization percentage
-  const utilizationPercentage = Math.round(dashboardData.warehouse.capacityUtilization);
-
-  // Prepare section utilization data for chart
-  const sectionUtilizationData: BarChartData[] = dashboardData.sections.map(section => ({
-    name: section.name,
-    value: Math.round(section.utilization)
-  }));
-
-  // Prepare order status data for pie chart
+  
+  // Get warehouse ID from user (assuming warehouse manager role)
+  const warehouseId = user?.warehouseId || "";
+  
+  // Fetch dashboard data
+  const { data, isLoading, isError, error, refetch } = useQuery({
+    queryKey: ['warehouseDashboard', warehouseId, timeRange],
+    queryFn: async () => {
+      if (!warehouseId) {
+        toast({
+          title: "Error",
+          description: "No warehouse ID found. Please ensure you're logged in as a warehouse manager.",
+          variant: "destructive"
+        });
+        throw new Error("No warehouse ID found");
+      }
+      
+      try {
+        const response = await api.get(`/warehouse/${warehouseId}/dashboard?timeRange=${timeRange}`);
+        return response.data as DashboardData;
+      } catch (err: any) {
+        toast({
+          title: "Failed to load dashboard data",
+          description: err.message || "An unknown error occurred",
+          variant: "destructive"
+        });
+        throw err;
+      }
+    },
+    enabled: !!warehouseId,
+    refetchInterval: 300000, // Refresh every 5 minutes
+  });
+  
+  // Use empty data if data is undefined
+  const dashboardData = data || emptyDashboardData;
+  
+  // Prepare data for charts
   const orderStatusData: PieChartData[] = [
     { name: 'Incoming', value: dashboardData.orderStats.incomingOrders },
-    { name: 'Ready', value: dashboardData.orderStats.readyForDelivery },
     { name: 'Outgoing', value: dashboardData.orderStats.outgoingOrders },
-    { name: 'Processing', value: Math.round((dashboardData.orderStats.incomingOrders + dashboardData.orderStats.outgoingOrders) / 3) }
+    { name: 'Ready for Delivery', value: dashboardData.orderStats.readyForDelivery }
   ];
-
-  // Helper function to determine batch status color
-  const getStatusColor = (status: string): string => {
-    switch (status.toUpperCase()) {
-      case 'COLLECTING':
-        return 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200';
-      case 'PROCESSING':
-        return 'bg-blue-100 text-blue-800 hover:bg-blue-200';
-      case 'COMPLETED':
-        return 'bg-green-100 text-green-800 hover:bg-green-200';
-      default:
-        return 'bg-gray-100 text-gray-800 hover:bg-gray-200';
-    }
-  };
-
-  // Loading state
+  
+  const sectionUtilizationData = dashboardData.sections.map(section => ({
+    name: section.name,
+    value: section.utilization
+  }));
+  
+  // If loading, show skeleton UI
   if (isLoading) {
     return (
       <div className="container mx-auto py-6 space-y-8">
-        <div className="space-y-2">
-          <Skeleton className="h-8 w-64" />
-          <Skeleton className="h-4 w-32" />
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold">
+            <Skeleton className="h-10 w-64" />
+          </h1>
         </div>
-        <div className="grid gap-6 md:grid-cols-3">
-          <Skeleton className="h-32" />
-          <Skeleton className="h-32" />
-          <Skeleton className="h-32" />
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3].map(i => (
+            <Card key={i}>
+              <CardHeader>
+                <Skeleton className="h-6 w-32" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-20 w-full" />
+              </CardContent>
+            </Card>
+          ))}
         </div>
-        <Skeleton className="h-[400px]" />
       </div>
     );
   }
-
-  // Error state
-  if (error) {
+  
+  // If error, show error message
+  if (isError) {
     return (
-      <div className="container mx-auto py-6 flex flex-col items-center justify-center">
-        <AlertCircle className="h-12 w-12 text-destructive mb-4" />
-        <h2 className="text-2xl font-bold mb-2">Error Loading Dashboard</h2>
-        <p className="text-muted-foreground mb-4">
-          {error instanceof Error ? error.message : "Failed to load warehouse data"}
-        </p>
-        <button
-          className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
-          onClick={() => window.location.reload()}
+      <div className="container mx-auto py-6 flex flex-col items-center justify-center min-h-[60vh]">
+        <AlertCircle className="h-16 w-16 text-destructive mb-4" />
+        <h2 className="text-2xl font-bold mb-2">Failed to load dashboard</h2>
+        <p className="text-muted-foreground mb-6">{error?.message || "An unknown error occurred"}</p>
+        <button 
+          onClick={() => refetch()} 
+          className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
         >
-          Retry
+          Try Again
         </button>
       </div>
     );
   }
-
+  
   return (
     <div className="container mx-auto py-6 space-y-8">
-      <div className="space-y-1">
-        <h2 className="text-3xl font-bold tracking-tight">Warehouse Dashboard</h2>
-        <p className="text-muted-foreground">
-          Monitor warehouse operations, inventory, and order processing
-        </p>
-      </div>
-
       <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <WarehouseIcon className="h-5 w-5 text-muted-foreground" />
-          <span className="text-lg font-medium">{dashboardData.warehouse.name}</span>
-          <Badge variant="outline" className="ml-2">
-            {dashboardData.warehouse.city}, {dashboardData.warehouse.governorate}
-          </Badge>
+        <h1 className="text-3xl font-bold">{dashboardData.warehouse.name || "Warehouse"} Dashboard</h1>
+        <div className="flex items-center gap-4">
+          <Select value={timeRange} onValueChange={setTimeRange}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Time Range" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="1d">Last 24 Hours</SelectItem>
+              <SelectItem value="7d">Last 7 Days</SelectItem>
+              <SelectItem value="30d">Last 30 Days</SelectItem>
+              <SelectItem value="90d">Last Quarter</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-        
-        <Select value={timeRange} onValueChange={setTimeRange}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Select time range" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="7d">Last 7 days</SelectItem>
-            <SelectItem value="30d">Last 30 days</SelectItem>
-            <SelectItem value="90d">Last 90 days</SelectItem>
-          </SelectContent>
-        </Select>
       </div>
-
-      <div className="grid gap-6 md:grid-cols-3">
+      
+      {/* Overview Cards */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Capacity Utilization</CardTitle>
-            <Layers className="h-4 w-4 text-muted-foreground" />
+            <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{utilizationPercentage}%</div>
-            <Progress value={utilizationPercentage} className="mt-2" />
+            <div className="text-2xl font-bold">{dashboardData.warehouse.capacityUtilization.toFixed(1)}%</div>
+            <Progress value={dashboardData.warehouse.capacityUtilization} className="mt-2" />
             <p className="text-xs text-muted-foreground mt-2">
-              {dashboardData.warehouse.currentLoad.toLocaleString()} / {dashboardData.warehouse.capacity.toLocaleString()} units
+              {dashboardData.warehouse.currentLoad.toFixed(1)} / {dashboardData.warehouse.capacity.toFixed(1)} kg
             </p>
           </CardContent>
         </Card>
+        
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Incoming Orders</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
+            <TruckIcon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{dashboardData.orderStats.incomingOrders}</div>
             <p className="text-xs text-muted-foreground mt-2">
-              Orders arriving at warehouse
+              Orders arriving at this warehouse
             </p>
           </CardContent>
         </Card>
+        
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Outgoing Orders</CardTitle>
-            <TruckIcon className="h-4 w-4 text-muted-foreground" />
+            <WarehouseIcon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{dashboardData.orderStats.outgoingOrders}</div>
             <p className="text-xs text-muted-foreground mt-2">
-              Orders leaving warehouse
+              Orders leaving this warehouse
             </p>
           </CardContent>
         </Card>
       </div>
-
+      
+      {/* Tabs for different dashboard views */}
       <Tabs defaultValue="overview" className="space-y-6">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="inventory">Inventory</TabsTrigger>
           <TabsTrigger value="operations">Operations</TabsTrigger>
         </TabsList>
-
+        
         <TabsContent value="overview" className="space-y-6">
-          {/* Order Flow Chart */}
+          {/* Recent Activity */}
           <Card>
             <CardHeader>
-              <CardTitle>Order Flow</CardTitle>
-              <CardDescription>Daily incoming and outgoing orders</CardDescription>
+              <CardTitle>Recent Activity</CardTitle>
+              <CardDescription>Latest warehouse operations</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {dashboardData.recentActivity && dashboardData.recentActivity.length > 0 ? (
+                <div className="space-y-4">
+                  {dashboardData.recentActivity.map((activity) => (
+                    <div key={activity.id} className="flex items-start gap-4">
+                      <div className="rounded-full p-2 bg-muted">
+                        <Clock className="h-4 w-4" />
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium">{activity.description}</p>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline">{activity.status}</Badge>
+                          <span className="text-xs text-muted-foreground">{activity.date}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <EmptyState
+                  icon={<Clock className="h-6 w-6 text-muted-foreground" />}
+                  title="No Recent Activity"
+                  description="Recent warehouse operations will appear here"
+                />
+              )}
+            </CardContent>
+          </Card>
+          
+          {/* Daily Orders Chart */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Daily Orders</CardTitle>
+              <CardDescription>Incoming vs outgoing orders over time</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart
-                    data={dashboardData.dailyOrderData}
+                    data={dashboardData.dailyOrders}
                     margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
                   >
                     <CartesianGrid strokeDasharray="3 3" />
@@ -322,98 +356,59 @@ export function WarehouseDashboard(): JSX.Element {
                     <YAxis />
                     <Tooltip />
                     <Legend />
-                    <Line type="monotone" dataKey="incoming" stroke="#0088FE" name="Incoming" />
-                    <Line type="monotone" dataKey="outgoing" stroke="#00C49F" name="Outgoing" />
+                    <Line type="monotone" dataKey="incoming" stroke="#8884d8" name="Incoming" />
+                    <Line type="monotone" dataKey="outgoing" stroke="#82ca9d" name="Outgoing" />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
             </CardContent>
           </Card>
-
-          <div className="grid gap-6 md:grid-cols-2">
-            {/* Recent Activity */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Recent Activity</CardTitle>
-                <CardDescription>Latest warehouse operations</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {dashboardData.recentAudits.length > 0 ? (
-                  <div className="space-y-4">
-                    {dashboardData.recentAudits.map((audit) => (
-                      <div key={audit.id} className="flex items-start space-x-3">
-                        <div className="p-2 rounded-full bg-primary/10">
-                          <Clock className="h-4 w-4 text-primary" />
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-sm font-medium">{audit.action}</p>
-                          <p className="text-xs text-muted-foreground">{audit.findings}</p>
-                          <div className="flex items-center text-xs text-muted-foreground">
-                            <span>{audit.managerName}</span>
-                            <span className="mx-1">•</span>
-                            <span>{format(new Date(audit.date), 'MMM dd, yyyy')}</span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <EmptyState
-                    icon={<Clock className="h-6 w-6 text-muted-foreground" />}
-                    title="No Recent Activity"
-                    description="Recent warehouse activities will appear here"
-                  />
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Active Batches */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Active Batches</CardTitle>
-                <CardDescription>Currently processing batches</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {dashboardData.activeBatches.length > 0 ? (
-                  <div className="space-y-4">
+          
+          {/* Active Batches */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Active Batches</CardTitle>
+              <CardDescription>Currently processing order batches</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {dashboardData.activeBatches && dashboardData.activeBatches.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Batch Type</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Orders</TableHead>
+                      <TableHead>Driver</TableHead>
+                      <TableHead>Scheduled</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {dashboardData.activeBatches.map((batch) => (
-                      <div key={batch.id} className="flex items-start space-x-3">
-                        <div className="p-2 rounded-full bg-primary/10">
-                          <Package className="h-4 w-4 text-primary" />
-                        </div>
-                        <div className="space-y-1">
-                          <div className="flex items-center">
-                            <p className="text-sm font-medium mr-2">Batch #{batch.id.substring(0, 8)}</p>
-                            <Badge className={getStatusColor(batch.status)}>
-                              {batch.status}
-                            </Badge>
-                          </div>
-                          <p className="text-xs">
-                            {batch.orderCount} orders • {batch.type.replace(/_/g, ' ')}
-                          </p>
-                          <div className="flex items-center text-xs text-muted-foreground">
-                            <span>Driver: {batch.driverName}</span>
-                            <span className="mx-1">•</span>
-                            <span>
-                              {batch.scheduledTime ? format(new Date(batch.scheduledTime), 'MMM dd, HH:mm') : 'Not scheduled'}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
+                      <TableRow key={batch.id}>
+                        <TableCell className="font-medium">{batch.type}</TableCell>
+                        <TableCell>
+                          <Badge variant={batch.status === 'PROCESSING' ? 'default' : 'secondary'}>
+                            {batch.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{batch.orderCount}</TableCell>
+                        <TableCell>{batch.driverName}</TableCell>
+                        <TableCell>{batch.scheduledTime || 'Not scheduled'}</TableCell>
+                      </TableRow>
                     ))}
-                  </div>
-                ) : (
-                  <EmptyState
-                    icon={<Package className="h-6 w-6 text-muted-foreground" />}
-                    title="No Active Batches"
-                    description="Active batches will appear here"
-                  />
-                )}
-              </CardContent>
-            </Card>
-          </div>
+                  </TableBody>
+                </Table>
+              ) : (
+                <EmptyState
+                  icon={<Package className="h-6 w-6 text-muted-foreground" />}
+                  title="No Active Batches"
+                  description="Active order batches will appear here"
+                />
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
-
+        
         <TabsContent value="inventory" className="space-y-6">
           {/* Warehouse Sections */}
           <Card>
@@ -422,22 +417,21 @@ export function WarehouseDashboard(): JSX.Element {
               <CardDescription>Storage areas and their utilization</CardDescription>
             </CardHeader>
             <CardContent>
-              {dashboardData.sections.length > 0 ? (
-                <div className="space-y-6">
+              {dashboardData.sections && dashboardData.sections.length > 0 ? (
+                <div className="space-y-4">
                   {dashboardData.sections.map((section) => (
                     <div key={section.id} className="space-y-2">
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="font-medium">{section.name}</p>
-                          <p className="text-sm text-muted-foreground">{section.type}</p>
+                          <p className="text-xs text-muted-foreground">{section.type} • {section.pileCount} piles</p>
                         </div>
-                        <Badge variant="outline">
-                          {section.pileCount} piles
-                        </Badge>
-                      </div>
-                      <div className="flex items-center justify-between text-sm">
-                        <span>{Math.round(section.utilization)}% utilized</span>
-                        <span>{section.currentLoad} / {section.capacity} units</span>
+                        <div className="text-right">
+                          <p className="font-medium">{section.utilization.toFixed(1)}%</p>
+                          <p className="text-xs text-muted-foreground">
+                            {section.currentLoad.toFixed(1)} / {section.capacity.toFixed(1)} kg
+                          </p>
+                        </div>
                       </div>
                       <Progress value={section.utilization} />
                     </div>
@@ -486,7 +480,7 @@ export function WarehouseDashboard(): JSX.Element {
               <CardDescription>Staff with warehouse management access</CardDescription>
             </CardHeader>
             <CardContent>
-              {dashboardData.managers.length > 0 ? (
+              {dashboardData.managers && dashboardData.managers.length > 0 ? (
                 <Table>
                   <TableHeader>
                     <TableRow>

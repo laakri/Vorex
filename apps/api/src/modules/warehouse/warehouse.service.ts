@@ -6,6 +6,7 @@ import { CreateWarehouseSectionDto } from './dto/create-warehouse-section.dto';
 import { OrderStatus, Prisma } from '@prisma/client';
 import { AssignOrderLocationDto } from './dto/assign-order-location.dto';
 import { CreatePileDto } from './dto/create-pile.dto';
+import { format } from 'date-fns';
 
 @Injectable()
 export class WarehouseService {
@@ -817,36 +818,35 @@ export class WarehouseService {
       }
     });
     
-    // Get recent inventory audits
-    const recentAudits = await this.prisma.inventoryAudit.findMany({
-      where: {
-        warehouseId
+    // Get recent orders instead of audits
+    const recentOrders = await this.prisma.order.findMany({
+      where: { 
+        OR: [
+          { warehouseId },
+          { secondaryWarehouseId: warehouseId }
+        ]
       },
+      orderBy: { createdAt: 'desc' },
+      take: 5,
       include: {
-        manager: {
-          include: {
-            user: {
-              select: {
-                fullName: true
-              }
-            }
+        seller: {
+          select: {
+            businessName: true
           }
         }
-      },
-      orderBy: {
-        date: 'desc'
-      },
-      take: 5
+      }
     });
     
-    // Get active batches - using the correct field from schema
+    // Get active batches
     const activeBatches = await this.prisma.batch.findMany({
-      where: {
-        warehouseId: warehouseId,
+      where: { 
+        warehouseId,
         status: {
           in: ['COLLECTING', 'PROCESSING']
         }
       },
+      take: 5,
+      orderBy: { createdAt: 'desc' },
       include: {
         driver: {
           include: {
@@ -857,11 +857,7 @@ export class WarehouseService {
             }
           }
         }
-      },
-      orderBy: {
-        createdAt: 'desc'
-      },
-      take: 5
+      }
     });
     
     // Get warehouse managers
@@ -883,7 +879,7 @@ export class WarehouseService {
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     
-    const dailyOrders = await this.prisma.$queryRaw`
+    const rawDailyOrders = await this.prisma.$queryRaw`
       SELECT 
         DATE_TRUNC('day', "createdAt") as date,
         COUNT(CASE WHEN "secondaryWarehouseId" = ${warehouseId} THEN 1 END) as incoming,
@@ -895,6 +891,22 @@ export class WarehouseService {
       GROUP BY DATE_TRUNC('day', "createdAt")
       ORDER BY date ASC
     `;
+    
+    // Helper function to format dates without date-fns
+    const formatDate = (date: Date): string => {
+      return date.toISOString().split('T')[0]; // Returns YYYY-MM-DD
+    };
+    
+    const formatDateTime = (date: Date): string => {
+      return date.toISOString().replace('T', ' ').substring(0, 16); // Returns YYYY-MM-DD HH:MM
+    };
+    
+    // Convert BigInt values to regular numbers
+    const dailyOrders = (rawDailyOrders as any[]).map(row => ({
+      date: row.date ? formatDate(new Date(row.date)) : '',
+      incoming: row.incoming ? Number(row.incoming) : 0,
+      outgoing: row.outgoing ? Number(row.outgoing) : 0
+    }));
     
     return {
       warehouse: {
@@ -921,12 +933,12 @@ export class WarehouseService {
         outgoingOrders,
         readyForDelivery
       },
-      recentAudits: recentAudits.map(audit => ({
-        id: audit.id,
-        date: audit.date,
-        action: audit.action,
-        findings: audit.findings,
-        managerName: audit.manager?.user?.fullName || 'Unknown'
+      recentActivity: recentOrders.map(order => ({
+        id: order.id,
+        date: formatDate(order.createdAt),
+        type: 'Order',
+        status: order.status,
+        description: `Order from ${order.seller?.businessName || 'Unknown seller'}`
       })),
       activeBatches: activeBatches.map(batch => ({
         id: batch.id,
@@ -934,7 +946,7 @@ export class WarehouseService {
         status: batch.status,
         orderCount: batch.orderCount,
         driverName: batch.driver?.user?.fullName || 'Unassigned',
-        scheduledTime: batch.scheduledTime
+        scheduledTime: batch.scheduledTime ? formatDateTime(batch.scheduledTime) : null
       })),
       managers: managers.map(manager => ({
         id: manager.id,
@@ -944,7 +956,7 @@ export class WarehouseService {
         securityClearance: manager.securityClearance,
         shiftPreference: manager.shiftPreference
       })),
-      dailyOrderData: dailyOrders
+      dailyOrders
     };
   }
 }
