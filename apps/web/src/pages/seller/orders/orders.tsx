@@ -43,12 +43,13 @@ export enum OrderStatus {
   LOCAL_DELIVERED = 'LOCAL_DELIVERED',
   CITY_ASSIGNED_TO_PICKUP = 'CITY_ASSIGNED_TO_PICKUP',
   CITY_PICKED_UP = 'CITY_PICKED_UP',
-  CITY_IN_TRANSIT_TO_WAREHOUSE = 'CITY_IN_TRANSIT_TO_WAREHOUSE',
   CITY_ARRIVED_AT_SOURCE_WAREHOUSE = 'CITY_ARRIVED_AT_SOURCE_WAREHOUSE',
   CITY_READY_FOR_INTERCITY_TRANSFER = 'CITY_READY_FOR_INTERCITY_TRANSFER',
+  CITY_READY_FOR_INTERCITY_TRANSFER_BATCHED = 'CITY_READY_FOR_INTERCITY_TRANSFER_BATCHED',
   CITY_IN_TRANSIT_TO_DESTINATION_WAREHOUSE = 'CITY_IN_TRANSIT_TO_DESTINATION_WAREHOUSE',
   CITY_ARRIVED_AT_DESTINATION_WAREHOUSE = 'CITY_ARRIVED_AT_DESTINATION_WAREHOUSE',
   CITY_READY_FOR_LOCAL_DELIVERY = 'CITY_READY_FOR_LOCAL_DELIVERY',
+  CITY_READY_FOR_LOCAL_DELIVERY_BATCHED = 'CITY_READY_FOR_LOCAL_DELIVERY_BATCHED',
   CITY_DELIVERED = 'CITY_DELIVERED',
   CANCELLED = 'CANCELLED'
 }
@@ -93,12 +94,13 @@ const ORDER_STATUSES: Record<OrderStatus, StatusConfig> = {
   [OrderStatus.LOCAL_DELIVERED]: { label: 'Local Delivered', color: 'bg-green-500' },
   [OrderStatus.CITY_ASSIGNED_TO_PICKUP]: { label: 'City Assigned to Pickup', color: 'bg-orange-500' },
   [OrderStatus.CITY_PICKED_UP]: { label: 'City Picked Up', color: 'bg-indigo-500' },
-  [OrderStatus.CITY_IN_TRANSIT_TO_WAREHOUSE]: { label: 'City In Transit to Warehouse', color: 'bg-teal-500' },
-  [OrderStatus.CITY_ARRIVED_AT_SOURCE_WAREHOUSE]: { label: 'City Arrived at Source Warehouse', color: 'bg-gray-500' },
-  [OrderStatus.CITY_READY_FOR_INTERCITY_TRANSFER]: { label: 'City Ready for Intercity Transfer', color: 'bg-pink-500' },
-  [OrderStatus.CITY_IN_TRANSIT_TO_DESTINATION_WAREHOUSE]: { label: 'City In Transit to Destination Warehouse', color: 'bg-lime-500' },
-  [OrderStatus.CITY_ARRIVED_AT_DESTINATION_WAREHOUSE]: { label: 'City Arrived at Destination Warehouse', color: 'bg-rose-500' },
-  [OrderStatus.CITY_READY_FOR_LOCAL_DELIVERY]: { label: 'City Ready for Local Delivery', color: 'bg-emerald-500' },
+  [OrderStatus.CITY_ARRIVED_AT_SOURCE_WAREHOUSE]: { label: 'Arrived at Source Warehouse', color: 'bg-gray-500' },
+  [OrderStatus.CITY_READY_FOR_INTERCITY_TRANSFER]: { label: 'Ready for Intercity Transfer', color: 'bg-pink-500' },
+  [OrderStatus.CITY_READY_FOR_INTERCITY_TRANSFER_BATCHED]: { label: 'Batched for Intercity Transfer', color: 'bg-cyan-500' },
+  [OrderStatus.CITY_IN_TRANSIT_TO_DESTINATION_WAREHOUSE]: { label: 'In Transit to Destination', color: 'bg-lime-500' },
+  [OrderStatus.CITY_ARRIVED_AT_DESTINATION_WAREHOUSE]: { label: 'Arrived at Destination', color: 'bg-rose-500' },
+  [OrderStatus.CITY_READY_FOR_LOCAL_DELIVERY]: { label: 'Ready for Local Delivery', color: 'bg-emerald-500' },
+  [OrderStatus.CITY_READY_FOR_LOCAL_DELIVERY_BATCHED]: { label: 'Batched for Local Delivery', color: 'bg-amber-500' },
   [OrderStatus.CITY_DELIVERED]: { label: 'City Delivered', color: 'bg-green-700' },
   [OrderStatus.CANCELLED]: { label: 'Cancelled', color: 'bg-red-500' },
 };
@@ -131,7 +133,7 @@ export function OrdersPage(): JSX.Element {
   const stats: OrderStats = {
     total: orders.length,
     pending: orders.filter(order => order.status === OrderStatus.PENDING).length,
-    inTransit: orders.filter(order => order.status === OrderStatus.CITY_IN_TRANSIT_TO_WAREHOUSE || order.status === OrderStatus.CITY_IN_TRANSIT_TO_DESTINATION_WAREHOUSE).length,
+    inTransit: orders.filter(order => order.status === OrderStatus.CITY_IN_TRANSIT_TO_DESTINATION_WAREHOUSE).length,
   };
 
   // Filters
@@ -162,12 +164,13 @@ export function OrdersPage(): JSX.Element {
     OrderStatus.LOCAL_DELIVERED,
     OrderStatus.CITY_ASSIGNED_TO_PICKUP,
     OrderStatus.CITY_PICKED_UP,
-    OrderStatus.CITY_IN_TRANSIT_TO_WAREHOUSE,
     OrderStatus.CITY_ARRIVED_AT_SOURCE_WAREHOUSE,
     OrderStatus.CITY_READY_FOR_INTERCITY_TRANSFER,
+    OrderStatus.CITY_READY_FOR_INTERCITY_TRANSFER_BATCHED,
     OrderStatus.CITY_IN_TRANSIT_TO_DESTINATION_WAREHOUSE,
     OrderStatus.CITY_ARRIVED_AT_DESTINATION_WAREHOUSE,
     OrderStatus.CITY_READY_FOR_LOCAL_DELIVERY,
+    OrderStatus.CITY_READY_FOR_LOCAL_DELIVERY_BATCHED,
     OrderStatus.CITY_DELIVERED,
     OrderStatus.CANCELLED
   ];

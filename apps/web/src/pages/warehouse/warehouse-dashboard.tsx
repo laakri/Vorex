@@ -1,818 +1,561 @@
 import { useState } from "react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  CardFooter,
-} from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Package,
-  Warehouse,
-  Truck,
-  Clock,
-
-  ClipboardCheck,
-  Layers,
-  Plus,
-  FileStack,
-  Users,
-} from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  ResponsiveContainer,
-  BarChart as RechartsBarChart,
-  Tooltip,
-  PieChart as RechartsPieChart,
-  Pie,
-  Cell,
-} from "recharts";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle,DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { useForm } from "react-hook-form";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { 
+  Package, 
+  TruckIcon, 
+  WarehouseIcon, 
+  Layers, 
+  Users,
+  Clock,
+  AlertCircle
+} from "lucide-react";
+import { 
+  LineChart, 
+  Line, 
+  BarChart, 
+  Bar, 
+  PieChart, 
+  Pie, 
+  Cell, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  Legend, 
+  ResponsiveContainer 
+} from "recharts";
+import api from "@/lib/axios";
+import { useAuthStore } from "@/stores/auth.store";
+import { format } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
-import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 
-// Sample data for warehouse metrics and visualizations
-const sampleWarehouseData = {
-  warehouseMetrics: {
-    capacityUtilization: 68,
-    totalCapacity: 10000,
-    currentLoad: 6800,
-    sections: 12,
-    piles: 48
-  },
-  orderMetrics: {
-    pendingArrival: 42,
-    inProcessing: 27,
-    readyForDelivery: 35,
-    total: 104
-  },
-  batchMetrics: {
-    collecting: 5,
-    processing: 3,
-    readyForDelivery: 7,
-    total: 15
-  },
-  sectionUtilization: [
-    { name: 'General', capacity: 2500, used: 1750, percent: 70 },
-    { name: 'Refrigerated', capacity: 1500, used: 1275, percent: 85 },
-    { name: 'Oversized', capacity: 2000, used: 1100, percent: 55 },
-    { name: 'Fragile', capacity: 1000, used: 650, percent: 65 },
-    { name: 'High Value', capacity: 500, used: 425, percent: 85 },
-    { name: 'Hazardous', capacity: 800, used: 480, percent: 60 },
-  ],
-  processingTimes: [
-    { date: '01/04', inbound: 45, outbound: 38 },
-    { date: '02/04', inbound: 52, outbound: 42 },
-    { date: '03/04', inbound: 48, outbound: 40 },
-    { date: '04/04', inbound: 61, outbound: 45 },
-    { date: '05/04', inbound: 55, outbound: 48 },
-    { date: '06/04', inbound: 67, outbound: 52 },
-    { date: '07/04', inbound: 70, outbound: 58 },
-  ],
-  orderStatusDistribution: [
-    { name: 'Pending Arrival', value: 42, color: '#1E88E5' },
-    { name: 'In Processing', value: 27, color: '#FFA000' },
-    { name: 'Ready for Delivery', value: 35, color: '#43A047' },
-  ],
-  recentArrivals: [
-    { id: 'ORD-7829', origin: 'Tunis', destination: 'Sousse', status: 'CITY_ARRIVED_AT_SOURCE_WAREHOUSE', items: 4, timestamp: '2023-04-12T09:45:00Z' },
-    { id: 'ORD-8102', origin: 'Sfax', destination: 'Tunis', status: 'CITY_ARRIVED_AT_DESTINATION_WAREHOUSE', items: 2, timestamp: '2023-04-12T10:15:00Z' },
-    { id: 'ORD-7963', origin: 'Nabeul', destination: 'Monastir', status: 'CITY_ARRIVED_AT_SOURCE_WAREHOUSE', items: 6, timestamp: '2023-04-12T10:30:00Z' },
-  ],
-  pendingBatches: [
-    { id: 'BAT-1245', type: 'LOCAL_WAREHOUSE_BUYERS', orders: 8, status: 'COLLECTING', dueBy: '2023-04-12T14:00:00Z' },
-    { id: 'BAT-1253', type: 'INTERCITY', orders: 12, status: 'PROCESSING', dueBy: '2023-04-12T16:00:00Z' },
-  ],
-  staffActivity: [
-    { name: 'Ahmed', tasks: 17, department: 'Receiving', efficiency: 92 },
-    { name: 'Leila', tasks: 22, department: 'Sorting', efficiency: 88 },
-    { name: 'Youssef', tasks: 15, department: 'Packing', efficiency: 95 },
-  ]
-};
+// Color constants for charts
+const COLORS: string[] = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 
-export function WarehouseDashboard() {
+// Types based on the schema
+interface WarehouseInfo {
+  id: string;
+  name: string;
+  address: string;
+  city: string;
+  governorate: string;
+  capacity: number;
+  currentLoad: number;
+  capacityUtilization: number;
+}
+
+interface WarehouseSection {
+  id: string;
+  name: string;
+  type: string;
+  capacity: number;
+  currentLoad: number;
+  utilization: number;
+  pileCount: number;
+}
+
+interface OrderStats {
+  incomingOrders: number;
+  outgoingOrders: number;
+  readyForDelivery: number;
+}
+
+interface Audit {
+  id: string;
+  date: string;
+  action: string;
+  findings: string;
+  managerName: string;
+}
+
+interface Batch {
+  id: string;
+  type: string;
+  status: string;
+  orderCount: number;
+  driverName: string;
+  scheduledTime: string | null;
+}
+
+interface Manager {
+  id: string;
+  name: string;
+  email: string;
+  employeeId: string;
+  securityClearance: string;
+  shiftPreference: string;
+}
+
+interface DailyOrderData {
+  date: string;
+  incoming: number;
+  outgoing: number;
+}
+
+interface DashboardData {
+  warehouse: WarehouseInfo;
+  sections: WarehouseSection[];
+  orderStats: OrderStats;
+  recentAudits: Audit[];
+  activeBatches: Batch[];
+  managers: Manager[];
+  dailyOrderData: DailyOrderData[];
+}
+
+// Chart data types
+interface PieChartData {
+  name: string;
+  value: number;
+}
+
+interface BarChartData {
+  name: string;
+  value: number;
+}
+
+export function WarehouseDashboard(): JSX.Element {
   const [timeRange, setTimeRange] = useState<string>("7d");
-  const [isNewSectionModalOpen, setIsNewSectionModalOpen] = useState(false);
-  const [isNewPileModalOpen, setIsNewPileModalOpen] = useState(false);
-  const [selectedSection, setSelectedSection] = useState<string | null>(null);
-
-  // For real implementation, replace this with actual data fetching
-  const { data: warehouseData, isLoading } = useQuery({
-    queryKey: ['warehouseDashboard', timeRange],
+  const { user } = useAuthStore();
+  
+  const { data, isLoading, error } = useQuery<DashboardData>({
+    queryKey: ['warehouseDashboard', timeRange, user?.warehouseId],
     queryFn: async () => {
-      // In a real implementation, you would fetch from your API:
-      // const response = await api.get(`/warehouse/dashboard?timeRange=${timeRange}`);
-      // return response.data;
-      
-      // For now, return sample data
-      return sampleWarehouseData;
+      if (!user?.warehouseId) throw new Error("No warehouse ID found");
+      const response = await api.get(`/warehouse/${user.warehouseId}/dashboard?timeRange=${timeRange}`);
+      return response.data as DashboardData;
     },
-    initialData: sampleWarehouseData // Remove this in production
+    enabled: !!user?.warehouseId
   });
 
-  const { register: registerSection, handleSubmit: handleSubmitSection, reset: resetSection } = useForm();
-  const { register: registerPile, handleSubmit: handleSubmitPile, reset: resetPile } = useForm();
-
-  const onSubmitSection = async (data: any) => {
-    try {
-      // await api.post('/warehouse/sections', data);
-      console.log('Section created:', data);
-      setIsNewSectionModalOpen(false);
-      resetSection();
-      // Refetch warehouse data or update local state
-    } catch (error) {
-      console.error('Error creating section:', error);
-    }
+  // Create a safe version of the dashboard data
+  const dashboardData: DashboardData = data || {
+    warehouse: {
+      id: '',
+      name: '',
+      address: '',
+      city: '',
+      governorate: '',
+      capacity: 0,
+      currentLoad: 0,
+      capacityUtilization: 0
+    },
+    sections: [],
+    orderStats: {
+      incomingOrders: 0,
+      outgoingOrders: 0,
+      readyForDelivery: 0
+    },
+    recentAudits: [],
+    activeBatches: [],
+    managers: [],
+    dailyOrderData: []
   };
 
-  const onSubmitPile = async (data: any) => {
-    try {
-      // await api.post('/warehouse/piles', { ...data, sectionId: selectedSection });
-      console.log('Pile created:', { ...data, sectionId: selectedSection });
-      setIsNewPileModalOpen(false);
-      resetPile();
-      // Refetch warehouse data or update local state
-    } catch (error) {
-      console.error('Error creating pile:', error);
+  // Calculate utilization percentage
+  const utilizationPercentage = Math.round(dashboardData.warehouse.capacityUtilization);
+
+  // Prepare section utilization data for chart
+  const sectionUtilizationData: BarChartData[] = dashboardData.sections.map(section => ({
+    name: section.name,
+    value: Math.round(section.utilization)
+  }));
+
+  // Prepare order status data for pie chart
+  const orderStatusData: PieChartData[] = [
+    { name: 'Incoming', value: dashboardData.orderStats.incomingOrders },
+    { name: 'Ready', value: dashboardData.orderStats.readyForDelivery },
+    { name: 'Outgoing', value: dashboardData.orderStats.outgoingOrders },
+    { name: 'Processing', value: Math.round((dashboardData.orderStats.incomingOrders + dashboardData.orderStats.outgoingOrders) / 3) }
+  ];
+
+  // Helper function to determine batch status color
+  const getStatusColor = (status: string): string => {
+    switch (status.toUpperCase()) {
+      case 'COLLECTING':
+        return 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200';
+      case 'PROCESSING':
+        return 'bg-blue-100 text-blue-800 hover:bg-blue-200';
+      case 'COMPLETED':
+        return 'bg-green-100 text-green-800 hover:bg-green-200';
+      default:
+        return 'bg-gray-100 text-gray-800 hover:bg-gray-200';
     }
   };
 
   // Loading state
   if (isLoading) {
     return (
-      <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {Array(4).fill(0).map((_, i) => (
-            <Skeleton key={i} className="h-[120px] w-full" />
-          ))}
+      <div className="container mx-auto py-6 space-y-8">
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-4 w-32" />
         </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-          <Skeleton className="col-span-4 h-[400px]" />
-          <Skeleton className="col-span-3 h-[400px]" />
+        <div className="grid gap-6 md:grid-cols-3">
+          <Skeleton className="h-32" />
+          <Skeleton className="h-32" />
+          <Skeleton className="h-32" />
         </div>
+        <Skeleton className="h-[400px]" />
       </div>
     );
   }
 
-  const {
-    warehouseMetrics,
-    orderMetrics,
-    batchMetrics,
-    sectionUtilization,
-    processingTimes,
-    orderStatusDistribution,
-    recentArrivals,
-    pendingBatches,
-    staffActivity
-  } = warehouseData;
+  // Error state
+  if (error) {
+    return (
+      <div className="container mx-auto py-6 flex flex-col items-center justify-center">
+        <AlertCircle className="h-12 w-12 text-destructive mb-4" />
+        <h2 className="text-2xl font-bold mb-2">Error Loading Dashboard</h2>
+        <p className="text-muted-foreground mb-4">
+          {error instanceof Error ? error.message : "Failed to load warehouse data"}
+        </p>
+        <button
+          className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
+          onClick={() => window.location.reload()}
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-      <div className="flex items-center justify-between space-y-2">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Warehouse Dashboard</h2>
-          <p className="text-muted-foreground">
-            Monitor warehouse operations and performance
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Select
-            value={timeRange}
-            onValueChange={(value: string) => setTimeRange(value)}
-          >
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Select timeframe" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="7d">Last 7 days</SelectItem>
-              <SelectItem value="30d">Last 30 days</SelectItem>
-              <SelectItem value="90d">Last 90 days</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+    <div className="container mx-auto py-6 space-y-8">
+      <div className="space-y-1">
+        <h2 className="text-3xl font-bold tracking-tight">Warehouse Dashboard</h2>
+        <p className="text-muted-foreground">
+          Monitor warehouse operations, inventory, and order processing
+        </p>
       </div>
 
-      {/* Top Metrics Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {/* Capacity Card */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Capacity Utilization
-            </CardTitle>
-            <Warehouse className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{warehouseMetrics.capacityUtilization}%</div>
-            <Progress value={warehouseMetrics.capacityUtilization} className="mt-2" />
-            <p className="text-xs text-muted-foreground mt-2">
-              {warehouseMetrics.currentLoad} / {warehouseMetrics.totalCapacity} kg used
-            </p>
-          </CardContent>
-        </Card>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-2">
+          <WarehouseIcon className="h-5 w-5 text-muted-foreground" />
+          <span className="text-lg font-medium">{dashboardData.warehouse.name}</span>
+          <Badge variant="outline" className="ml-2">
+            {dashboardData.warehouse.city}, {dashboardData.warehouse.governorate}
+          </Badge>
+        </div>
+        
+        <Select value={timeRange} onValueChange={setTimeRange}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Select time range" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="7d">Last 7 days</SelectItem>
+            <SelectItem value="30d">Last 30 days</SelectItem>
+            <SelectItem value="90d">Last 90 days</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
 
-        {/* Order Processing Card */}
+      <div className="grid gap-6 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Orders in Warehouse
-            </CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{orderMetrics.total}</div>
-            <div className="flex items-center justify-between mt-2">
-              <div className="text-xs flex flex-col">
-                <span className="text-muted-foreground">Pending</span>
-                <span className="font-medium">{orderMetrics.pendingArrival}</span>
-              </div>
-              <div className="text-xs flex flex-col">
-                <span className="text-muted-foreground">Processing</span>
-                <span className="font-medium">{orderMetrics.inProcessing}</span>
-              </div>
-              <div className="text-xs flex flex-col">
-                <span className="text-muted-foreground">Ready</span>
-                <span className="font-medium">{orderMetrics.readyForDelivery}</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Batch Status Card */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Active Batches
-            </CardTitle>
+            <CardTitle className="text-sm font-medium">Capacity Utilization</CardTitle>
             <Layers className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{batchMetrics.total}</div>
-            <div className="flex items-center justify-between mt-2">
-              <div className="text-xs flex flex-col">
-                <span className="text-muted-foreground">Collecting</span>
-                <span className="font-medium">{batchMetrics.collecting}</span>
-              </div>
-              <div className="text-xs flex flex-col">
-                <span className="text-muted-foreground">Processing</span>
-                <span className="font-medium">{batchMetrics.processing}</span>
-              </div>
-              <div className="text-xs flex flex-col">
-                <span className="text-muted-foreground">Ready</span>
-                <span className="font-medium">{batchMetrics.readyForDelivery}</span>
-              </div>
-            </div>
+            <div className="text-2xl font-bold">{utilizationPercentage}%</div>
+            <Progress value={utilizationPercentage} className="mt-2" />
+            <p className="text-xs text-muted-foreground mt-2">
+              {dashboardData.warehouse.currentLoad.toLocaleString()} / {dashboardData.warehouse.capacity.toLocaleString()} units
+            </p>
           </CardContent>
         </Card>
-
-        {/* Warehouse Structure Card */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Warehouse Structure
-            </CardTitle>
-            <FileStack className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Incoming Orders</CardTitle>
+            <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-2xl font-bold">{warehouseMetrics.sections}</div>
-                <p className="text-xs text-muted-foreground">Sections</p>
-              </div>
-              <div>
-                <div className="text-2xl font-bold">{warehouseMetrics.piles}</div>
-                <p className="text-xs text-muted-foreground">Piles</p>
-              </div>
-            </div>
-            <div className="mt-4 flex space-x-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="text-xs flex items-center"
-                onClick={() => setIsNewSectionModalOpen(true)}
-              >
-                <Plus className="h-3 w-3 mr-1" /> Add Section
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="text-xs flex items-center"
-                onClick={() => setIsNewPileModalOpen(true)}
-              >
-                <Plus className="h-3 w-3 mr-1" /> Add Pile
-              </Button>
-            </div>
+            <div className="text-2xl font-bold">{dashboardData.orderStats.incomingOrders}</div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Orders arriving at warehouse
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Outgoing Orders</CardTitle>
+            <TruckIcon className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{dashboardData.orderStats.outgoingOrders}</div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Orders leaving warehouse
+            </p>
           </CardContent>
         </Card>
       </div>
 
-      <Tabs defaultValue="overview" className="space-y-4">
+      <Tabs defaultValue="overview" className="space-y-6">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="sections">Sections</TabsTrigger>
-          <TabsTrigger value="orders">Orders</TabsTrigger>
-          <TabsTrigger value="batches">Batches</TabsTrigger>
-          <TabsTrigger value="staff">Staff</TabsTrigger>
+          <TabsTrigger value="inventory">Inventory</TabsTrigger>
+          <TabsTrigger value="operations">Operations</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="overview" className="space-y-4">
-          {/* Processing Times Chart */}
-          <div className="grid gap-4 md:grid-cols-7">
-            <Card className="col-span-4">
-              <CardHeader>
-                <CardTitle>Processing Times (minutes)</CardTitle>
-                <CardDescription>Average time to process orders</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={processingTimes}>
-                      <XAxis 
-                        dataKey="date" 
-                        stroke="#888888" 
-                        fontSize={12} 
-                        tickLine={false}
-                        axisLine={false}
-                      />
-                      <YAxis
-                        stroke="#888888"
-                        fontSize={12}
-                        tickLine={false}
-                        axisLine={false}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="inbound"
-                        stroke="hsl(var(--primary))"
-                        strokeWidth={2}
-                        name="Inbound"
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="outbound"
-                        stroke="hsl(var(--primary)/0.3)"
-                        strokeWidth={2}
-                        name="Outbound"
-                      />
-                      <Tooltip
-                        content={({ active, payload }) => {
-                          if (active && payload?.length) {
-                            return (
-                              <div className="rounded-lg border bg-background p-2 shadow-sm">
-                                <div className="grid grid-cols-2 gap-2">
-                                  <div className="flex flex-col">
-                                    <span className="text-[0.70rem] uppercase text-muted-foreground">
-                                      Inbound
-                                    </span>
-                                    <span className="font-bold text-muted-foreground">
-                                      {payload[0].value} mins
-                                    </span>
-                                  </div>
-                                  <div className="flex flex-col">
-                                    <span className="text-[0.70rem] uppercase text-muted-foreground">
-                                      Outbound
-                                    </span>
-                                    <span className="font-bold text-muted-foreground">
-                                      {payload[1].value} mins
-                                    </span>
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          }
-                          return null;
-                        }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Order Status Distribution */}
-            <Card className="col-span-3">
-              <CardHeader>
-                <CardTitle>Order Status</CardTitle>
-                <CardDescription>Current distribution by status</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[300px] flex items-center justify-center">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <RechartsPieChart>
-                      <Pie
-                        data={orderStatusDistribution}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={90}
-                        paddingAngle={4}
-                        dataKey="value"
-                      >
-                        {orderStatusDistribution.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        content={({ active, payload }) => {
-                          if (active && payload?.length) {
-                            return (
-                              <div className="rounded-lg border bg-background p-2 shadow-sm">
-                                <div className="flex flex-col">
-                                  <span className="text-[0.70rem] uppercase text-muted-foreground">
-                                    {payload[0].name}
-                                  </span>
-                                  <span className="font-bold text-muted-foreground">
-                                    {payload[0].value} orders ({Math.round((payload[0].value / orderMetrics.total) * 100)}%)
-                                  </span>
-                                </div>
-                              </div>
-                            );
-                          }
-                          return null;
-                        }}
-                      />
-                    </RechartsPieChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="flex justify-center gap-4 mt-2">
-                  {orderStatusDistribution.map((status) => (
-                    <div key={status.name} className="flex items-center gap-1">
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: status.color }} />
-                      <span className="text-xs">{status.name}</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Three Column Layout */}
-          <div className="grid gap-4 md:grid-cols-3">
-            {/* Recent Arrivals */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Recent Arrivals</CardTitle>
-                <CardDescription>Latest orders received</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {recentArrivals.map((order) => (
-                    <div key={order.id} className="flex items-center justify-between border-b pb-2">
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium">{order.id}</p>
-                        <div className="flex items-center gap-1">
-                          <Package className="h-3 w-3 text-muted-foreground" />
-                          <p className="text-xs text-muted-foreground">
-                            {order.items} items
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Truck className="h-3 w-3 text-muted-foreground" />
-                          <p className="text-xs text-muted-foreground">
-                            {order.origin} → {order.destination}
-                          </p>
-                        </div>
-                      </div>
-                      <Badge variant="outline" className="text-xs">
-                        {order.status.replace(/([A-Z])/g, ' $1').replace('_', ' ').trim()}
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-              <CardFooter>
-                <Button variant="ghost" size="sm" className="w-full">View All Arrivals</Button>
-              </CardFooter>
-            </Card>
-
-            {/* Pending Batches */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Pending Batches</CardTitle>
-                <CardDescription>Batches requiring attention</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {pendingBatches.map((batch) => (
-                    <div key={batch.id} className="flex items-center justify-between border-b pb-2">
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium">{batch.id}</p>
-                        <div className="flex items-center gap-1">
-                          <Layers className="h-3 w-3 text-muted-foreground" />
-                          <p className="text-xs text-muted-foreground">
-                            {batch.orders} orders
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Clock className="h-3 w-3 text-muted-foreground" />
-                          <p className="text-xs text-muted-foreground">
-                            Due in {Math.floor((new Date(batch.dueBy).getTime() - new Date().getTime()) / (1000 * 60))} minutes
-                          </p>
-                        </div>
-                      </div>
-                      <Badge 
-                        variant={batch.status === 'COLLECTING' ? 'outline' : 'secondary'} 
-                        className="text-xs"
-                      >
-                        {batch.status}
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-              <CardFooter>
-                <Button variant="ghost" size="sm" className="w-full">View All Batches</Button>
-              </CardFooter>
-            </Card>
-
-            {/* Staff Activity */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Staff Activity</CardTitle>
-                <CardDescription>Top performing staff</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {staffActivity.map((staff) => (
-                    <div key={staff.name} className="flex items-center justify-between border-b pb-2">
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium">{staff.name}</p>
-                        <div className="flex items-center gap-1">
-                          <Users className="h-3 w-3 text-muted-foreground" />
-                          <p className="text-xs text-muted-foreground">
-                            {staff.department}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <ClipboardCheck className="h-3 w-3 text-muted-foreground" />
-                          <p className="text-xs text-muted-foreground">
-                            {staff.tasks} tasks completed
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-sm font-medium">
-                        {staff.efficiency}%
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-              <CardFooter>
-                <Button variant="ghost" size="sm" className="w-full">View All Staff</Button>
-              </CardFooter>
-            </Card>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="sections" className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h3 className="text-lg font-medium">Warehouse Sections</h3>
-            <Button 
-              onClick={() => setIsNewSectionModalOpen(true)}
-              className="flex items-center gap-1"
-            >
-              <Plus className="h-4 w-4" /> Add Section
-            </Button>
-          </div>
-          
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {sectionUtilization.map((section) => (
-              <Card key={section.name} className="overflow-hidden">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-md">{section.name}</CardTitle>
-                  <CardDescription>
-                    {section.used} / {section.capacity} kg used
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="pb-2">
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-sm">Utilization</span>
-                      <span className="text-sm font-medium">{section.percent}%</span>
-                    </div>
-                    <Progress value={section.percent} />
-                  </div>
-                </CardContent>
-                <CardFooter className="flex justify-between pt-2">
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => {
-                      setSelectedSection('section-id-' + section.name.toLowerCase());
-                      setIsNewPileModalOpen(true);
-                    }}
+        <TabsContent value="overview" className="space-y-6">
+          {/* Order Flow Chart */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Order Flow</CardTitle>
+              <CardDescription>Daily incoming and outgoing orders</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart
+                    data={dashboardData.dailyOrderData}
+                    margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
                   >
-                    Add Pile
-                  </Button>
-                  <Button variant="ghost" size="sm">View Details</Button>
-                </CardFooter>
-              </Card>
-            ))}
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Line type="monotone" dataKey="incoming" stroke="#0088FE" name="Incoming" />
+                    <Line type="monotone" dataKey="outgoing" stroke="#00C49F" name="Outgoing" />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="grid gap-6 md:grid-cols-2">
+            {/* Recent Activity */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Activity</CardTitle>
+                <CardDescription>Latest warehouse operations</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {dashboardData.recentAudits.length > 0 ? (
+                  <div className="space-y-4">
+                    {dashboardData.recentAudits.map((audit) => (
+                      <div key={audit.id} className="flex items-start space-x-3">
+                        <div className="p-2 rounded-full bg-primary/10">
+                          <Clock className="h-4 w-4 text-primary" />
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-sm font-medium">{audit.action}</p>
+                          <p className="text-xs text-muted-foreground">{audit.findings}</p>
+                          <div className="flex items-center text-xs text-muted-foreground">
+                            <span>{audit.managerName}</span>
+                            <span className="mx-1">•</span>
+                            <span>{format(new Date(audit.date), 'MMM dd, yyyy')}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <EmptyState
+                    icon={<Clock className="h-6 w-6 text-muted-foreground" />}
+                    title="No Recent Activity"
+                    description="Recent warehouse activities will appear here"
+                  />
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Active Batches */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Active Batches</CardTitle>
+                <CardDescription>Currently processing batches</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {dashboardData.activeBatches.length > 0 ? (
+                  <div className="space-y-4">
+                    {dashboardData.activeBatches.map((batch) => (
+                      <div key={batch.id} className="flex items-start space-x-3">
+                        <div className="p-2 rounded-full bg-primary/10">
+                          <Package className="h-4 w-4 text-primary" />
+                        </div>
+                        <div className="space-y-1">
+                          <div className="flex items-center">
+                            <p className="text-sm font-medium mr-2">Batch #{batch.id.substring(0, 8)}</p>
+                            <Badge className={getStatusColor(batch.status)}>
+                              {batch.status}
+                            </Badge>
+                          </div>
+                          <p className="text-xs">
+                            {batch.orderCount} orders • {batch.type.replace(/_/g, ' ')}
+                          </p>
+                          <div className="flex items-center text-xs text-muted-foreground">
+                            <span>Driver: {batch.driverName}</span>
+                            <span className="mx-1">•</span>
+                            <span>
+                              {batch.scheduledTime ? format(new Date(batch.scheduledTime), 'MMM dd, HH:mm') : 'Not scheduled'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <EmptyState
+                    icon={<Package className="h-6 w-6 text-muted-foreground" />}
+                    title="No Active Batches"
+                    description="Active batches will appear here"
+                  />
+                )}
+              </CardContent>
+            </Card>
           </div>
         </TabsContent>
 
-        <TabsContent value="orders">
-          <div className="p-8 flex justify-center items-center">
-            <EmptyState
-              icon={<Package className="h-10 w-10" />}
-              title="Order Management"
-              description="Order management functionality would go here"
-            />
-          </div>
+        <TabsContent value="inventory" className="space-y-6">
+          {/* Warehouse Sections */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Warehouse Sections</CardTitle>
+              <CardDescription>Storage areas and their utilization</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {dashboardData.sections.length > 0 ? (
+                <div className="space-y-6">
+                  {dashboardData.sections.map((section) => (
+                    <div key={section.id} className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium">{section.name}</p>
+                          <p className="text-sm text-muted-foreground">{section.type}</p>
+                        </div>
+                        <Badge variant="outline">
+                          {section.pileCount} piles
+                        </Badge>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span>{Math.round(section.utilization)}% utilized</span>
+                        <span>{section.currentLoad} / {section.capacity} units</span>
+                      </div>
+                      <Progress value={section.utilization} />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <EmptyState
+                  icon={<Layers className="h-6 w-6 text-muted-foreground" />}
+                  title="No Sections Found"
+                  description="Warehouse sections will appear here"
+                />
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Section Utilization Chart */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Section Utilization</CardTitle>
+              <CardDescription>Capacity usage by section</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={sectionUtilizationData}
+                    margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis label={{ value: 'Utilization %', angle: -90, position: 'insideLeft' }} />
+                    <Tooltip />
+                    <Bar dataKey="value" fill="#8884d8" name="Utilization %" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
-        <TabsContent value="batches">
-          <div className="p-8 flex justify-center items-center">
-            <EmptyState
-              icon={<Layers className="h-10 w-10" />}
-              title="Batch Management"
-              description="Batch management functionality would go here"
-            />
-          </div>
-        </TabsContent>
+        <TabsContent value="operations" className="space-y-6">
+          {/* Warehouse Managers */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Warehouse Managers</CardTitle>
+              <CardDescription>Staff with warehouse management access</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {dashboardData.managers.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Employee ID</TableHead>
+                      <TableHead>Security Level</TableHead>
+                      <TableHead>Shift</TableHead>
+                      <TableHead>Email</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {dashboardData.managers.map((manager) => (
+                      <TableRow key={manager.id}>
+                        <TableCell className="font-medium">{manager.name}</TableCell>
+                        <TableCell>{manager.employeeId}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="capitalize">
+                            {manager.securityClearance.toLowerCase()}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{manager.shiftPreference}</TableCell>
+                        <TableCell className="text-muted-foreground">{manager.email}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <EmptyState
+                  icon={<Users className="h-6 w-6 text-muted-foreground" />}
+                  title="No Managers Found"
+                  description="Warehouse managers will appear here"
+                />
+              )}
+            </CardContent>
+          </Card>
 
-        <TabsContent value="staff">
-          <div className="p-8 flex justify-center items-center">
-            <EmptyState
-              icon={<Users className="h-10 w-10" />}
-              title="Staff Management"
-              description="Staff management functionality would go here"
-            />
-          </div>
+          {/* Order Status Distribution */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Order Status Distribution</CardTitle>
+              <CardDescription>Current orders by status</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={orderStatusData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      paddingAngle={5}
+                      dataKey="value"
+                    >
+                      {orderStatusData.map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
-
-      {/* New Section Dialog */}
-      <Dialog open={isNewSectionModalOpen} onOpenChange={setIsNewSectionModalOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Create New Warehouse Section</DialogTitle>
-            <DialogDescription>
-              Add a new section to organize your warehouse inventory.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleSubmitSection(onSubmitSection)}>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="name">Section Name</Label>
-                <Input
-                  id="name"
-                  placeholder="e.g., Electronics, Refrigerated, etc."
-                  {...registerSection('name', { required: true })}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  placeholder="Describe the purpose and contents of this section"
-                  {...registerSection('description')}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="capacity">Capacity (kg)</Label>
-                  <Input
-                    id="capacity"
-                    type="number"
-                    min="0"
-                    placeholder="Maximum weight capacity"
-                    {...registerSection('capacity', { required: true, min: 0 })}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="sectionType">Section Type</Label>
-                  <Select {...registerSection('sectionType', { required: true })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="STANDARD">Standard</SelectItem>
-                      <SelectItem value="REFRIGERATED">Refrigerated</SelectItem>
-                      <SelectItem value="FRAGILE">Fragile Items</SelectItem>
-                      <SelectItem value="OVERSIZED">Oversized</SelectItem>
-                      <SelectItem value="HIGH_VALUE">High Value</SelectItem>
-                      <SelectItem value="HAZARDOUS">Hazardous</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsNewSectionModalOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit">Create Section</Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* New Pile Dialog */}
-      <Dialog open={isNewPileModalOpen} onOpenChange={setIsNewPileModalOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Create New Pile</DialogTitle>
-            <DialogDescription>
-              Add a new pile to a warehouse section for more granular organization.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleSubmitPile(onSubmitPile)}>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="sectionId">Warehouse Section</Label>
-                <Select 
-                  defaultValue={selectedSection || undefined}
-                  onValueChange={(value) => setSelectedSection(value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select section" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {sectionUtilization.map((section) => (
-                      <SelectItem 
-                        key={section.name}
-                        value={'section-id-' + section.name.toLowerCase()}
-                      >
-                        {section.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="name">Pile Name</Label>
-                <Input
-                  id="name"
-                  placeholder="e.g., A1, Fast-Moving, etc."
-                  {...registerPile('name', { required: true })}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  placeholder="Describe this pile's purpose"
-                  {...registerPile('description')}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="capacity">Capacity (kg)</Label>
-                  <Input
-                    id="capacity"
-                    type="number"
-                    min="0"
-                    placeholder="Maximum weight capacity"
-                    {...registerPile('capacity', { required: true, min: 0 })}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="pileType">Pile Type</Label>
-                  <Select {...registerPile('pileType', { required: true })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="STANDARD">Standard</SelectItem>
-                      <SelectItem value="HIGH_PRIORITY">High Priority</SelectItem>
-                      <SelectItem value="OVERSIZED">Oversized</SelectItem>
-                      <SelectItem value="FRAGILE">Fragile</SelectItem>
-                      <SelectItem value="SPECIAL_HANDLING">Special Handling</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsNewPileModalOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit">Create Pile</Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
     </div>
   );
-} 
+}

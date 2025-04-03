@@ -41,42 +41,42 @@ interface BatchGroup {
 export class BatchService {
   private readonly logger = new Logger(BatchService.name);
   private readonly batchConfig: BatchConfig = {
-    maxOrdersPerBatch: 20,
-    minOrdersForBatch: 2,               
-    maxWeightPerBatch: 800,             
-    maxVolumePerBatch: 300000,          
-    timeWindow: 120,
+    maxOrdersPerBatch: 50,
+    minOrdersForBatch: 3,               
+    maxWeightPerBatch: 2000,             
+    maxVolumePerBatch: 1000000,          
+    timeWindow: 1,
     maxWaitTime: 180,
     vehicleTypeThresholds: {
-      MOTORCYCLE: { maxWeight: 50, maxVolume: 10000 },       
-      CAR: { maxWeight: 200, maxVolume: 40000 },             
-      VAN: { maxWeight: 800, maxVolume: 150000 },            
-      SMALL_TRUCK: { maxWeight: 2000, maxVolume: 400000 },   
-      LARGE_TRUCK: { maxWeight: 5000, maxVolume: 1000000 }   
+      MOTORCYCLE: { maxWeight: 100, maxVolume: 50000 },       
+      CAR: { maxWeight: 400, maxVolume: 200000 },             
+      VAN: { maxWeight: 1500, maxVolume: 600000 },            
+      SMALL_TRUCK: { maxWeight: 5000, maxVolume: 2000000 },   
+      LARGE_TRUCK: { maxWeight: 15000, maxVolume: 6000000 }   
     }
   };
 
   private readonly intercityBatchConfig: IntercityBatchConfig = {
-    maxOrdersPerBatch: 30,
-    minOrdersForBatch: 2,               
-    maxWeightPerBatch: 2000,
-    maxVolumePerBatch: 1000000,
-    timeWindow: 240,
-    maxWaitTime: 360,
-    minDistanceForIntercity: 30,        
+    maxOrdersPerBatch: 80,
+    minOrdersForBatch: 10,               
+    maxWeightPerBatch: 10000,
+    maxVolumePerBatch: 5000000,
+    timeWindow: 360,
+    maxWaitTime: 720,
+    minDistanceForIntercity: 50,        
     vehicleTypeThresholds: {
       MOTORCYCLE: { maxWeight: 0, maxVolume: 0 },
       CAR: { maxWeight: 0, maxVolume: 0 },
-      VAN: { maxWeight: 1000, maxVolume: 200000 },         
-      SMALL_TRUCK: { maxWeight: 4000, maxVolume: 800000 }, 
-      LARGE_TRUCK: { maxWeight: 10000, maxVolume: 2000000 }
+      VAN: { maxWeight: 2000, maxVolume: 800000 },         
+      SMALL_TRUCK: { maxWeight: 10000, maxVolume: 4000000 }, 
+      LARGE_TRUCK: { maxWeight: 25000, maxVolume: 10000000 }
     }
   };
 
   constructor(private prisma: PrismaService) {}
 
-  // For local deliveries (every 30 mnts)
-  @Cron('*/30 * * * * *')
+  // For local deliveries (every 30 sec)
+  @Cron('*/30 * * * *')
   async processBatches() {
     this.logger.log('Starting batch processing...');
     try {
@@ -88,7 +88,8 @@ export class BatchService {
     }
   }
 
-  @Cron('0 0 */4 * *')
+  // @Cron('0 0 */4 * *')
+  @Cron('*/30 * * * *')
   async processIntercityBatches() {
     this.logger.log('Starting intercity batch processing...');
     try {

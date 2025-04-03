@@ -184,7 +184,7 @@ export class WarehouseService {
           warehouseId,
           status: {
             in: [
-              OrderStatus.CITY_IN_TRANSIT_TO_WAREHOUSE,
+              OrderStatus.CITY_PICKED_UP,
               OrderStatus.CITY_ARRIVED_AT_SOURCE_WAREHOUSE
             ]
           }
@@ -603,8 +603,8 @@ export class WarehouseService {
 
   // Helper method to validate status transitions
   private validateStatusTransition(currentStatus: OrderStatus, newStatus: OrderStatus) {
-    // Define allowed transitions
-    const allowedTransitions: Record<OrderStatus, OrderStatus[]> = {
+    // Define allowed transitions - use a partial record instead of a complete one
+    const allowedTransitions: Partial<Record<OrderStatus, OrderStatus[]>> = {
       // Source warehouse flows
       [OrderStatus.PENDING]: [
         OrderStatus.CITY_ASSIGNED_TO_PICKUP,
@@ -612,18 +612,10 @@ export class WarehouseService {
         OrderStatus.CANCELLED
       ],
       [OrderStatus.CITY_ASSIGNED_TO_PICKUP]: [
-        OrderStatus.CITY_ASSIGNED_TO_PICKUP_ACCEPTED,
-        OrderStatus.CANCELLED
-      ],
-      [OrderStatus.CITY_ASSIGNED_TO_PICKUP_ACCEPTED]: [
         OrderStatus.CITY_PICKED_UP,
         OrderStatus.CANCELLED
       ],
       [OrderStatus.CITY_PICKED_UP]: [
-        OrderStatus.CITY_IN_TRANSIT_TO_WAREHOUSE,
-        OrderStatus.CANCELLED
-      ],
-      [OrderStatus.CITY_IN_TRANSIT_TO_WAREHOUSE]: [
         OrderStatus.CITY_ARRIVED_AT_SOURCE_WAREHOUSE,
         OrderStatus.CANCELLED
       ],
@@ -743,5 +735,216 @@ export class WarehouseService {
     });
     
     return sections.reduce((sum, section) => sum + section.capacity, 0);
+  }
+
+  async getWarehouseDashboardData(warehouseId: string) {
+    // Verify warehouse exists
+    const warehouse = await this.prisma.warehouse.findUnique({
+      where: { id: warehouseId },
+      include: {
+        managers: {
+          include: {
+            user: {
+              select: {
+                fullName: true,
+                email: true
+              }
+            }
+          }
+        },
+        sections: {
+          include: {
+            piles: true
+          }
+        }
+      }
+    });
+
+    if (!warehouse) {
+      throw new NotFoundException(`Warehouse with ID ${warehouseId} not found`);
+    }
+
+    // Calculate capacity utilization
+    const capacityUtilization = warehouse.capacity > 0 
+      ? (warehouse.currentLoad / warehouse.capacity) * 100
+      : 0;
+    
+    // Get warehouse sections with piles
+    const sections = await this.prisma.warehouseSection.findMany({
+      where: { warehouseId },
+      include: {
+        piles: true
+      }
+    });
+    
+    // Get incoming orders (orders where this warehouse is the secondary warehouse)
+    const incomingOrders = await this.prisma.order.count({
+      where: {
+        secondaryWarehouseId: warehouseId,
+        status: {
+          in: [
+            OrderStatus.CITY_PICKED_UP,
+            OrderStatus.CITY_ARRIVED_AT_SOURCE_WAREHOUSE
+          ]
+        }
+      }
+    });
+    
+    // Get outgoing orders (orders where this warehouse is the primary warehouse)
+    const outgoingOrders = await this.prisma.order.count({
+      where: {
+        warehouseId: warehouseId,
+        status: {
+          in: [
+            OrderStatus.CITY_READY_FOR_INTERCITY_TRANSFER,
+            OrderStatus.CITY_READY_FOR_INTERCITY_TRANSFER_BATCHED,
+            OrderStatus.CITY_IN_TRANSIT_TO_DESTINATION_WAREHOUSE
+          ]
+        }
+      }
+    });
+    
+    // Get orders ready for local delivery
+    const readyForDelivery = await this.prisma.order.count({
+      where: {
+        secondaryWarehouseId: warehouseId,
+        status: {
+          in: [
+            OrderStatus.CITY_READY_FOR_LOCAL_DELIVERY,
+            OrderStatus.CITY_READY_FOR_LOCAL_DELIVERY_BATCHED
+          ]
+        }
+      }
+    });
+    
+    // Get recent inventory audits
+    const recentAudits = await this.prisma.inventoryAudit.findMany({
+      where: {
+        warehouseId
+      },
+      include: {
+        manager: {
+          include: {
+            user: {
+              select: {
+                fullName: true
+              }
+            }
+          }
+        }
+      },
+      orderBy: {
+        date: 'desc'
+      },
+      take: 5
+    });
+    
+    // Get active batches - using the correct field from schema
+    const activeBatches = await this.prisma.batch.findMany({
+      where: {
+        warehouseId: warehouseId,
+        status: {
+          in: ['COLLECTING', 'PROCESSING']
+        }
+      },
+      include: {
+        driver: {
+          include: {
+            user: {
+              select: {
+                fullName: true
+              }
+            }
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      },
+      take: 5
+    });
+    
+    // Get warehouse managers
+    const managers = await this.prisma.warehouseManager.findMany({
+      where: {
+        warehouseId
+      },
+      include: {
+        user: {
+          select: {
+            fullName: true,
+            email: true
+          }
+        }
+      }
+    });
+    
+    // Get daily order data for the past week
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    
+    const dailyOrders = await this.prisma.$queryRaw`
+      SELECT 
+        DATE_TRUNC('day', "createdAt") as date,
+        COUNT(CASE WHEN "secondaryWarehouseId" = ${warehouseId} THEN 1 END) as incoming,
+        COUNT(CASE WHEN "warehouseId" = ${warehouseId} THEN 1 END) as outgoing
+      FROM "Order"
+      WHERE 
+        ("warehouseId" = ${warehouseId} OR "secondaryWarehouseId" = ${warehouseId})
+        AND "createdAt" >= ${sevenDaysAgo}
+      GROUP BY DATE_TRUNC('day', "createdAt")
+      ORDER BY date ASC
+    `;
+    
+    return {
+      warehouse: {
+        id: warehouse.id,
+        name: warehouse.name,
+        address: warehouse.address,
+        city: warehouse.city,
+        governorate: warehouse.governorate,
+        capacity: warehouse.capacity,
+        currentLoad: warehouse.currentLoad,
+        capacityUtilization
+      },
+      sections: sections.map(section => ({
+        id: section.id,
+        name: section.name,
+        type: section.sectionType,
+        capacity: section.capacity,
+        currentLoad: section.currentLoad,
+        utilization: section.capacity > 0 ? (section.currentLoad / section.capacity) * 100 : 0,
+        pileCount: section.piles.length
+      })),
+      orderStats: {
+        incomingOrders,
+        outgoingOrders,
+        readyForDelivery
+      },
+      recentAudits: recentAudits.map(audit => ({
+        id: audit.id,
+        date: audit.date,
+        action: audit.action,
+        findings: audit.findings,
+        managerName: audit.manager?.user?.fullName || 'Unknown'
+      })),
+      activeBatches: activeBatches.map(batch => ({
+        id: batch.id,
+        type: batch.type,
+        status: batch.status,
+        orderCount: batch.orderCount,
+        driverName: batch.driver?.user?.fullName || 'Unassigned',
+        scheduledTime: batch.scheduledTime
+      })),
+      managers: managers.map(manager => ({
+        id: manager.id,
+        name: manager.user.fullName,
+        email: manager.user.email,
+        employeeId: manager.employeeId,
+        securityClearance: manager.securityClearance,
+        shiftPreference: manager.shiftPreference
+      })),
+      dailyOrderData: dailyOrders
+    };
   }
 }

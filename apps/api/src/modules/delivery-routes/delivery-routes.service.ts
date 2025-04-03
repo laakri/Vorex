@@ -17,7 +17,7 @@ export class DeliveryRoutesService {
 
   constructor(private prisma: PrismaService) {}
 
-  @Cron('*/30 * * * * *') // Every 30 seconds
+  @Cron('*/30 * * * * *') // Every 30 sec
   async processUnassignedBatches() {
     this.logger.log('Creating routes for unassigned batches...');
 
@@ -436,55 +436,86 @@ export class DeliveryRoutesService {
   }
 
   private async updateOrderStatusBasedOnStop(stop: any) {
-    if (!stop.orderId) return;
+    if (!stop.orderId) {
+      this.logger.log('No orderId in stop, skipping order status update');
+      return;
+    }
     
     const order = await this.prisma.order.findUnique({
       where: { id: stop.orderId },
-      include: { batch: true }
+      include: { 
+        batch: true
+      }
     });
     
-    if (!order) return;
+    if (!order) {
+      this.logger.warn(`Order ${stop.orderId} not found`);
+      return;
+    }
     
     let newStatus: OrderStatus;
     
-    // Determine new status based on batch type and whether this is a pickup or delivery
-    switch (order.batch?.type) {
-      case BatchType.LOCAL_PICKUP:
-      case BatchType.LOCAL_SELLERS_WAREHOUSE:
-        newStatus = stop.isPickup 
-          ? OrderStatus.CITY_PICKED_UP 
-          : OrderStatus.CITY_ARRIVED_AT_SOURCE_WAREHOUSE;
-        break;
-        
-      case BatchType.LOCAL_WAREHOUSE_BUYERS:
-        newStatus = stop.isPickup 
-          ? OrderStatus.CITY_READY_FOR_LOCAL_DELIVERY_BATCHED 
-          : OrderStatus.CITY_DELIVERED;
-        break;
-        
-      case BatchType.INTERCITY:
-        if (stop.isPickup) {
+    // Determine if this is a local or city delivery
+    const isLocalDelivery = order.isLocalDelivery;
+    
+    this.logger.log(`Updating status for order ${order.id}, current status: ${order.status}, isLocalDelivery: ${isLocalDelivery}`);
+    
+    // For local deliveries - simple progression
+    if (isLocalDelivery) {
+      // LOCAL DELIVERY FLOW
+      if (order.status === OrderStatus.LOCAL_ASSIGNED_TO_PICKUP) {
+        newStatus = OrderStatus.LOCAL_PICKED_UP;
+      } else if (order.status === OrderStatus.LOCAL_PICKED_UP) {
+        newStatus = OrderStatus.LOCAL_DELIVERED;
+      } else {
+        // If status doesn't match expected progression, log and return
+        this.logger.warn(`Unexpected local order status: ${order.status} for order ${order.id}`);
+        return;
+      }
+    } else {
+      // CITY DELIVERY FLOW - simplified progression
+      switch (order.status) {
+        case OrderStatus.CITY_ASSIGNED_TO_PICKUP:
+          newStatus = OrderStatus.CITY_PICKED_UP;
+          break;
+          
+        case OrderStatus.CITY_PICKED_UP:
+          newStatus = OrderStatus.CITY_ARRIVED_AT_SOURCE_WAREHOUSE;
+          break;
+          
+        case OrderStatus.CITY_READY_FOR_INTERCITY_TRANSFER_BATCHED:
           newStatus = OrderStatus.CITY_IN_TRANSIT_TO_DESTINATION_WAREHOUSE;
-        } else {
+          break;
+          
+        case OrderStatus.CITY_IN_TRANSIT_TO_DESTINATION_WAREHOUSE:
           newStatus = OrderStatus.CITY_ARRIVED_AT_DESTINATION_WAREHOUSE;
-          // When an order arrives at the destination warehouse, it should be ready for local delivery
-          setTimeout(async () => {
-            await this.prisma.order.update({
-              where: { id: order.id },
-              data: { status: OrderStatus.CITY_READY_FOR_LOCAL_DELIVERY }
-            });
-          }, 5000); // Small delay to allow the transaction to complete
-        }
-        break;
-        
-      default:
-        return; // Don't update if we don't have a matching case
+          break;
+          
+        case OrderStatus.CITY_READY_FOR_LOCAL_DELIVERY_BATCHED:
+          newStatus = OrderStatus.CITY_DELIVERED;
+          break;
+          
+        default:
+          // If status doesn't match expected progression, log and return
+          this.logger.warn(`Unexpected city order status: ${order.status} for order ${order.id}`);
+          return;
+      }
     }
     
-    await this.prisma.order.update({
-      where: { id: order.id },
-      data: { status: newStatus }
-    });
+    // Log the status change
+    this.logger.log(`Updating order ${order.id} status from ${order.status} to ${newStatus}`);
+    
+    try {
+      // Update the order status
+      await this.prisma.order.update({
+        where: { id: order.id },
+        data: { status: newStatus }
+      });
+      this.logger.log(`Successfully updated order ${order.id} status to ${newStatus}`);
+    } catch (error) {
+      this.logger.error(`Error updating order ${order.id} status: ${error.message}`);
+      throw error; // Rethrow to be caught by the caller
+    }
   }
 
   private areAllStopsCompleted(route: any): boolean {
@@ -506,6 +537,7 @@ export class DeliveryRoutesService {
     });
     
     if (route?.batchId) {
+      // First update the batch status
       await this.prisma.batch.update({
         where: { id: route.batchId },
         data: {
@@ -513,6 +545,60 @@ export class DeliveryRoutesService {
           completedTime: new Date()
         }
       });
+      this.logger.log(`Batch ${route.batchId} marked as completed`);
+      
+      // Then update all orders in the batch that aren't already in a terminal state
+      const batchOrders = await this.prisma.order.findMany({
+        where: { 
+          batchId: route.batchId,
+          status: {
+            notIn: [OrderStatus.CITY_DELIVERED, OrderStatus.LOCAL_DELIVERED, OrderStatus.CANCELLED]
+          }
+        }
+      });
+      
+      this.logger.log(`Found ${batchOrders.length} orders in batch ${route.batchId} that need status updates`);
+      
+      // Update each order based on the batch type
+      for (const order of batchOrders) {
+        let newStatus: OrderStatus;
+        
+        // Determine the appropriate final status based on delivery type
+        if (order.isLocalDelivery) {
+          newStatus = OrderStatus.LOCAL_DELIVERED;
+        } else {
+          // For city deliveries, determine based on batch type
+          const batch = await this.prisma.batch.findUnique({
+            where: { id: route.batchId }
+          });
+          
+          // Add null check for batch
+          if (!batch) {
+            this.logger.error(`Batch ${route.batchId} not found when updating order ${order.id}`);
+            continue; // Skip this order and continue with others
+          }
+          
+          if (batch.type === BatchType.INTERCITY) {
+            newStatus = OrderStatus.CITY_ARRIVED_AT_DESTINATION_WAREHOUSE;
+          } else if (batch.type === BatchType.LOCAL_WAREHOUSE_BUYERS) {
+            newStatus = OrderStatus.CITY_DELIVERED;
+          } else {
+            newStatus = OrderStatus.CITY_ARRIVED_AT_SOURCE_WAREHOUSE;
+          }
+        }
+        
+        // Update the order status
+        try {
+          await this.prisma.order.update({
+            where: { id: order.id },
+            data: { status: newStatus }
+          });
+          this.logger.log(`Updated order ${order.id} status to ${newStatus} as part of batch completion`);
+        } catch (error) {
+          this.logger.error(`Error updating order ${order.id} status during batch completion: ${error.message}`);
+          // Continue with other orders even if one fails
+        }
+      }
     }
   }
 
@@ -601,7 +687,11 @@ export class DeliveryRoutesService {
   async updateRouteStopCompletion(stopId: string, data: { isCompleted: boolean, notes?: string }) {
     const stop = await this.prisma.routeStop.findUnique({
       where: { id: stopId },
-      include: { route: true }
+      include: { 
+        route: true,
+        order: true,  // Include the order data
+        warehouse: true  // Include warehouse data
+      }
     });
     
     if (!stop) {
@@ -617,39 +707,123 @@ export class DeliveryRoutesService {
         notes: data.notes,
       },
       include: {
-        order: true,
-        route: true
+        order: {
+          include: {
+            batch: true
+          }
+        },
+        warehouse: true,
+        route: {
+          include: {
+            batch: true
+          }
+        }
       }
     });
     
-    // Check if all stops are completed
+    this.logger.log(`Route stop ${stopId} updated: isCompleted=${data.isCompleted}`);
+    
+    // Update the order status if the stop is completed
     if (data.isCompleted) {
-      const allStops = await this.prisma.routeStop.findMany({
-        where: { routeId: stop.routeId }
-      });
-      
-      const allCompleted = allStops.every(s => s.isCompleted);
-      
-      // If all stops are completed, mark the route as completed
-      if (allCompleted) {
-        await this.prisma.deliveryRoute.update({
-          where: { id: stop.routeId },
-          data: {
-            status: RouteStatus.COMPLETED,
-            completedAt: new Date()
-          }
+      try {
+        // Call the function to update order status
+        if (updatedStop.orderId) {
+          this.logger.log(`Updating order status for order ${updatedStop.orderId}`);
+          await this.updateOrderStatusBasedOnStop(updatedStop);
+        } else if (updatedStop.warehouseId) {
+          this.logger.log(`Stop is for warehouse ${updatedStop.warehouseId}, no order status update needed`);
+        } else {
+          this.logger.warn(`Stop ${stopId} has neither orderId nor warehouseId`);
+        }
+        
+        // Check if all stops are completed
+        const allStops = await this.prisma.routeStop.findMany({
+          where: { routeId: stop.routeId }
         });
         
-        // Also update the batch if there is one
-        if (stop.route.batchId) {
-          await this.prisma.batch.update({
-            where: { id: stop.route.batchId },
+        const allCompleted = allStops.every(s => s.isCompleted);
+        this.logger.log(`All stops completed for route ${stop.routeId}: ${allCompleted}`);
+        
+        // If all stops are completed, mark the route as completed
+        if (allCompleted) {
+          await this.prisma.deliveryRoute.update({
+            where: { id: stop.routeId },
             data: {
-              status: BatchStatus.COMPLETED,
-              completedTime: new Date()
+              status: RouteStatus.COMPLETED,
+              completedAt: new Date()
             }
           });
+          this.logger.log(`Route ${stop.routeId} marked as completed`);
+          
+          // Also update the batch if there is one
+          if (stop.route.batchId) {
+            // First update the batch status
+            await this.prisma.batch.update({
+              where: { id: stop.route.batchId },
+              data: {
+                status: BatchStatus.COMPLETED,
+                completedTime: new Date()
+              }
+            });
+            this.logger.log(`Batch ${stop.route.batchId} marked as completed`);
+            
+            // Then update all orders in the batch that aren't already in a terminal state
+            const batchOrders = await this.prisma.order.findMany({
+              where: { 
+                batchId: stop.route.batchId,
+                status: {
+                  notIn: [OrderStatus.CITY_DELIVERED, OrderStatus.LOCAL_DELIVERED, OrderStatus.CANCELLED]
+                }
+              }
+            });
+            
+            this.logger.log(`Found ${batchOrders.length} orders in batch ${stop.route.batchId} that need status updates`);
+            
+            // Update each order based on the batch type
+            for (const order of batchOrders) {
+              let newStatus: OrderStatus;
+              
+              // Determine the appropriate final status based on delivery type
+              if (order.isLocalDelivery) {
+                newStatus = OrderStatus.LOCAL_DELIVERED;
+              } else {
+                // For city deliveries, determine based on batch type
+                const batch = await this.prisma.batch.findUnique({
+                  where: { id: stop.route.batchId }
+                });
+                
+                // Add null check for batch
+                if (!batch) {
+                  this.logger.error(`Batch ${stop.route.batchId} not found when updating order ${order.id}`);
+                  continue; // Skip this order and continue with others
+                }
+                
+                if (batch.type === BatchType.INTERCITY) {
+                  newStatus = OrderStatus.CITY_ARRIVED_AT_DESTINATION_WAREHOUSE;
+                } else if (batch.type === BatchType.LOCAL_WAREHOUSE_BUYERS) {
+                  newStatus = OrderStatus.CITY_DELIVERED;
+                } else {
+                  newStatus = OrderStatus.CITY_ARRIVED_AT_SOURCE_WAREHOUSE;
+                }
+              }
+              
+              // Update the order status
+              try {
+                await this.prisma.order.update({
+                  where: { id: order.id },
+                  data: { status: newStatus }
+                });
+                this.logger.log(`Updated order ${order.id} status to ${newStatus} as part of batch completion`);
+              } catch (error) {
+                this.logger.error(`Error updating order ${order.id} status during batch completion: ${error.message}`);
+                // Continue with other orders even if one fails
+              }
+            }
+          }
         }
+      } catch (error) {
+        this.logger.error(`Error updating order status: ${error.message}`, error.stack);
+        // Don't rethrow - we don't want to fail the whole operation if just the status update fails
       }
     }
     

@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Loader2, Search} from "lucide-react";
 import api from "@/lib/axios";
 import { useAuthStore } from "@/stores/auth.store";
@@ -19,7 +19,6 @@ type OrderStatus =
   | "LOCAL_PICKED_UP"
   | "LOCAL_DELIVERED"
   | "CITY_ASSIGNED_TO_PICKUP"
-  | "CITY_ASSIGNED_TO_PICKUP_ACCEPTED"
   | "CITY_PICKED_UP"
   | "CITY_IN_TRANSIT_TO_WAREHOUSE"
   | "CITY_ARRIVED_AT_SOURCE_WAREHOUSE"
@@ -125,7 +124,22 @@ export default function IncomingOrdersPage() {
       if (!warehouseId) throw new Error("No warehouse ID found");
       
       const response = await api.get(`/warehouse/${warehouseId}/orders/incoming-warehouse`);
-      setOrders(response.data);
+      console.log(response.data, warehouseId); // Log raw data
+      
+      // Ensure we have valid data with all required fields
+      const validOrders = response.data.map((order: any) => ({
+        ...order,
+        id: order.id || '',
+        orderNumber: order.orderNumber || order.id?.substring(0, 8) || '',
+        sellerName: order.sellerName || (order.seller?.businessName || 'Unknown Seller'),
+        buyerName: order.customerName || order.buyerName || 'Unknown Buyer',
+        totalItems: order.totalItems || (order.items?.length || 0),
+        totalWeight: order.totalWeight || 0,
+        status: order.status || 'PENDING'
+      }));
+      
+      console.log("Processed orders:", validOrders);
+      setOrders(validOrders);
       setLoading(false);
     } catch (error) {
       console.error("Error fetching orders:", error);
@@ -134,6 +148,7 @@ export default function IncomingOrdersPage() {
         description: "Failed to load incoming orders",
         variant: "destructive",
       });
+      setOrders([]); // Set empty array on error
       setLoading(false);
     }
   };
@@ -162,7 +177,7 @@ export default function IncomingOrdersPage() {
       const warehouseId = user?.warehouseId;
       if (!warehouseId) throw new Error("No warehouse ID found");
       
-      await api.patch(`/warehouse/${warehouseId}/orders/${orderId}/status`, {
+      await api.put(`/warehouse/orders/${orderId}/status`, {
         status: "CITY_ARRIVED_AT_SOURCE_WAREHOUSE"
       });
       
@@ -203,30 +218,25 @@ export default function IncomingOrdersPage() {
 
     try {
       setProcessingAction(true);
-      const warehouseId = user?.warehouseId || "default-warehouse-id";
-      
-      await api.post(`/warehouse/${warehouseId}/orders/${selectedOrder.id}/location`, {
+      await api.put(`/warehouse/orders/${selectedOrder.id}/location`, {
         sectionId: selectedSection,
         pileId: selectedPile
       });
       
-      // Update order status to ready for intercity transfer
-      await api.patch(`/warehouse/${warehouseId}/orders/${selectedOrder.id}/status`, {
-        status: "CITY_READY_FOR_INTERCITY_TRANSFER"
-      });
-      
       toast({
         title: "Success",
-        description: "Order location assigned and marked as ready for transfer",
+        description: "Order location assigned successfully",
       });
-      
+      setSelectedOrder(null as unknown as Order);
+      setSelectedSection("");
+      setSelectedPile("");
       setIsAssignLocationOpen(false);
       fetchOrders();
     } catch (error) {
       console.error("Error assigning location:", error);
       toast({
         title: "Error",
-        description: "Failed to assign location to order",
+        description: "Failed to assign location",
         variant: "destructive",
       });
     } finally {
@@ -239,7 +249,6 @@ export default function IncomingOrdersPage() {
       setProcessingAction(true);
       const warehouseId = user?.warehouseId || "default-warehouse-id";
       
-      // Get all orders that are ready for intercity transfer
       const eligibleOrders = orders.filter(
         order => order.status === "CITY_READY_FOR_INTERCITY_TRANSFER"
       );
@@ -254,8 +263,8 @@ export default function IncomingOrdersPage() {
         return;
       }
       
-      // Create a new batch
-      await api.post(`/warehouse/${warehouseId}/batches`, {
+      await api.post(`/batches`, {
+        warehouseId: warehouseId,
         type: "INTERCITY",
         orderIds: eligibleOrders.map(order => order.id)
       });
@@ -307,13 +316,17 @@ export default function IncomingOrdersPage() {
   };
 
   const filteredOrders = orders.filter(order => {
+    const orderNumber = (order.orderNumber || '').toLowerCase();
+    const sellerName = (order.sellerName || '').toLowerCase();
+    const searchLower = searchQuery.toLowerCase();
+    
     const matchesSearch = 
-      order.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.sellerName.toLowerCase().includes(searchQuery.toLowerCase());
+      orderNumber.includes(searchLower) ||
+      sellerName.includes(searchLower);
     
     if (activeTab === "source") {
       return matchesSearch && (
-        order.status === "CITY_IN_TRANSIT_TO_WAREHOUSE" ||
+        order.status === "CITY_PICKED_UP" ||
         order.status === "CITY_ARRIVED_AT_SOURCE_WAREHOUSE"
       );
     } else if (activeTab === "destination") {
@@ -403,20 +416,27 @@ export default function IncomingOrdersPage() {
                         {filteredOrders.length > 0 ? (
                           filteredOrders.map((order) => (
                             <TableRow key={order.id}>
-                              <TableCell className="font-medium">{order.orderNumber}</TableCell>
-                              <TableCell>{order.sellerName}</TableCell>
+                              <TableCell className="font-medium">{order.orderNumber || order.id?.substring(0, 8) || 'N/A'}</TableCell>
+                              <TableCell>
+                                <div className="flex flex-col">
+                                  <span className="font-medium">{order.sellerName || 'Unknown'}</span>
+                                  <span className="text-xs text-muted-foreground">
+                                    {order.seller?.phone || 'No phone'}
+                                  </span>
+                                </div>
+                              </TableCell>
                               <TableCell>{order.buyerName}</TableCell>
                               <TableCell>{order.buyerCity}, {order.buyerGovernorate}</TableCell>
-                              <TableCell>{order.totalItems}</TableCell>
-                              <TableCell>{order.totalWeight.toFixed(2)} kg</TableCell>
+                              <TableCell>{order.totalItems || 0}</TableCell>
+                              <TableCell>{(order.totalWeight || 0).toFixed(2)} kg</TableCell>
                               <TableCell>
                                 <Badge className={getStatusBadgeColor(order.status)}>
-                                  {order.status}
+                                  {order.status?.replace(/_/g, " ") || 'UNKNOWN'}
                                 </Badge>
                               </TableCell>
-                              <TableCell>{format(new Date(order.createdAt), "MMM dd, yyyy")}</TableCell>
+                              <TableCell>{format(new Date(order.createdAt || new Date()), "MMM dd, yyyy")}</TableCell>
                               <TableCell className="text-right">
-                                {order.status === "CITY_IN_TRANSIT_TO_WAREHOUSE" && (
+                                {order.status === "CITY_PICKED_UP" && (
                                   <Button 
                                     variant="outline" 
                                     size="sm"
@@ -425,6 +445,17 @@ export default function IncomingOrdersPage() {
                                   >
                                     {processingAction ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
                                     Mark Arrived
+                                  </Button>
+                                )}
+                                {order.status === "CITY_ARRIVED_AT_SOURCE_WAREHOUSE" && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleAssignLocation(order)}
+                                    disabled={processingAction}
+                                  >
+                                    {processingAction ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
+                                    Assign Location
                                   </Button>
                                 )}
                               </TableCell>
@@ -461,23 +492,27 @@ export default function IncomingOrdersPage() {
                         {filteredOrders.length > 0 ? (
                           filteredOrders.map((order) => (
                             <TableRow key={order.id}>
-                              <TableCell className="font-medium">{order.orderNumber}</TableCell>
-                              <TableCell>{order.sellerName}</TableCell>
+                              <TableCell className="font-medium">{order.orderNumber || order.id?.substring(0, 8) || 'N/A'}</TableCell>
+                              <TableCell>
+                                <div className="flex flex-col">
+                                  <span className="font-medium">{order.sellerName || 'Unknown'}</span>
+                                  <span className="text-xs text-muted-foreground">
+                                    {order.seller?.phone || 'No phone'}
+                                  </span>
+                                </div>
+                              </TableCell>
                               <TableCell>{order.buyerName}</TableCell>
                               <TableCell>{order.buyerCity}, {order.buyerGovernorate}</TableCell>
                               <TableCell>
-                                {order.sectionId && order.pileId ? (
-                                  <span className="text-sm">
-                                    {sections.find(s => s.id === order.sectionId)?.name || "Unknown"} / 
-                                    {sections.find(s => s.id === order.sectionId)?.piles.find(p => p.id === order.pileId)?.name || "Unknown"}
-                                  </span>
+                                {order.sectionId ? (
+                                  <span className="text-green-600">Assigned</span>
                                 ) : (
-                                  <span className="text-sm text-muted-foreground">Not assigned</span>
+                                  <span className="text-amber-600">Unassigned</span>
                                 )}
                               </TableCell>
                               <TableCell>
                                 <Badge className={getStatusBadgeColor(order.status)}>
-                                  {order.status}
+                                  {order.status?.replace(/_/g, " ") || 'UNKNOWN'}
                                 </Badge>
                               </TableCell>
                               <TableCell>
@@ -590,6 +625,9 @@ export default function IncomingOrdersPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Assign Warehouse Location</DialogTitle>
+            <DialogDescription>
+              Select a section and pile to store this order in the warehouse.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             {selectedOrder && (

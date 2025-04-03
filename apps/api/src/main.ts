@@ -2,9 +2,16 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Logger } from '@nestjs/common';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  // Create a logger instance with custom log levels
+  const logger = new Logger('Bootstrap');
+  
+  // Configure the app with custom logger settings
+  const app = await NestFactory.create(AppModule, {
+    logger: ['error', 'warn'], // Only show errors and warnings from NestJS
+  });
   const configService = app.get(ConfigService);
 
   // Add global prefix
@@ -42,7 +49,7 @@ async function bootstrap() {
 
   const port = configService.get<number>('PORT', 3000);
   await app.listen(port);
-  console.log(`Application is running on: ${await app.getUrl()}`);
+  logger.log(`Application is running on: ${await app.getUrl()}`);
 }
 
 bootstrap();

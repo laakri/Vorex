@@ -206,4 +206,17 @@ export class WarehouseController {
       throw new InternalServerErrorException('Failed to fetch warehouse inventory');
     }
   }
+
+  @Get(':id/dashboard')
+  @Roles(Role.WAREHOUSE_MANAGER)
+  async getWarehouseDashboard(@Param('id') warehouseId: string) {
+    try {
+      return await this.warehouseService.getWarehouseDashboardData(warehouseId);
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to fetch warehouse dashboard data');
+    }
+  }
 }

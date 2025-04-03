@@ -6,7 +6,6 @@ import {
   LayoutDashboard,
   Package,
   Truck,
-  Users,
   Warehouse as WarehouseIcon,
   LogOut,
   ChevronLeft,
@@ -22,8 +21,6 @@ import {
   CheckCircle2,
   BookOpen,
   Video,
-  Route as RouteIcon,
-  BarChart3,
   Timer,
   Layers,
   FileStack,
@@ -60,16 +57,7 @@ const menuItems = [
     icon: Truck,
     href: "/warehouse/outgoing-orders",
   },
-  {
-    title: "Batches",
-    icon: FileStack,
-    href: "/warehouse/batches",
-  },
-  {
-    title: "Routes",
-    icon: RouteIcon,
-    href: "/warehouse/routes",
-  },
+  
   {
     title: "Warehouse Sections",
     icon: Layers,
@@ -80,16 +68,8 @@ const menuItems = [
     icon: FileStack,
     href: "/warehouse/inventory",
   },
-  {
-    title: "Staff",
-    icon: Users,
-    href: "/warehouse/staff",
-  },
-  {
-    title: "Analytics",
-    icon: BarChart3,
-    href: "/warehouse/analytics",
-  },
+ 
+ 
   {
     title: "Settings",
     icon: Settings,
