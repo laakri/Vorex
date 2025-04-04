@@ -36,7 +36,6 @@ import { DriverGuard } from "./driver-guard";
 import { TrackPage } from "@/pages/track/track";
 import TrackOrderPage from "@/pages/track/track-order";
 import { WarehouseLayout } from "@/layers/warehouse-layout";
-import { WarehouseDashboard } from "@/pages/warehouse/warehouse-dashboard";
 import { AdminLayout } from "@/layers/admin-layout";
 import { AdminWarehouseManagersPage } from "@/pages/admin/warehouse-managers";
 import { WarehouseSectionsPage } from "@/pages/warehouse/warehouse-sections";
@@ -44,6 +43,8 @@ import { WarehouseGuard } from "./warehouse-guard";
 import WarehouseInventoryPage from "@/pages/warehouse/warehouse-inventory";
 import IncomingOrdersPage from "@/pages/warehouse/warehouse-incoming-orders";
 import OutgoingOrdersPage from "@/pages/warehouse/warehouse-outgoing-orders";
+import WarehouseDashboard from "@/pages/warehouse/warehouse-dashboard";
+import WarehouseSettings from "@/pages/warehouse/warehouse-settings";
 
 export function AppRoutes() {
   return (
@@ -138,11 +139,14 @@ export function AppRoutes() {
 
       {/* Warehouse Platform */}
       <Route path="/warehouse" element={ <WarehouseGuard><WarehouseLayout /></WarehouseGuard>}>
-        <Route path="dashboard" element={<WarehouseDashboard /> } />
+        <Route index element={<WarehouseGuard><WarehouseDashboard/></WarehouseGuard>} />
+        <Route path="dashboard" element={<WarehouseGuard><WarehouseDashboard/></WarehouseGuard> } />
         <Route path="sections" element={<WarehouseGuard><WarehouseSectionsPage/></WarehouseGuard>} />
         <Route path="inventory" element={<WarehouseGuard><WarehouseInventoryPage/></WarehouseGuard>} />
         <Route path="incoming-orders" element={<WarehouseGuard><IncomingOrdersPage/></WarehouseGuard>} />
         <Route path="outgoing-orders" element={<WarehouseGuard><OutgoingOrdersPage/></WarehouseGuard>} />
+        <Route path="settings" element={<WarehouseGuard><WarehouseSettings/></WarehouseGuard>} />
+
       </Route>
 
      

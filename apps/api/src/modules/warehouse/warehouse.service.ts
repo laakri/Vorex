@@ -7,6 +7,7 @@ import { OrderStatus, Prisma } from '@prisma/client';
 import { AssignOrderLocationDto } from './dto/assign-order-location.dto';
 import { CreatePileDto } from './dto/create-pile.dto';
 import { format } from 'date-fns';
+import { UpdateWarehouseSettingsDto } from './dto/update-warehouse-settings.dto';
 
 @Injectable()
 export class WarehouseService {
@@ -958,5 +959,44 @@ export class WarehouseService {
       })),
       dailyOrders
     };
+  }
+
+  async getWarehouseSettings(warehouseId: string) {
+    const warehouse = await this.prisma.warehouse.findUnique({
+      where: { id: warehouseId }
+    });
+
+    if (!warehouse) {
+      throw new NotFoundException(`Warehouse with ID ${warehouseId} not found`);
+    }
+
+    return warehouse;
+  }
+
+  async updateWarehouseSettings(warehouseId: string, updateSettingsDto: UpdateWarehouseSettingsDto) {
+    const warehouse = await this.prisma.warehouse.findUnique({
+      where: { id: warehouseId }
+    });
+
+    if (!warehouse) {
+      throw new NotFoundException(`Warehouse with ID ${warehouseId} not found`);
+    }
+
+    return this.prisma.warehouse.update({
+      where: { id: warehouseId },
+      data: {
+        name: updateSettingsDto.name,
+        address: updateSettingsDto.address,
+        city: updateSettingsDto.city,
+        governorate: updateSettingsDto.governorate,
+        postalCode: updateSettingsDto.postalCode,
+        phone: updateSettingsDto.phone,
+        capacity: updateSettingsDto.capacity,
+        currentLoad: updateSettingsDto.currentLoad,
+        latitude: updateSettingsDto.latitude,
+        longitude: updateSettingsDto.longitude,
+        coverageGovernorate: updateSettingsDto.coverageGovernorate
+      }
+    });
   }
 }

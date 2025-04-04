@@ -10,6 +10,7 @@ import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { RolesGuard } from '@/common/guards/roles.guard';
 import { Roles } from '@/common/decorators/roles.decorator';
 import { GetUser } from '@/common/decorators/get-user.decorator';
+import { UpdateWarehouseSettingsDto } from './dto/update-warehouse-settings.dto';
 
 @Controller('warehouse')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -208,15 +209,23 @@ export class WarehouseController {
   }
 
   @Get(':id/dashboard')
-  @Roles(Role.WAREHOUSE_MANAGER)
-  async getWarehouseDashboard(@Param('id') warehouseId: string) {
-    try {
-      return await this.warehouseService.getWarehouseDashboardData(warehouseId);
-    } catch (error) {
-      if (error instanceof NotFoundException) {
-        throw error;
-      }
-      throw new InternalServerErrorException('Failed to fetch warehouse dashboard data');
-    }
+  @Roles(Role.WAREHOUSE_MANAGER, Role.ADMIN)
+  async getWarehouseDashboard(@Param('id') id: string) {
+    return this.warehouseService.getWarehouseDashboardData(id);
+  }
+
+  @Get(':id/settings')
+  @Roles(Role.WAREHOUSE_MANAGER, Role.ADMIN)
+  async getWarehouseSettings(@Param('id') id: string) {
+    return this.warehouseService.getWarehouseSettings(id);
+  }
+
+  @Put(':id/settings')
+  @Roles(Role.WAREHOUSE_MANAGER, Role.ADMIN)
+  async updateWarehouseSettings(
+    @Param('id') id: string,
+    @Body() updateSettingsDto: UpdateWarehouseSettingsDto
+  ) {
+    return this.warehouseService.updateWarehouseSettings(id, updateSettingsDto);
   }
 }
