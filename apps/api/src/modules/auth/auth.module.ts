@@ -7,6 +7,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from 'prisma/prisma.service';
 import { GoogleStrategy } from './strategies/google.strategy';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { GoogleStrategy } from './strategies/google.strategy';
       }),
       inject: [ConfigService],
     }),
+    NotificationsModule
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy, GoogleStrategy, PrismaService],

@@ -11,7 +11,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Brain,
-  Bell,
   X,
   Settings,
   HelpCircle,
@@ -40,6 +39,7 @@ import {
 } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import NotificationButton from "@/pages/notification/NotificationButton";
 
 const menuItems = [
   {
@@ -82,20 +82,22 @@ export function WarehouseLayout() {
   const { logout, user } = useAuthStore();
   const [collapsed, setCollapsed] = useState(false);
   const navigate = useNavigate();
-  const [showInfoCard, setShowInfoCard] = useState(true);
-  const notificationsCount = 3;
+  const [showInfoCard, setShowInfoCard] = useState(false);
   const [isAIChatOpen, setIsAIChatOpen] = useState(false);
   const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(true);
   
   // Add responsive behavior
   useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth < 768) {
+      if (window.innerWidth < 1080) {
         setCollapsed(true);
         setShowInfoCard(false);
+        setIsRightSidebarOpen(false)
       } else {
         setCollapsed(false);
         setShowInfoCard(true);
+        setIsRightSidebarOpen(true)
+
       }
     };
 
@@ -203,19 +205,8 @@ export function WarehouseLayout() {
             </Card>
           </div>
         )}
-
-        {/* Notification Button - Responsive */}
-        <div className={cn("flex items-center justify-center p-3", collapsed && "p-2")}>
-          <Button variant="secondary" className={cn("flex items-center gap-2", collapsed ? "w-auto p-2" : "w-full")}>
-            <Bell className="h-5 w-5" />
-            {!collapsed && <span className="text-sm">Notifications</span>}
-            {notificationsCount > 0 && (
-              <span className={cn("bg-red-500 text-white rounded-full px-2 text-xs", !collapsed && "ml-1")}>
-                {notificationsCount}
-              </span>
-            )}
-          </Button>
-        </div>
+        <NotificationButton collapsed={collapsed} />
+       
 
         {/* Platform Selector - Improved UI and Position, Hide when collapsed */}
         <div className={cn("px-3 py-2", collapsed && "hidden")}>

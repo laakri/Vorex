@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import api from "@/lib/axios";
+import { LogOut } from "lucide-react";
 
 interface User {
   id: string;
@@ -58,6 +59,16 @@ export const useAuthStore = create<AuthState>()(
       },
 
       signIn: async (email: string, password: string) => {
+        set({
+          token: null,
+          user: null,
+          isAuthenticated: false,
+          isVerifiedSeller: false,
+          isVerifiedDriver: false,
+          warehouseId: null,
+        });
+        delete api.defaults.headers.common["Authorization"];
+        
         const response = await api.post("/auth/login", { email, password });
         set({
           token: response.data.token,
@@ -74,6 +85,16 @@ export const useAuthStore = create<AuthState>()(
       },
 
       signUp: async ({ firstName, lastName, email, password }) => {
+        set({
+          token: null,
+          user: null,
+          isAuthenticated: false,
+          isVerifiedSeller: false,
+          isVerifiedDriver: false,
+          warehouseId: null,
+        });
+        delete api.defaults.headers.common["Authorization"];
+        
         const response = await api.post("/auth/register", {
           fullName: `${firstName} ${lastName}`.trim(),
           email,
@@ -103,10 +124,30 @@ export const useAuthStore = create<AuthState>()(
       },
 
       signInWithGoogle: () => {
+        set({
+          token: null,
+          user: null,
+          isAuthenticated: false,
+          isVerifiedSeller: false,
+          isVerifiedDriver: false,
+          warehouseId: null,
+        });
+        delete api.defaults.headers.common["Authorization"];
+        
         window.location.href = `${import.meta.env.VITE_API_URL}/auth/google`;
       },
 
       handleGoogleCallback: async (token: string) => {
+        set({
+          token: null,
+          user: null,
+          isAuthenticated: false,
+          isVerifiedSeller: false,
+          isVerifiedDriver: false,
+          warehouseId: null,
+        });
+        delete api.defaults.headers.common["Authorization"];
+        
         const response = await api.get('/auth/me', {
           headers: { Authorization: `Bearer ${token}` }
         });

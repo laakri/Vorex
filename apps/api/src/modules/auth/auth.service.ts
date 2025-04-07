@@ -10,12 +10,17 @@ import { RegisterDto } from './dto/register.dto';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from 'prisma/prisma.service';
 import { Role } from '@/common/enums/role.enum';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationsGateway } from '../notifications/notifications.gateway';
+
 
 @Injectable()
 export class AuthService {
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
+    private notificationsService: NotificationsService,
+    private notificationsGateway: NotificationsGateway,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -49,6 +54,17 @@ export class AuthService {
     });
 
     const token = this.generateToken(user);
+
+      // Create a notification
+      const notification = await this.notificationsService.createNotification(
+        user.id,
+        'INFO', // or another enum value from NotificationTypeValues
+        'Welcome!',
+        `Hello ${user.fullName}, welcome to our platform! 🎉`
+      );
+
+      // Emit the notification via socket
+      this.notificationsGateway.sendNotificationToUser(user.id, notification);
 
     return {
       user,
@@ -160,7 +176,18 @@ export class AuthService {
       email: user.email,
       role: user.role,
     });
-    console.log("userdataaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",userProfile)
+
+      // Create a notification
+      const notification = await this.notificationsService.createNotification(
+        user.id,
+        'INFO', // or another enum value from NotificationTypeValues
+        'Welcome!',
+        `Hello ${user.fullName}, welcome to our platform! 🎉`
+      );
+
+      // Emit the notification via socket
+      this.notificationsGateway.sendNotificationToUser(user.id, notification);
+
     return {
       user: {
         id: userProfile?.id,

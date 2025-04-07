@@ -45,6 +45,7 @@ import IncomingOrdersPage from "@/pages/warehouse/warehouse-incoming-orders";
 import OutgoingOrdersPage from "@/pages/warehouse/warehouse-outgoing-orders";
 import WarehouseDashboard from "@/pages/warehouse/warehouse-dashboard";
 import WarehouseSettings from "@/pages/warehouse/warehouse-settings";
+import NotificationPage from "@/pages/notification/NotificationPage";
 
 export function AppRoutes() {
   return (
@@ -98,6 +99,12 @@ export function AppRoutes() {
             </SellerGuard>
           </ProtectedRoute>
           } />
+          <Route path="notifications" element={
+            <ProtectedRoute>
+                <NotificationPage />
+            </ProtectedRoute>
+          } />
+
         <Route
           path="products"
           element={
@@ -134,6 +141,7 @@ export function AppRoutes() {
       <Route path="/admin" element={<AdminLayout />}>
           <Route path="warehouses-managers" element={<AdminWarehouseManagersPage/>}/>
           <Route path="users" element={<div>Users Management</div>} />
+          <Route path="notifications" element={<NotificationPage/>} />
       </Route>
 
 
@@ -141,6 +149,7 @@ export function AppRoutes() {
       <Route path="/warehouse" element={ <WarehouseGuard><WarehouseLayout /></WarehouseGuard>}>
         <Route index element={<WarehouseGuard><WarehouseDashboard/></WarehouseGuard>} />
         <Route path="dashboard" element={<WarehouseGuard><WarehouseDashboard/></WarehouseGuard> } />
+        <Route path="notifications" element={<WarehouseGuard><NotificationPage/></WarehouseGuard>} />
         <Route path="sections" element={<WarehouseGuard><WarehouseSectionsPage/></WarehouseGuard>} />
         <Route path="inventory" element={<WarehouseGuard><WarehouseInventoryPage/></WarehouseGuard>} />
         <Route path="incoming-orders" element={<WarehouseGuard><IncomingOrdersPage/></WarehouseGuard>} />
@@ -172,6 +181,17 @@ export function AppRoutes() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="notifications"
+          element={
+            <ProtectedRoute>
+              <DriverGuard>
+                <NotificationPage />
+              </DriverGuard>
+            </ProtectedRoute>
+          }
+        />
+
         <Route
             path="application"
             element={

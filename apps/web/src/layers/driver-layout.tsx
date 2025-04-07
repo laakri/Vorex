@@ -12,7 +12,7 @@ import {
   ChevronLeft,
   Navigation,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useAuthStore } from "@/stores/auth.store";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import NotificationButton from "@/pages/notification/NotificationButton";
 
 const menuItems = [
   {
@@ -64,6 +65,22 @@ export function DriverLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const navigate = useNavigate();
 
+
+
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 1080) {
+        setCollapsed(true);
+      } else {
+        setCollapsed(false);
+
+      }
+    };
+    handleResize();
+
+  });
+  
   const getInitials = (name?: string) => {
     if (!name) return "U";
     return name
@@ -150,6 +167,8 @@ export function DriverLayout() {
             ))}
           </div>
         </nav>
+        <NotificationButton collapsed={collapsed} />
+        
 
         {/* Platform Selector - Improved UI and Position */}
         <div className="px-3 py-2">

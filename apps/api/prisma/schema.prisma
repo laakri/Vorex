@@ -20,6 +20,22 @@ model User {
   driver           Driver?
   seller           Seller?
   warehouseManager WarehouseManager?
+  notifications     Notification[]  
+
+}
+model Notification {
+  id           String    @id @default(cuid())
+  userId       String
+  type         String    // Store as string instead of enum
+  title        String
+  message      String
+  isRead       Boolean   @default(false)
+  data         Json?     // For additional data related to the notification
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  user         User      @relation(fields: [userId], references: [id])
+  order        Order?    @relation(fields: [orderId], references: [id])
+  orderId      String?
 }
 
 model Seller {
@@ -93,6 +109,7 @@ model Order {
   rating               Rating?
   refund               Refund?
   routeStops           RouteStop[]
+  notifications        Notification[]
 }
 
 model OrderItem {
