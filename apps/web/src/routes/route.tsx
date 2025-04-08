@@ -19,7 +19,7 @@ import { ProductsPage } from "@/pages/seller/products/products";
 import { OrdersPage } from "@/pages/seller/orders/orders";
 import { StoreSettingsPage } from "@/pages/seller/settings/store-settings";
 // Driver layers
-import  {DriverLayout}  from "@/layers/driver-layout";
+import { DriverLayout } from "@/layers/driver-layout";
 import { DriverApplication } from "@/pages/driver/driver-application";
 // Protected route
 import { SellerGuard } from "./seller-guard";
@@ -46,6 +46,10 @@ import OutgoingOrdersPage from "@/pages/warehouse/warehouse-outgoing-orders";
 import WarehouseDashboard from "@/pages/warehouse/warehouse-dashboard";
 import WarehouseSettings from "@/pages/warehouse/warehouse-settings";
 import NotificationPage from "@/pages/notification/NotificationPage";
+// Admin pages
+import AdminDashboard from "@/pages/admin/dashboard";
+import UsersPage from "@/pages/admin/users";
+import WarehousesPage from "@/pages/admin/warehouses";
 
 export function AppRoutes() {
   return (
@@ -59,7 +63,6 @@ export function AppRoutes() {
         <Route path="contact" element={<MainContact />} />
         <Route path="/track" element={<TrackPage />} />
         <Route path="/track/:trackingId" element={<TrackOrderPage />} />
-       
       </Route>
 
       {/* Auth Platform */}
@@ -92,19 +95,24 @@ export function AppRoutes() {
             </ProtectedRoute>
           }
         />
-        <Route path="onboarding" element={
-          <ProtectedRoute>
-            <SellerGuard>
-              <SellerOnboarding />
-            </SellerGuard>
-          </ProtectedRoute>
-          } />
-          <Route path="notifications" element={
+        <Route
+          path="onboarding"
+          element={
             <ProtectedRoute>
-                <NotificationPage />
+              <SellerGuard>
+                <SellerOnboarding />
+              </SellerGuard>
             </ProtectedRoute>
-          } />
-
+          }
+        />
+        <Route
+          path="notifications"
+          element={
+            <ProtectedRoute>
+              <NotificationPage />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="products"
           element={
@@ -125,13 +133,16 @@ export function AppRoutes() {
             </ProtectedRoute>
           }
         />
-        <Route path="settings" element={
-          <ProtectedRoute>
+        <Route
+          path="settings"
+          element={
+            <ProtectedRoute>
               <SellerGuard>
                 <StoreSettingsPage />
               </SellerGuard>
-            </ProtectedRoute>} />
-       
+            </ProtectedRoute>
+          }
+        />
       </Route>
 
       {/* Unauthorized Route */}
@@ -139,29 +150,92 @@ export function AppRoutes() {
 
       {/* Admin Platform */}
       <Route path="/admin" element={<AdminLayout />}>
-          <Route path="warehouses-managers" element={<AdminWarehouseManagersPage/>}/>
-          <Route path="users" element={<div>Users Management</div>} />
-          <Route path="notifications" element={<NotificationPage/>} />
+        <Route index element={<AdminDashboard />} />
+        <Route path="dashboard" element={<AdminDashboard />} />
+        <Route path="users" element={<UsersPage />} />
+        <Route path="warehouses" element={<WarehousesPage />} />
+        <Route path="warehouses-managers" element={<AdminWarehouseManagersPage />} />
+        <Route path="notifications" element={<NotificationPage />} />
       </Route>
-
 
       {/* Warehouse Platform */}
-      <Route path="/warehouse" element={ <WarehouseGuard><WarehouseLayout /></WarehouseGuard>}>
-        <Route index element={<WarehouseGuard><WarehouseDashboard/></WarehouseGuard>} />
-        <Route path="dashboard" element={<WarehouseGuard><WarehouseDashboard/></WarehouseGuard> } />
-        <Route path="notifications" element={<WarehouseGuard><NotificationPage/></WarehouseGuard>} />
-        <Route path="sections" element={<WarehouseGuard><WarehouseSectionsPage/></WarehouseGuard>} />
-        <Route path="inventory" element={<WarehouseGuard><WarehouseInventoryPage/></WarehouseGuard>} />
-        <Route path="incoming-orders" element={<WarehouseGuard><IncomingOrdersPage/></WarehouseGuard>} />
-        <Route path="outgoing-orders" element={<WarehouseGuard><OutgoingOrdersPage/></WarehouseGuard>} />
-        <Route path="settings" element={<WarehouseGuard><WarehouseSettings/></WarehouseGuard>} />
-
+      <Route
+        path="/warehouse"
+        element={
+          <WarehouseGuard>
+            <WarehouseLayout />
+          </WarehouseGuard>
+        }
+      >
+        <Route
+          index
+          element={
+            <WarehouseGuard>
+              <WarehouseDashboard />
+            </WarehouseGuard>
+          }
+        />
+        <Route
+          path="dashboard"
+          element={
+            <WarehouseGuard>
+              <WarehouseDashboard />
+            </WarehouseGuard>
+          }
+        />
+        <Route
+          path="notifications"
+          element={
+            <WarehouseGuard>
+              <NotificationPage />
+            </WarehouseGuard>
+          }
+        />
+        <Route
+          path="sections"
+          element={
+            <WarehouseGuard>
+              <WarehouseSectionsPage />
+            </WarehouseGuard>
+          }
+        />
+        <Route
+          path="inventory"
+          element={
+            <WarehouseGuard>
+              <WarehouseInventoryPage />
+            </WarehouseGuard>
+          }
+        />
+        <Route
+          path="incoming-orders"
+          element={
+            <WarehouseGuard>
+              <IncomingOrdersPage />
+            </WarehouseGuard>
+          }
+        />
+        <Route
+          path="outgoing-orders"
+          element={
+            <WarehouseGuard>
+              <OutgoingOrdersPage />
+            </WarehouseGuard>
+          }
+        />
+        <Route
+          path="settings"
+          element={
+            <WarehouseGuard>
+              <WarehouseSettings />
+            </WarehouseGuard>
+          }
+        />
       </Route>
 
-     
       {/* Driver Platform */}
       <Route path="/driver" element={<DriverLayout />}>
-      <Route
+        <Route
           index
           element={
             <ProtectedRoute>
@@ -191,17 +265,15 @@ export function AppRoutes() {
             </ProtectedRoute>
           }
         />
-
         <Route
-            path="application"
-            element={
-              <ProtectedRoute>
-
-                <DriverApplication />
-              </ProtectedRoute>
-            }
-          />
-          <Route
+          path="application"
+          element={
+            <ProtectedRoute>
+              <DriverApplication />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="active-delivery"
           element={
             <ProtectedRoute>
@@ -210,8 +282,8 @@ export function AppRoutes() {
               </DriverGuard>
             </ProtectedRoute>
           }
-          />
-          <Route
+        />
+        <Route
           path="history"
           element={
             <ProtectedRoute>
@@ -220,8 +292,8 @@ export function AppRoutes() {
               </DriverGuard>
             </ProtectedRoute>
           }
-          />
-          <Route
+        />
+        <Route
           path="vehicle"
           element={
             <ProtectedRoute>
@@ -230,8 +302,8 @@ export function AppRoutes() {
               </DriverGuard>
             </ProtectedRoute>
           }
-          />
-          <Route
+        />
+        <Route
           path="settings"
           element={
             <ProtectedRoute>
@@ -240,8 +312,8 @@ export function AppRoutes() {
               </DriverGuard>
             </ProtectedRoute>
           }
-          />
-          <Route
+        />
+        <Route
           path="available-routes"
           element={
             <ProtectedRoute>
@@ -250,15 +322,8 @@ export function AppRoutes() {
               </DriverGuard>
             </ProtectedRoute>
           }
-          />
-
-        
-        
+        />
       </Route>
-      
-
-
-
     </Routes>
   );
 }

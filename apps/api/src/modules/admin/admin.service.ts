@@ -1,13 +1,122 @@
 // apps/api/src/modules/admin/admin.service.ts
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Prisma, Role, User } from '@prisma/client';
 import { PrismaService } from 'prisma/prisma.service';
-import { Prisma } from '@prisma/client';
 import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class AdminService {
   constructor(private readonly prisma: PrismaService) {}
 
+  // User Management
+  async getAllUsers() {
+    return this.prisma.user.findMany({
+      include: {
+        driver: true,
+        seller: true,
+        warehouseManager: true,
+      },
+    });
+  }
+
+  async getUserById(id: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      include: {
+        driver: true,
+        seller: true,
+        warehouseManager: true,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
+
+    return user;
+  }
+
+  async updateUserRole(id: string, roles: Role[]) {
+    return this.prisma.user.update({
+      where: { id },
+      data: { role: roles },
+    });
+  }
+
+  // Warehouse Management
+  async getAllWarehouses() {
+    return this.prisma.warehouse.findMany({
+      include: {
+        managers: true,
+        sections: true,
+      },
+    });
+  }
+
+  async getWarehouseById(id: string) {
+    const warehouse = await this.prisma.warehouse.findUnique({
+      where: { id },
+      include: {
+        managers: true,
+        sections: true,
+      },
+    });
+
+    if (!warehouse) {
+      throw new NotFoundException(`Warehouse with ID ${id} not found`);
+    }
+
+    return warehouse;
+  }
+
+  // System Statistics
+  async getSystemStatistics() {
+    const [
+      totalUsers,
+      totalSellers,
+      totalDrivers,
+      totalWarehouses,
+      totalOrders,
+      activeOrders,
+    ] = await Promise.all([
+      this.prisma.user.count(),
+      this.prisma.seller.count(),
+      this.prisma.driver.count(),
+      this.prisma.warehouse.count(),
+      this.prisma.order.count(),
+      this.prisma.order.count({
+        where: {
+          status: {
+            not: 'CANCELLED',
+          },
+        },
+      }),
+    ]);
+
+    return {
+      totalUsers,
+      totalSellers,
+      totalDrivers,
+      totalWarehouses,
+      totalOrders,
+      activeOrders,
+    };
+  }
+
+  // Audit Logs
+  async getAuditLogs() {
+    return this.prisma.notification.findMany({
+      where: {
+        type: 'AUDIT',
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      take: 100,
+    });
+  }
+
+  // Warehouse Manager methods
   async getWarehouseManagers() {
     return this.prisma.warehouseManager.findMany({
       include: {
@@ -15,146 +124,150 @@ export class AdminService {
           select: {
             id: true,
             fullName: true,
-            email: true
-          }
+            email: true,
+          },
         },
         warehouse: {
           select: {
             id: true,
             name: true,
             city: true,
-            governorate: true
-          }
-        }
-      }
+            governorate: true,
+          },
+        },
+      },
     });
   }
 
-  async assignWarehouseManager(userId: string, warehouseId: string) {
-    // Check if user exists
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId }
+  async createWarehouseManager(createWarehouseManagerDto: {
+    name: string;
+    email: string;
+    warehouseId: string;
+  }) {
+    // First create the user
+    const user = await this.prisma.user.create({
+      data: {
+        fullName: createWarehouseManagerDto.name,
+        email: createWarehouseManagerDto.email,
+        password: uuidv4(), // Generate a random password
+        role: [Role.WAREHOUSE_MANAGER],
+      },
     });
-    
-    if (!user) {
-      throw new NotFoundException(`User with ID ${userId} not found`);
-    }
-
-    // Check if warehouse exists
-    const warehouse = await this.prisma.warehouse.findUnique({
-      where: { id: warehouseId }
-    });
-    
-    if (!warehouse) {
-      throw new NotFoundException(`Warehouse with ID ${warehouseId} not found`);
-    }
-
-    // Check if assignment already exists
-    const existingAssignment = await this.prisma.warehouseManager.findFirst({
-      where: {
-        userId,
-        warehouseId
-      }
-    });
-    
-    if (existingAssignment) {
-      throw new BadRequestException('This user is already assigned to this warehouse');
-    }
 
     // Generate a unique employee ID
     const employeeId = `EMP-${uuidv4().substring(0, 8)}`;
 
-    // Start a transaction to update both the user role and create the warehouse manager
-    return this.prisma.$transaction(async (prisma) => {
-      // Update user role to include WAREHOUSE_MANAGER if not already present
-      if (!user.role.includes('WAREHOUSE_MANAGER')) {
-        await prisma.user.update({
-          where: { id: userId },
-          data: {
-            role: [...user.role, 'WAREHOUSE_MANAGER']
-          }
-        });
-      }
-
-      // Create the warehouse manager assignment
-      const data: Prisma.WarehouseManagerCreateInput = {
-        user: {
-          connect: { id: userId }
-        },
-        warehouse: {
-          connect: { id: warehouseId }
-        },
-        employeeId: employeeId,
+    // Then create the warehouse manager relationship
+    return this.prisma.warehouseManager.create({
+      data: {
+        userId: user.id,
+        warehouseId: createWarehouseManagerDto.warehouseId,
+        employeeId,
         securityClearance: 'BASIC',
         shiftPreference: 'MORNING',
-        emergencyContact: ''
-      };
-
-      return prisma.warehouseManager.create({
-        data,
-        include: {
-          user: {
-            select: {
-              id: true,
-              fullName: true,
-              email: true,
-              role: true
-            }
+        emergencyContact: '',
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
           },
-          warehouse: {
-            select: {
-              id: true,
-              name: true,
-              city: true,
-              governorate: true
-            }
-          }
-        }
+        },
+        warehouse: {
+          select: {
+            id: true,
+            name: true,
+            city: true,
+            governorate: true,
+          },
+        },
+      },
+    });
+  }
+
+  async updateWarehouseManagerStatus(id: string, status: 'active' | 'inactive') {
+    const manager = await this.prisma.warehouseManager.findUnique({
+      where: { id },
+    });
+
+    if (!manager) {
+      throw new NotFoundException(`Warehouse manager with ID ${id} not found`);
+    }
+
+    // Instead of updating status directly, we'll update the user's role
+    if (status === 'inactive') {
+      // Remove WAREHOUSE_MANAGER role from user
+      const user = await this.prisma.user.findUnique({
+        where: { id: manager.userId },
       });
+
+      if (user) {
+        await this.prisma.user.update({
+          where: { id: manager.userId },
+          data: {
+            role: user.role.filter(role => role !== Role.WAREHOUSE_MANAGER),
+          },
+        });
+      }
+    } else {
+      // Add WAREHOUSE_MANAGER role to user
+      const user = await this.prisma.user.findUnique({
+        where: { id: manager.userId },
+      });
+
+      if (user && !user.role.includes(Role.WAREHOUSE_MANAGER)) {
+        await this.prisma.user.update({
+          where: { id: manager.userId },
+          data: {
+            role: [...user.role, Role.WAREHOUSE_MANAGER],
+          },
+        });
+      }
+    }
+
+    return this.prisma.warehouseManager.findUnique({
+      where: { id },
+      include: {
+        user: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+          },
+        },
+        warehouse: {
+          select: {
+            id: true,
+            name: true,
+            city: true,
+            governorate: true,
+          },
+        },
+      },
     });
   }
 
   async removeWarehouseManager(id: string) {
-    // Get the assignment to find the user
-    const assignment = await this.prisma.warehouseManager.findUnique({
+    const manager = await this.prisma.warehouseManager.findUnique({
       where: { id },
-      include: {
-        user: true
-      }
     });
-    
-    if (!assignment) {
-      throw new NotFoundException(`Warehouse manager assignment with ID ${id} not found`);
+
+    if (!manager) {
+      throw new NotFoundException(`Warehouse manager with ID ${id} not found`);
     }
 
-    // Start a transaction to update both the user role and delete the warehouse manager
-    return this.prisma.$transaction(async (prisma) => {
-      // Delete the assignment
-      await prisma.warehouseManager.delete({
-        where: { id }
-      });
-      
-      // Check if user has other warehouse manager assignments
-      const otherAssignments = await prisma.warehouseManager.findFirst({
-        where: {
-          userId: assignment.userId
-        }
-      });
-      
-      // If no other assignments, remove WAREHOUSE_MANAGER role
-      if (!otherAssignments) {
-        const user = await prisma.user.findUnique({
-          where: { id: assignment.userId }
-        });
-        
-        await prisma.user.update({
-          where: { id: assignment.userId },
-          data: {
-            role: user?.role?.filter(role => role !== 'WAREHOUSE_MANAGER') || []
-          }
-        });
-      }
-      return { success: true };
+    // First delete the warehouse manager relationship
+    await this.prisma.warehouseManager.delete({
+      where: { id },
     });
+
+    // Then delete the associated user
+    await this.prisma.user.delete({
+      where: { id: manager.userId },
+    });
+
+    return { message: 'Warehouse manager deleted successfully' };
   }
 }

@@ -11,6 +11,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Loader2, Warehouse as WarehouseIcon, Users as UsersIcon, UserPlus, Trash2 } from "lucide-react";
 import api from "@/lib/axios";
+import { Input } from '@/components/ui/input';
+import { toast } from 'sonner';
 
 // Form schema
 const assignManagerSchema = z.object({
@@ -47,6 +49,7 @@ type WarehouseManager = {
     city: string;
     governorate: string;
   };
+  status: 'active' | 'inactive';
 };
 
 export function AdminWarehouseManagersPage() {
@@ -57,6 +60,11 @@ export function AdminWarehouseManagersPage() {
   const [managers, setManagers] = useState<WarehouseManager[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+  const [newManager, setNewManager] = useState({
+    name: '',
+    email: '',
+    warehouseId: '',
+  });
   
   // Form
   const form = useForm({
@@ -156,6 +164,31 @@ export function AdminWarehouseManagersPage() {
   );
   
   console.log("Eligible users:", eligibleUsers);
+  
+  const handleAddManager = async () => {
+    try {
+      await api.post('/admin/warehouse-managers', newManager);
+      toast.success('Warehouse manager added successfully');
+      setNewManager({ name: '', email: '', warehouseId: '' });
+      fetchManagers();
+    } catch (error) {
+      console.error('Failed to add manager:', error);
+      toast.error('Failed to add warehouse manager');
+    }
+  };
+
+  const handleToggleStatus = async (managerId: string, currentStatus: 'active' | 'inactive') => {
+    try {
+      await api.patch(`/admin/warehouse-managers/${managerId}/status`, {
+        status: currentStatus === 'active' ? 'inactive' : 'active',
+      });
+      toast.success('Manager status updated successfully');
+      fetchManagers();
+    } catch (error) {
+      console.error('Failed to update manager status:', error);
+      toast.error('Failed to update manager status');
+    }
+  };
   
   // Loading state
   if (isLoading) {
@@ -290,6 +323,7 @@ export function AdminWarehouseManagersPage() {
                   <TableHead>Email</TableHead>
                   <TableHead>Warehouse</TableHead>
                   <TableHead>Location</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -302,13 +336,24 @@ export function AdminWarehouseManagersPage() {
                     <TableCell>
                       {manager.warehouse.city}, {manager.warehouse.governorate}
                     </TableCell>
+                    <TableCell>
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs ${
+                          manager.status === 'active'
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-red-100 text-red-800'
+                        }`}
+                      >
+                        {manager.status}
+                      </span>
+                    </TableCell>
                     <TableCell className="text-right">
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleRemoveManager(manager.id)}
+                        onClick={() => handleToggleStatus(manager.id, manager.status)}
                       >
-                        <Trash2 className="h-4 w-4 text-destructive" />
+                        {manager.status === 'active' ? 'Deactivate' : 'Activate'}
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -340,6 +385,52 @@ export function AdminWarehouseManagersPage() {
               To assign a warehouse manager, the user must first have the Warehouse Manager role assigned to their account.
             </p>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Add New Manager</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label>Name</Label>
+              <Input
+                value={newManager.name}
+                onChange={(e) => setNewManager({ ...newManager, name: e.target.value })}
+                placeholder="Manager name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <Input
+                type="email"
+                value={newManager.email}
+                onChange={(e) => setNewManager({ ...newManager, email: e.target.value })}
+                placeholder="Manager email"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Warehouse</Label>
+              <Select
+                value={newManager.warehouseId}
+                onValueChange={(value) => setNewManager({ ...newManager, warehouseId: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select warehouse" />
+                </SelectTrigger>
+                <SelectContent>
+                  {warehouses.map((warehouse) => (
+                    <SelectItem key={warehouse.id} value={warehouse.id}>
+                      {warehouse.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <Button onClick={handleAddManager}>Add Manager</Button>
         </CardContent>
       </Card>
     </div>
