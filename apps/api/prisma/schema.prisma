@@ -85,6 +85,7 @@ model Order {
   warehouseId          String?
   status               OrderStatus @default(PENDING)
   totalAmount          Float
+  deliveryPrice        Float       @default(0)
   address              String
   city                 String
   governorate          String

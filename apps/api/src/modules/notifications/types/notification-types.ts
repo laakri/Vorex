@@ -7,4 +7,12 @@ export const NotificationType = {
     // Add more types as needed without updating DB schema
   };
   
-  export type NotificationTypeValues = typeof NotificationType[keyof typeof NotificationType];
+  export type NotificationTypeValues = 
+    | 'ORDER_CREATED'
+    | 'LOW_STOCK'
+    | 'ORDER_STATUS_CHANGED'
+    | 'ORDER_STATUS_CHANGE'
+    | 'NEW_ORDER'
+    | 'ACCOUNT_UPDATE'
+    | 'SYSTEM_ALERT'
+    | 'PROMOTION';

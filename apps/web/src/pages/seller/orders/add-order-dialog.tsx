@@ -237,6 +237,50 @@ export function AddOrderDialog({ open, onOpenChange, onOrderAdded }: AddOrderDia
     return items.reduce((total, item) => total + (item.price * item.quantity), 0);
   };
 
+  const previewDeliveryPrice = async () => {
+    if (!form.getValues('governorate') || form.getValues('items').length === 0) {
+      return;
+    }
+
+    try {
+      const response = await api.post('/sellers/orders/preview-delivery-price', {
+        items: form.getValues('items').map(item => ({
+          weight: item.weight,
+          dimensions: item.dimensions,
+          quantity: item.quantity,
+          fragile: item.fragile,
+          perishable: item.perishable
+        })),
+        deliveryGovernorate: form.getValues('governorate')
+      });
+
+      // Show price preview
+      toast({
+        title: "Delivery Price Preview",
+        description: (
+          <div className="space-y-2">
+            <p>Estimated Delivery Price: {response.data.finalPrice} DT</p>
+            <p className="text-sm text-muted-foreground">
+              Weight: {response.data.breakdown.weight} kg
+              <br />
+              Volume: {response.data.breakdown.volume} cm³
+              <br />
+              Fragile Items: {response.data.breakdown.fragileItems}
+              <br />
+              Perishable Items: {response.data.breakdown.perishableItems}
+            </p>
+          </div>
+        )
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to calculate delivery price",
+        variant: "destructive"
+      });
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -523,6 +567,15 @@ export function AddOrderDialog({ open, onOpenChange, onOrderAdded }: AddOrderDia
                 )}
               </Button>
             </DialogFooter>
+
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={previewDeliveryPrice}
+              disabled={!form.getValues('governorate') || form.getValues('items').length === 0}
+            >
+              Preview Delivery Price
+            </Button>
           </form>
         </Form>
       </DialogContent>

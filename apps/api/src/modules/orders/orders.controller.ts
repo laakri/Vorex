@@ -11,6 +11,7 @@ import {
   Request,
   InternalServerErrorException,
   BadRequestException,
+  Req,
 } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
@@ -22,6 +23,8 @@ import { OrderStatus } from '@prisma/client';
 import { GetUser } from '@/common/decorators/get-user.decorator';
 import { PrismaService } from 'prisma/prisma.service';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
+import { DeliveryPricingService } from './delivery-pricing.service';
+import { DeliveryPricePreview } from './types/delivery-pricing.types';
 
 @Controller('orders')
 export class PublicOrdersController {
@@ -51,6 +54,7 @@ export class OrdersController {
   constructor(
     private readonly ordersService: OrdersService,
     private readonly prisma: PrismaService,
+    private readonly deliveryPricingService: DeliveryPricingService
   ) {}
 
   @Get('products')
@@ -125,5 +129,27 @@ export class OrdersController {
     @Body() updateOrderStatusDto: UpdateOrderStatusDto,
   ) {
     return this.ordersService.updateStatus(userId, orderId, updateOrderStatusDto.status);
+  }
+
+  @Post('preview-delivery-price')
+  @Roles(Role.SELLER)
+  async previewDeliveryPrice(
+    @GetUser('id') userId: string,
+    @Body() body: {
+      items: Array<{
+        weight: number;
+        dimensions: string;
+        quantity: number;
+        fragile?: boolean;
+        perishable?: boolean;
+      }>;
+      deliveryGovernorate: string;
+    }
+  ): Promise<DeliveryPricePreview> {
+    return this.deliveryPricingService.calculateDeliveryPricePreview(
+      userId,
+      body.items,
+      body.deliveryGovernorate
+    );
   }
 } 

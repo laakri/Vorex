@@ -3,10 +3,14 @@ import { CreateOrderDto } from './dto/create-order.dto';
 import { Prisma, OrderStatus, BatchType } from '@prisma/client';
 import { PrismaService } from 'prisma/prisma.service';
 import { Governorate, WAREHOUSE_COVERAGE } from '@/config/constants';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class OrdersService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private notificationsService: NotificationsService
+  ) {}
 
   private isLocalDelivery(sellerGovernorate: string, buyerGovernorate: string): boolean {
     const sellerWarehouse = Object.values(WAREHOUSE_COVERAGE).find(warehouse => 
@@ -66,6 +70,7 @@ export class OrdersService {
       const warehouseId = await this.getWarehouseId(seller.governorate);
       const secondaryWarehouseId = await this.getSecondaryWarehouseId(createOrderDto.governorate);
 
+      // First create the order and update stock in a transaction
       const order = await this.prisma.$transaction(async (prisma) => {
         const order = await prisma.order.create({
           data: {
@@ -114,8 +119,9 @@ export class OrdersService {
           }
         });
 
-        for (const item of order.items) {
-          await prisma.product.update({
+        // Update stock for each item
+        const stockUpdates = order.items.map(async (item) => {
+          return prisma.product.update({
             where: { id: item.productId },
             data: {
               stock: {
@@ -123,10 +129,48 @@ export class OrdersService {
               }
             }
           });
-        }
+        });
 
+        await Promise.all(stockUpdates);
         return order;
       });
+
+      // After transaction completes successfully, create notifications
+      try {
+        // Create order confirmation notification
+        await this.notificationsService.createNotification(
+          userId,
+          'NEW_ORDER',  // Using the correct notification type from your enum
+          'New Order Created',
+          `Order #${order.id} has been created successfully for ${order.customerName}`,
+          {
+            orderId: order.id,
+            customerName: order.customerName,
+            totalAmount: order.totalAmount
+          },
+          order.id
+        );
+
+        // Check stock levels and create low stock notifications
+        for (const item of order.items) {
+          if (item.product.stock < 10) {
+            await this.notificationsService.createNotification(
+              userId,
+              'SYSTEM_ALERT',  // Using the correct notification type from your enum
+              'Low Stock Alert',
+              `Your product "${item.product.name}" is running low on stock (${item.product.stock} remaining)`,
+              {
+                productId: item.productId,
+                currentStock: item.product.stock,
+                productName: item.product.name
+              }
+            );
+          }
+        }
+      } catch (notificationError) {
+        // Log notification error but don't fail the order creation
+        console.error('Error creating notifications:', notificationError);
+      }
 
       return order;
     } catch (error) {
