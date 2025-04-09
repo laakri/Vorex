@@ -9,8 +9,8 @@ import { JwtModule } from '@nestjs/jwt';
   imports: [
     PrismaModule,
     JwtModule.register({
-      secret: process.env.JWT_SECRET, // Make sure this matches your auth configuration
-      signOptions: { expiresIn: '1d' },
+      secret: process.env.JWT_SECRET,
+      signOptions: { expiresIn: '60m' },
     }),
   ],
   controllers: [NotificationsController],

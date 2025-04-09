@@ -19,9 +19,19 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  optimizeDeps: {
+    include: [
+      'socket.io-client',
+      'engine.io-parser',
+      'engine.io-client'
+    ]
+  },
   build: {
     outDir: 'dist',
-    emptyOutDir: true
+    emptyOutDir: true,
+    commonjsOptions: {
+      include: [/node_modules/]
+    }
   },
   define: {
     'process.env': process.env

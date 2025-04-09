@@ -1,7 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import api from "@/lib/axios";
-import { LogOut } from "lucide-react";
 
 interface User {
   id: string;
