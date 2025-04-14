@@ -9,7 +9,9 @@ import {
   
   @WebSocketGateway({
     cors: {
-      origin: '*', // In production, set this to your frontend URL
+      origin: 'http://localhost:5173',
+      methods: ["GET", "POST"],
+      credentials: true
     },
   })
   export class NotificationsGateway

@@ -4,12 +4,16 @@ import { Prisma, OrderStatus, BatchType } from '@prisma/client';
 import { PrismaService } from 'prisma/prisma.service';
 import { Governorate, WAREHOUSE_COVERAGE } from '@/config/constants';
 import { NotificationsService } from '../notifications/notifications.service';
+import { DeliveryPricingService } from './delivery-pricing.service';
+import { DeliveryTimeEstimationService } from './delivery-time-estimation.service';
 
 @Injectable()
 export class OrdersService {
   constructor(
     private prisma: PrismaService,
-    private notificationsService: NotificationsService
+    private notificationsService: NotificationsService,
+    private readonly deliveryPricingService: DeliveryPricingService,
+    private readonly deliveryTimeEstimationService: DeliveryTimeEstimationService
   ) {}
 
   private isLocalDelivery(sellerGovernorate: string, buyerGovernorate: string): boolean {
@@ -70,6 +74,19 @@ export class OrdersService {
       const warehouseId = await this.getWarehouseId(seller.governorate);
       const secondaryWarehouseId = await this.getSecondaryWarehouseId(createOrderDto.governorate);
 
+      // Calculate delivery price
+      const deliveryPricePreview = await this.deliveryPricingService.calculateDeliveryPricePreview(
+        userId,
+        createOrderDto.items.map(item => ({
+          weight: item.weight,
+          dimensions: item.dimensions,
+          quantity: item.quantity,
+          fragile: item.fragile,
+          perishable: item.perishable,
+        })),
+        createOrderDto.governorate
+      );
+
       // First create the order and update stock in a transaction
       const order = await this.prisma.$transaction(async (prisma) => {
         const order = await prisma.order.create({
@@ -103,7 +120,8 @@ export class OrdersService {
                 fragile: item.fragile,
                 perishable: item.perishable
               }))
-            }
+            },
+            deliveryPrice: deliveryPricePreview.finalPrice
           },
           include: {
             items: {
@@ -132,6 +150,10 @@ export class OrdersService {
         });
 
         await Promise.all(stockUpdates);
+
+        // Calculate and update estimated delivery time
+        await this.deliveryTimeEstimationService.updateOrderEstimatedDeliveryTime(order.id);
+
         return order;
       });
 
@@ -723,6 +745,13 @@ export class OrdersService {
     
     console.log(`Order ${orderId} status updated from ${existingOrder.status} to ${status}`);
     
+    // Recalculate estimated delivery time if relevant fields changed
+    if (
+      status !== existingOrder.status
+    ) {
+      await this.deliveryTimeEstimationService.updateOrderEstimatedDeliveryTime(orderId);
+    }
+
     return updatedOrder;
   }
 

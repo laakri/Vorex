@@ -3,6 +3,7 @@ import { OrdersService } from './orders.service';
 import { OrdersController, PublicOrdersController } from './orders.controller';
 import { PrismaModule } from 'prisma/prisma.module';
 import { DeliveryPricingService } from './delivery-pricing.service';
+import { DeliveryTimeEstimationService } from './delivery-time-estimation.service';
 import { NotificationsService } from '../notifications/notifications.service';
 
 @Module({
@@ -10,9 +11,10 @@ import { NotificationsService } from '../notifications/notifications.service';
   controllers: [OrdersController, PublicOrdersController],
   providers: [ 
     OrdersService, 
-    DeliveryPricingService, 
+    DeliveryPricingService,
+    DeliveryTimeEstimationService,
     NotificationsService
   ],
-  exports: [OrdersService, DeliveryPricingService],
+  exports: [OrdersService, DeliveryPricingService, DeliveryTimeEstimationService],
 })
 export class OrdersModule {} 

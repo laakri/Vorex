@@ -4,7 +4,10 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { getNotificationCount } from './notificationApi';
-import { subscribeToNotifications, unsubscribeNotifications } from './notificationSocket';
+import {
+  subscribeToNotifications,
+  unsubscribeNotifications,
+} from './notificationSocket';
 import { toast } from '@/hooks/use-toast';
 import { useAuthStore } from '@/stores/auth.store';
 
@@ -12,7 +15,7 @@ export default function NotificationButton({ collapsed }: { collapsed: boolean }
   const [notificationsCount, setNotificationsCount] = useState(0);
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useAuthStore();
+  const { user, token } = useAuthStore();
 
   useEffect(() => {
     let mounted = true;
@@ -28,18 +31,17 @@ export default function NotificationButton({ collapsed }: { collapsed: boolean }
       }
     };
 
-    if (user?.id) {
+    if (user?.id && token) {
       fetchCount();
-      
-      // Subscribe to real-time updates
-      subscribeToNotifications(user.id, (notification) => {
+
+      subscribeToNotifications(user.id, token, (notification) => {
         console.log('New notification received:', notification);
         if (mounted) {
-          setNotificationsCount(prev => prev + 1);
+          setNotificationsCount((prev) => prev + 1);
           toast({
             title: notification.title,
             description: notification.message,
-            duration: 5000
+            duration: 5000,
           });
         }
       });
@@ -49,9 +51,8 @@ export default function NotificationButton({ collapsed }: { collapsed: boolean }
       mounted = false;
       unsubscribeNotifications();
     };
-  }, [user?.id]);
+  }, [user?.id, token]);
 
-  // Determine which layout we're in
   const basePath = location.pathname.startsWith('/warehouse')
     ? '/warehouse'
     : location.pathname.startsWith('/seller')

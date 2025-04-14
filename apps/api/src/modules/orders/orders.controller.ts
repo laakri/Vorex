@@ -12,6 +12,7 @@ import {
   InternalServerErrorException,
   BadRequestException,
   Req,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
@@ -25,6 +26,8 @@ import { PrismaService } from 'prisma/prisma.service';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { DeliveryPricingService } from './delivery-pricing.service';
 import { DeliveryPricePreview } from './types/delivery-pricing.types';
+import { DeliveryTimeEstimationService } from './delivery-time-estimation.service';
+import { NotificationsService } from '@/modules/notifications/notifications.service';
 
 @Controller('orders')
 export class PublicOrdersController {
@@ -54,7 +57,9 @@ export class OrdersController {
   constructor(
     private readonly ordersService: OrdersService,
     private readonly prisma: PrismaService,
-    private readonly deliveryPricingService: DeliveryPricingService
+    private readonly deliveryPricingService: DeliveryPricingService,
+    private readonly deliveryTimeEstimationService: DeliveryTimeEstimationService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   @Get('products')
@@ -151,5 +156,19 @@ export class OrdersController {
       body.items,
       body.deliveryGovernorate
     );
+  }
+
+  @Get(':id/estimated-delivery-time')
+  @Roles(Role.ADMIN, Role.SELLER, Role.WAREHOUSE_MANAGER, Role.DRIVER)
+  async getEstimatedDeliveryTime(@Param('id', ParseUUIDPipe) id: string) {
+    const estimatedTime = await this.deliveryTimeEstimationService.calculateEstimatedDeliveryTime(id);
+    return { estimatedDeliveryTime: estimatedTime };
+  }
+
+  @Post(':id/update-delivery-time')
+  @Roles(Role.ADMIN, Role.WAREHOUSE_MANAGER)
+  async updateDeliveryTime(@Param('id', ParseUUIDPipe) id: string) {
+    await this.deliveryTimeEstimationService.updateOrderEstimatedDeliveryTime(id);
+    return { message: 'Delivery time updated successfully' };
   }
 } 

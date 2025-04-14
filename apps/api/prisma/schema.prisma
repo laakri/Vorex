@@ -103,6 +103,7 @@ model Order {
   isLocalDelivery      Boolean     @default(false)
   batchId              String?
   secondaryWarehouseId String?
+  estimatedDeliveryTime DateTime?
   batch                Batch?      @relation(fields: [batchId], references: [id])
   seller               Seller      @relation(fields: [sellerId], references: [id])
   warehouse            Warehouse?  @relation(fields: [warehouseId], references: [id])
