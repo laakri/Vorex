@@ -25,7 +25,7 @@ export function MainHomePage() {
         
         {/* Abstract shapes */}
         <div className="absolute -left-64 -top-64 w-[40rem] h-[40rem] rounded-full bg-primary/5 blur-3xl"></div>
-        <div className="absolute -right-64 top-1/3 w-[30rem] h-[30rem] rounded-full bg-blue-500/5 blur-3xl"></div>
+        <div className="absolute -right-64 top-1/3 w-[30rem] h-[30rem] rounded-full bg-red-500/5 blur-3xl"></div>
         <div className="absolute left-1/3 bottom-0 w-[35rem] h-[35rem] rounded-full bg-purple-500/5 blur-3xl"></div>
         
         {/* Animated particles */}
@@ -62,10 +62,10 @@ export function MainHomePage() {
                 <h1 className="mt-6 font-bold text-5xl md:text-6xl lg:text-7xl tracking-tight leading-[1.1]">
                   Logistics at{" "}
                   <span className="relative">
-                    <span className="relative z-10 bg-gradient-to-r from-primary to-blue-500 bg-clip-text text-transparent">
+                    <span className="relative z-10 bg-gradient-to-r from-primary to-red-500 bg-clip-text text-transparent">
                       lightspeed
                     </span>
-                    <span className="absolute bottom-1 left-0 z-0 h-3 w-full bg-gradient-to-r from-primary/30 to-blue-500/30 rounded-lg"></span>
+                    <span className="absolute bottom-1 left-0 z-0 h-3 w-full bg-gradient-to-r from-primary/30 to-red-500/30 rounded-lg"></span>
                   </span>
                 </h1>
                 
@@ -83,7 +83,7 @@ export function MainHomePage() {
               </div>
               
               <div className="flex flex-col sm:flex-row gap-5">
-                <Button size="lg" className="h-14 rounded-xl text-base font-medium px-10 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 shadow-lg shadow-primary/20">
+                <Button size="lg" className="h-14 rounded-xl text-base font-medium px-10 bg-gradient-to-r from-primary to-red-600 hover:from-primary/90 hover:to-red-600/90 shadow-lg shadow-primary/20">
                   <Link to="/register" className="flex items-center gap-2">
                     Start shipping now
                     <ArrowRight className="h-5 w-5" />
@@ -123,14 +123,14 @@ export function MainHomePage() {
                     {/* Route visualization */}
                     <div className="absolute inset-0 p-4">
                       <div className="relative h-full w-full">
-                        <div className="absolute top-1/4 left-1/5 h-3 w-3 rounded-full bg-blue-500 animate-pulse"></div>
-                        <div className="absolute top-1/3 left-2/5 h-3 w-3 rounded-full bg-blue-500 animate-pulse"></div>
-                        <div className="absolute top-1/2 right-2/5 h-3 w-3 rounded-full bg-blue-500 animate-pulse"></div>
-                        <div className="absolute bottom-1/4 right-1/5 h-3 w-3 rounded-full bg-blue-500 animate-pulse"></div>
+                        <div className="absolute top-1/4 left-1/5 h-3 w-3 rounded-full bg-red-500 animate-pulse"></div>
+                        <div className="absolute top-1/3 left-2/5 h-3 w-3 rounded-full bg-red-500 animate-pulse"></div>
+                        <div className="absolute top-1/2 right-2/5 h-3 w-3 rounded-full bg-red-500 animate-pulse"></div>
+                        <div className="absolute bottom-1/4 right-1/5 h-3 w-3 rounded-full bg-red-500 animate-pulse"></div>
                         
-                        <div className="absolute top-[28%] left-[25%] w-[15%] h-0.5 bg-blue-500/50"></div>
-                        <div className="absolute top-[33%] left-[40%] w-[20%] h-0.5 bg-blue-500/50"></div>
-                        <div className="absolute top-[42%] right-[40%] w-[15%] h-0.5 bg-blue-500/50"></div>
+                        <div className="absolute top-[28%] left-[25%] w-[15%] h-0.5 bg-red-500/50"></div>
+                        <div className="absolute top-[33%] left-[40%] w-[20%] h-0.5 bg-red-500/50"></div>
+                        <div className="absolute top-[42%] right-[40%] w-[15%] h-0.5 bg-red-500/50"></div>
                         
                         <div className="absolute w-4 h-4 bg-primary rounded-full top-1/2 right-1/4 shadow-lg shadow-primary/30 animate-ping"></div>
                         <div className="absolute w-3 h-3 bg-primary rounded-full top-1/2 right-1/4 shadow-lg shadow-primary/30 z-10"></div>

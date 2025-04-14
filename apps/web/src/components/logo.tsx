@@ -18,7 +18,7 @@ export function Logo({ className, size = "md" }: LogoProps) {
       <div className="relative">
         {/* Background shape */}
         <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-primary/10 rounded-lg " />
-        <div className="relative bg-background rounded-lg p-1.5 bg-blue-600">
+        <div className="relative bg-background rounded-lg p-1.5 bg-orange-600">
           <div className="relative">
             {/* Base box */}
             <Box className="h-4 w-4 text-white" strokeWidth={5.5} />
