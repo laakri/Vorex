@@ -1,162 +1,458 @@
-import { Package, Truck, Scale, MapPin, Calculator } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Box } from "lucide-react";
-// Example pricing calculation
-const examplePackages = [
-  {
-    name: "Small Package",
-    icon: Package,
-    weight: "Up to 5kg",
-    dimensions: "30x20x15cm",
-    examples: ["Documents", "Small electronics", "Clothing"],
-    basePrice: 5,
-  },
-  {
-    name: "Medium Package",
-    icon: Box,
-    weight: "Up to 15kg",
-    dimensions: "50x40x30cm",
-    examples: ["Home appliances", "Multiple items", "Medium boxes"],
-    basePrice: 12,
-  },
-  {
-    name: "Large Package",
-    icon: Truck,
-    weight: "Up to 30kg",
-    dimensions: "80x60x50cm",
-    examples: ["Furniture", "Large appliances", "Multiple boxes"],
-    basePrice: 25,
-  },
-];
-
-const distanceRates = [
-  { range: "0-30km", price: 1 },
-  { range: "31-100km", price: 2 },
-  { range: "101-300km", price: 3 },
-  { range: ">300km", price: 4 },
-];
+import { useState } from "react";
+import { Package, Truck, Scale, MapPin, Calculator, AlertCircle,Shield } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 
 export function MainPricing() {
+  const [weight, setWeight] = useState(5);
+  const [dimensions, setDimensions] = useState({ length: 30, width: 20, height: 15 });
+  const [quantity, setQuantity] = useState(1);
+  const [isFragile, setIsFragile] = useState(false);
+  const [isPerishable, setIsPerishable] = useState(false);
+  const [deliveryGovernorate, setDeliveryGovernorate] = useState("Tunis");
+  const [sellerGovernorate, setSellerGovernorate] = useState("Tunis");
+  const [pricePreview, setPricePreview] = useState<{
+    basePrice: number;
+    weightFactor: number;
+    volumeFactor: number;
+    specialHandlingFactor: number;
+    finalPrice: number;
+    breakdown: {
+      weight: number;
+      volume: number;
+      fragileItems: number;
+      perishableItems: number;
+    };
+  } | null>(null);
+
+  // Calculate price preview based on inputs
+  const calculatePrice = () => {
+    // Calculate total weight and volume
+    const totalWeight = weight * quantity;
+    const totalVolume = dimensions.length * dimensions.width * dimensions.height * quantity;
+    
+    // Check if it's local delivery
+    const isLocalDelivery = sellerGovernorate === deliveryGovernorate;
+    
+    // Base price based on delivery type
+    const basePrice = isLocalDelivery ? 3 : 7;
+    
+    // Weight factor (exponential increase)
+    const weightFactor = Math.pow(totalWeight / 10, 1.2);
+    
+    // Volume factor
+    const volumeFactor = Math.pow(totalVolume / 1000, 1.1);
+    
+    // Special handling factors
+    const fragileItems = isFragile ? quantity : 0;
+    const perishableItems = isPerishable ? quantity : 0;
+    const specialHandlingFactor = 1 + (fragileItems * 0.1) + (perishableItems * 0.15);
+    
+    // Calculate final price
+    let finalPrice = basePrice * weightFactor * volumeFactor * specialHandlingFactor;
+    
+    // Apply price caps
+    if (isLocalDelivery) {
+      finalPrice = Math.min(Math.max(finalPrice, 3), 30);
+    } else {
+      finalPrice = Math.min(Math.max(finalPrice, 7), 250);
+    }
+    
+    finalPrice = Math.round(finalPrice * 100) / 100;
+    
+    setPricePreview({
+      basePrice,
+      weightFactor,
+      volumeFactor,
+      specialHandlingFactor,
+      finalPrice,
+      breakdown: {
+        weight: totalWeight,
+        volume: totalVolume,
+        fragileItems,
+        perishableItems
+      }
+    });
+  };
+
   return (
-    <div className="py-24">
-      <div className="container">
-        {/* Header with consistent styling */}
-        <div className="mx-auto max-w-4xl text-center pb-8 border-b">
-          <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
-            Fair & Transparent <span className="text-primary">Pricing</span>
-          </h1>
-          <p className="mt-6 text-lg leading-8 text-muted-foreground">
-            Pay only for what you ship. Our prices are calculated based on
-            package size, weight, and delivery distance.
-          </p>
+    <div className="min-h-screen ">
+      {/* Hero Section */}
+      <div className="relative overflow-hidden py-16">
+        <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))]"></div>
+        <div className="container relative mx-auto px-4">
+          <div className="flex flex-col items-center text-center">
+            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+              <Calculator className="h-8 w-8 text-primary" />
+            </div>
+            <h1 className="mb-4 text-4xl font-bold tracking-tight">Delivery Pricing</h1>
+            <p className="mb-8 max-w-2xl text-lg text-muted-foreground">
+              Calculate your delivery cost based on package details, distance, and special handling requirements.
+              Our transparent pricing ensures you only pay for what you need.
+            </p>
+          </div>
         </div>
+      </div>
 
-        {/* Interactive Price Calculator */}
-        <div className="mt-16 mx-auto max-w-5xl">
-          <Card className="bg-card/50 backdrop-blur">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calculator className="h-5 w-5" />
-                Shipping Cost Calculator
-              </CardTitle>
-              <CardDescription>
-                See how our pricing works with this interactive calculator
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid md:grid-cols-2 gap-8">
-                {/* Package Types */}
-                <div>
-                  <h3 className="font-semibold mb-4 flex items-center gap-2">
-                    <Scale className="h-4 w-4" />
-                    Package Types & Base Prices
-                  </h3>
-                  <div className="space-y-4">
-                    {examplePackages.map((pkg) => (
-                      <div
-                        key={pkg.name}
-                        className="flex items-start gap-4 p-4 rounded-lg border bg-card"
-                      >
-                        <pkg.icon className="h-8 w-8 text-primary shrink-0" />
-                        <div>
-                          <h4 className="font-medium">{pkg.name}</h4>
-                          <p className="text-sm text-muted-foreground">
-                            {pkg.weight} • {pkg.dimensions}
-                          </p>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            Perfect for: {pkg.examples.join(", ")}
-                          </p>
-                          <p className="text-sm font-medium mt-2">
-                            Base price: dt {pkg.basePrice}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Distance Rates */}
-                <div>
-                  <h3 className="font-semibold mb-4 flex items-center gap-2">
-                    <MapPin className="h-4 w-4" />
-                    Distance Rates (per km)
-                  </h3>
-                  <div className="relative">
-                    {/* Distance visualization */}
-                    <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-primary/20 rounded-lg" />
-                    <div className="relative space-y-4 p-4">
-                      {distanceRates.map((rate) => (
-                        <div
-                          key={rate.range}
-                          className="flex items-center justify-between"
-                        >
-                          <span className="text-sm font-medium">
-                            {rate.range}
-                          </span>
-                          <span className="text-sm font-medium">
-                            dt {rate.price}/km
-                          </span>
-                        </div>
-                      ))}
+      <div className="container mx-auto px-4 py-12">
+        <div className="grid gap-12 lg:grid-cols-3">
+          {/* Calculator Section */}
+          <div className="lg:col-span-2">
+            <div className="rounded-lg border bg-card p-6 shadow-sm">
+              <h2 className="mb-6 text-2xl font-semibold">Delivery Cost Calculator</h2>
+              
+              <div className="grid gap-6 md:grid-cols-2">
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="weight">Package Weight (kg)</Label>
+                    <div className="flex items-center gap-4">
+                      <Slider 
+                        id="weight" 
+                        min={0.1} 
+                        max={30} 
+                        step={0.1} 
+                        value={[weight]} 
+                        onValueChange={(value) => setWeight(value[0])} 
+                        className="mt-2"
+                      />
+                      <span className="text-sm font-medium w-12">{weight} kg</span>
                     </div>
                   </div>
-
-                  {/* Example calculation */}
-                  <div className="mt-8 p-4 rounded-lg border bg-card">
-                    <h4 className="font-medium mb-2">Example Calculation</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Medium package (15kg) shipped 150km:
-                    </p>
-                    <ul className="text-sm mt-2 space-y-1">
-                      <li>Base price: dt 12</li>
-                      <li>Distance rate: dt 3/km × 150km = dt 450</li>
-                      <li className="font-medium pt-2">Total: dt 462</li>
-                    </ul>
+                  
+                  <div>
+                    <Label>Dimensions (cm)</Label>
+                    <div className="grid grid-cols-3 gap-2 mt-2">
+                      <div>
+                        <Label htmlFor="length" className="text-xs">Length</Label>
+                        <Input 
+                          id="length" 
+                          type="number" 
+                          value={dimensions.length} 
+                          onChange={(e) => setDimensions({...dimensions, length: Number(e.target.value)})} 
+                          className="h-8"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="width" className="text-xs">Width</Label>
+                        <Input 
+                          id="width" 
+                          type="number" 
+                          value={dimensions.width} 
+                          onChange={(e) => setDimensions({...dimensions, width: Number(e.target.value)})} 
+                          className="h-8"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="height" className="text-xs">Height</Label>
+                        <Input 
+                          id="height" 
+                          type="number" 
+                          value={dimensions.height} 
+                          onChange={(e) => setDimensions({...dimensions, height: Number(e.target.value)})} 
+                          className="h-8"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="quantity">Quantity</Label>
+                    <Input 
+                      id="quantity" 
+                      type="number" 
+                      min={1} 
+                      value={quantity} 
+                      onChange={(e) => setQuantity(Number(e.target.value))} 
+                      className="mt-2"
+                    />
+                  </div>
+                </div>
+                
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="fragile">Fragile Items</Label>
+                    <Switch 
+                      id="fragile" 
+                      checked={isFragile} 
+                      onCheckedChange={setIsFragile} 
+                    />
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="perishable">Perishable Items</Label>
+                    <Switch 
+                      id="perishable" 
+                      checked={isPerishable} 
+                      onCheckedChange={setIsPerishable} 
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="sellerGovernorate">Seller Location</Label>
+                    <select 
+                      id="sellerGovernorate" 
+                      value={sellerGovernorate} 
+                      onChange={(e) => setSellerGovernorate(e.target.value)}
+                      className="w-full mt-2 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
+                    >
+                      <option value="Tunis">Tunis</option>
+                      <option value="Sfax">Sfax</option>
+                      <option value="Sousse">Sousse</option>
+                      <option value="Kairouan">Kairouan</option>
+                      <option value="Bizerte">Bizerte</option>
+                      <option value="Gabes">Gabes</option>
+                      <option value="Ariana">Ariana</option>
+                      <option value="Gafsa">Gafsa</option>
+                      <option value="Monastir">Monastir</option>
+                      <option value="Ben Arous">Ben Arous</option>
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="deliveryGovernorate">Delivery Location</Label>
+                    <select 
+                      id="deliveryGovernorate" 
+                      value={deliveryGovernorate} 
+                      onChange={(e) => setDeliveryGovernorate(e.target.value)}
+                      className="w-full mt-2 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
+                    >
+                      <option value="Tunis">Tunis</option>
+                      <option value="Sfax">Sfax</option>
+                      <option value="Sousse">Sousse</option>
+                      <option value="Kairouan">Kairouan</option>
+                      <option value="Bizerte">Bizerte</option>
+                      <option value="Gabes">Gabes</option>
+                      <option value="Ariana">Ariana</option>
+                      <option value="Gafsa">Gafsa</option>
+                      <option value="Monastir">Monastir</option>
+                      <option value="Ben Arous">Ben Arous</option>
+                    </select>
                   </div>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+              
+              <Button onClick={calculatePrice} className="mt-6 w-full">
+                Calculate Price
+              </Button>
+            </div>
+
+            {pricePreview && (
+              <div className="mt-6 rounded-lg border bg-card p-6 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xl font-semibold">Estimated Delivery Cost</h3>
+                  <Badge variant={sellerGovernorate === deliveryGovernorate ? "default" : "secondary"} className="text-sm">
+                    {sellerGovernorate === deliveryGovernorate ? "Local Delivery" : "Intercity Delivery"}
+                  </Badge>
+                </div>
+                
+                <div className="mb-6 flex items-baseline gap-2">
+                  <span className="text-4xl font-bold">{pricePreview.finalPrice.toFixed(2)}</span>
+                  <span className="text-xl font-medium">DT</span>
+                </div>
+                
+                <Separator className="my-4" />
+                
+                <div className="space-y-3 text-sm">
+                  <div className="flex justify-between">
+                    <span>Base Price:</span>
+                    <span>{pricePreview.basePrice.toFixed(2)} DT</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Weight Factor:</span>
+                    <span>{pricePreview.weightFactor.toFixed(2)}x</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Volume Factor:</span>
+                    <span>{pricePreview.volumeFactor.toFixed(2)}x</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Special Handling:</span>
+                    <span>{pricePreview.specialHandlingFactor.toFixed(2)}x</span>
+                  </div>
+                  
+                  <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
+                    <AlertCircle className="h-4 w-4" />
+                    <span>Price range: {sellerGovernorate === deliveryGovernorate ? "3-30 DT" : "7-250 DT"}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Pricing Guide Section */}
+          <div>
+            <div className="sticky top-4">
+              <h2 className="mb-6 text-2xl font-semibold">Pricing Guide</h2>
+              
+              <div className="space-y-6">
+                <div className="rounded-lg border bg-card p-6 shadow-sm">
+                  <div className="mb-4 flex items-center gap-2">
+                    <Scale className="h-5 w-5 text-primary" />
+                    <h3 className="text-lg font-medium">Local Delivery</h3>
+                  </div>
+                  <p className="mb-4 text-sm text-muted-foreground">
+                    For deliveries within the same governorate, we offer competitive rates with quick delivery times.
+                  </p>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span>Base Price:</span>
+                      <span className="font-medium">3 DT</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Minimum Price:</span>
+                      <span className="font-medium">3 DT</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Maximum Price:</span>
+                      <span className="font-medium">30 DT</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="rounded-lg border bg-card p-6 shadow-sm">
+                  <div className="mb-4 flex items-center gap-2">
+                    <Truck className="h-5 w-5 text-primary" />
+                    <h3 className="text-lg font-medium">Intercity Delivery</h3>
+                  </div>
+                  <p className="mb-4 text-sm text-muted-foreground">
+                    For deliveries between different governorates, we provide reliable service with appropriate pricing.
+                  </p>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span>Base Price:</span>
+                      <span className="font-medium">7 DT</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Minimum Price:</span>
+                      <span className="font-medium">7 DT</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Maximum Price:</span>
+                      <span className="font-medium">250 DT</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="rounded-lg border bg-card p-6 shadow-sm">
+                  <div className="mb-4 flex items-center gap-2">
+                    <Package className="h-5 w-5 text-primary" />
+                    <h3 className="text-lg font-medium">Special Handling</h3>
+                  </div>
+                  <p className="mb-4 text-sm text-muted-foreground">
+                    Additional care and handling for special items to ensure safe delivery.
+                  </p>
+                  <div className="space-y-4">
+                    <div>
+                      <div className="mb-1 flex items-center gap-2">
+                        <AlertCircle className="h-4 w-4 text-amber-500" />
+                        <span className="font-medium">Fragile Items</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Adds 10% to the final price for each fragile item. Includes special packaging and careful handling.
+                      </p>
+                    </div>
+                    
+                    <div>
+                      <div className="mb-1 flex items-center gap-2">
+                        <AlertCircle className="h-4 w-4 text-red-500" />
+                        <span className="font-medium">Perishable Items</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Adds 15% to the final price for each perishable item. Includes temperature-controlled transport when needed.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Payment Methods */}
-        <div className="mt-24 mx-auto max-w-4xl text-center">
-          <h2 className="text-2xl font-bold mb-8">Payment Methods</h2>
-          <div className="inline-flex items-center gap-8 justify-center flex-wrap">
-            <div className="text-sm">Credit/Debit Cards</div>
-            <div className="text-sm">Bank Transfer</div>
-            <div className="text-sm">Cash on Delivery</div>
-            <div className="text-sm">Corporate Billing</div>
+        {/* Features Section */}
+        <div className="mt-20">
+          <h2 className="mb-10 text-center text-3xl font-bold">Why Choose Our Delivery Service</h2>
+          
+          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
+            <div className="flex flex-col items-center text-center">
+              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-purple-500/10">
+                <Scale className="h-8 w-8 text-purple-500" />
+              </div>
+              <h3 className="mb-2 text-lg font-semibold">Weight-Based Pricing</h3>
+              <p className="text-sm text-muted-foreground">
+                Pay only for the actual weight of your package with our fair pricing model.
+              </p>
+            </div>
+
+            <div className="flex flex-col items-center text-center">
+              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-500/10">
+                <MapPin className="h-8 w-8 text-blue-500" />
+              </div>
+              <h3 className="mb-2 text-lg font-semibold">Location-Based Rates</h3>
+              <p className="text-sm text-muted-foreground">
+                Different rates for local and intercity deliveries to ensure fair pricing.
+              </p>
+            </div>
+
+            <div className="flex flex-col items-center text-center">
+              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-500/10">
+                <Package className="h-8 w-8 text-green-500" />
+              </div>
+              <h3 className="mb-2 text-lg font-semibold">Special Handling</h3>
+              <p className="text-sm text-muted-foreground">
+                Additional care for fragile and perishable items with transparent pricing.
+              </p>
+            </div>
+            
+            <div className="flex flex-col items-center text-center">
+              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-amber-500/10">
+                <Shield className="h-8 w-8 text-amber-500" />
+              </div>
+              <h3 className="mb-2 text-lg font-semibold">Secure Delivery</h3>
+              <p className="text-sm text-muted-foreground">
+                All packages are insured and tracked throughout the delivery process.
+              </p>
+            </div>
           </div>
-          <p className="text-sm text-muted-foreground mt-4">
-            Flexible payment options to suit your business needs
-          </p>
+        </div>
+
+        {/* FAQ Section */}
+        <div className="mt-20">
+          <h2 className="mb-10 text-center text-3xl font-bold">Frequently Asked Questions</h2>
+          
+          <div className="mx-auto max-w-3xl space-y-6">
+            <div className="rounded-lg border bg-card p-6 shadow-sm">
+              <h3 className="mb-2 text-lg font-medium">How is the delivery price calculated?</h3>
+              <p className="text-sm text-muted-foreground">
+                Our pricing is based on several factors including package weight, dimensions, delivery distance, and special handling requirements. The base price varies between local (3 DT) and intercity (7 DT) deliveries, with additional factors applied based on your specific package details.
+              </p>
+            </div>
+            
+            <div className="rounded-lg border bg-card p-6 shadow-sm">
+              <h3 className="mb-2 text-lg font-medium">What is considered a local delivery?</h3>
+              <p className="text-sm text-muted-foreground">
+                A local delivery is when the seller and delivery locations are in the same governorate. For example, if both the seller and recipient are in Tunis, it's considered a local delivery with a base price of 3 DT.
+              </p>
+            </div>
+            
+            <div className="rounded-lg border bg-card p-6 shadow-sm">
+              <h3 className="mb-2 text-lg font-medium">How do I know if my item needs special handling?</h3>
+              <p className="text-sm text-muted-foreground">
+                Fragile items include glass, electronics, ceramics, and other breakable goods. Perishable items include food, plants, and other time-sensitive products. If you're unsure, it's better to select the appropriate option to ensure proper handling.
+              </p>
+            </div>
+            
+            <div className="rounded-lg border bg-card p-6 shadow-sm">
+              <h3 className="mb-2 text-lg font-medium">Is there a maximum weight or size limit?</h3>
+              <p className="text-sm text-muted-foreground">
+                Yes, our calculator supports packages up to 30kg in weight. For larger or heavier items, please contact our customer service for a custom quote. We can accommodate most package sizes within reasonable limits.
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
