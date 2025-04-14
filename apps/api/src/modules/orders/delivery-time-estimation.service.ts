@@ -18,6 +18,15 @@ export class DeliveryTimeEstimationService {
     WAREHOUSE: 30, // Time to process at warehouse (minutes)
   };
 
+  // Time factors for different delivery stages
+  private readonly TIME_FACTORS = {
+    PICKUP_PREPARATION: 30, // Minutes to prepare for pickup
+    WAREHOUSE_PROCESSING: 60, // Minutes for warehouse processing
+    INTERCITY_TRANSIT: 240, // Minutes for intercity transit (4 hours)
+    LOCAL_TRANSIT: 120, // Minutes for local transit (2 hours)
+    TRAFFIC_BUFFER: 0.2, // 20% buffer for traffic
+  };
+
   constructor(private prisma: PrismaService) {}
 
   /**
@@ -60,6 +69,11 @@ export class DeliveryTimeEstimationService {
     // 2. Number of items and their handling requirements
     // 3. Traffic conditions (simplified)
     
+    let estimatedTime = new Date(startTime);
+    
+    // Add pickup preparation time
+    estimatedTime.setMinutes(estimatedTime.getMinutes() + this.TIME_FACTORS.PICKUP_PREPARATION);
+    
     // Calculate distance if coordinates are available
     let distanceKm = 0;
     if (order.pickupLatitude && order.pickupLongitude && 
@@ -82,7 +96,7 @@ export class DeliveryTimeEstimationService {
     const handlingTimeMinutes = this.calculateHandlingTime(order.items);
     
     // Add buffer for traffic (20% of travel time)
-    const trafficBufferMinutes = travelTimeHours * 60 * 0.2;
+    const trafficBufferMinutes = travelTimeHours * 60 * this.TIME_FACTORS.TRAFFIC_BUFFER;
     
     // Total time in minutes
     const totalTimeMinutes = 
@@ -90,8 +104,7 @@ export class DeliveryTimeEstimationService {
       handlingTimeMinutes + // Handling time
       trafficBufferMinutes; // Traffic buffer
     
-    // Create estimated delivery time
-    const estimatedTime = new Date(startTime);
+    // Add total time to estimated time
     estimatedTime.setMinutes(estimatedTime.getMinutes() + totalTimeMinutes);
     
     return estimatedTime;
@@ -110,6 +123,9 @@ export class DeliveryTimeEstimationService {
     
     let estimatedTime = new Date(startTime);
     
+    // Add pickup preparation time
+    estimatedTime.setMinutes(estimatedTime.getMinutes() + this.TIME_FACTORS.PICKUP_PREPARATION);
+    
     // Step 1: Seller to source warehouse (if coordinates available)
     if (order.pickupLatitude && order.pickupLongitude && 
         order.warehouse?.latitude && order.warehouse?.longitude) {
@@ -124,11 +140,11 @@ export class DeliveryTimeEstimationService {
       estimatedTime.setMinutes(estimatedTime.getMinutes() + travelTimeToWarehouse);
     } else {
       // Default time if coordinates not available
-      estimatedTime.setMinutes(estimatedTime.getMinutes() + 30);
+      estimatedTime.setMinutes(estimatedTime.getMinutes() + this.TIME_FACTORS.LOCAL_TRANSIT / 2);
     }
     
     // Step 2: Processing at source warehouse
-    estimatedTime.setMinutes(estimatedTime.getMinutes() + this.STOP_TIME_MINUTES.WAREHOUSE);
+    estimatedTime.setMinutes(estimatedTime.getMinutes() + this.TIME_FACTORS.WAREHOUSE_PROCESSING);
     
     // Step 3: Intercity travel (if secondary warehouse is available)
     if (order.secondaryWarehouseId) {
@@ -148,15 +164,15 @@ export class DeliveryTimeEstimationService {
         estimatedTime.setMinutes(estimatedTime.getMinutes() + intercityTravelTime);
       } else {
         // Default intercity travel time
-        estimatedTime.setHours(estimatedTime.getHours() + 4);
+        estimatedTime.setMinutes(estimatedTime.getMinutes() + this.TIME_FACTORS.INTERCITY_TRANSIT);
       }
     } else {
       // Default intercity travel time
-      estimatedTime.setHours(estimatedTime.getHours() + 4);
+      estimatedTime.setMinutes(estimatedTime.getMinutes() + this.TIME_FACTORS.INTERCITY_TRANSIT);
     }
     
     // Step 4: Processing at destination warehouse
-    estimatedTime.setMinutes(estimatedTime.getMinutes() + this.STOP_TIME_MINUTES.WAREHOUSE);
+    estimatedTime.setMinutes(estimatedTime.getMinutes() + this.TIME_FACTORS.WAREHOUSE_PROCESSING);
     
     // Step 5: Destination warehouse to customer
     if (order.dropLatitude && order.dropLongitude && 
@@ -177,11 +193,11 @@ export class DeliveryTimeEstimationService {
         estimatedTime.setMinutes(estimatedTime.getMinutes() + travelTimeToCustomer);
       } else {
         // Default time if secondary warehouse not found
-        estimatedTime.setMinutes(estimatedTime.getMinutes() + 45);
+        estimatedTime.setMinutes(estimatedTime.getMinutes() + this.TIME_FACTORS.LOCAL_TRANSIT / 2);
       }
     } else {
       // Default time if coordinates not available
-      estimatedTime.setMinutes(estimatedTime.getMinutes() + 45);
+      estimatedTime.setMinutes(estimatedTime.getMinutes() + this.TIME_FACTORS.LOCAL_TRANSIT / 2);
     }
     
     // Add handling time for items
@@ -271,5 +287,165 @@ export class DeliveryTimeEstimationService {
     for (const order of batch.orders) {
       await this.updateOrderEstimatedDeliveryTime(order.id);
     }
+  }
+
+  /**
+   * Recalculate estimated delivery time based on order status
+   * This method is called when an order status changes
+   */
+  async recalculateEstimatedDeliveryTimeBasedOnStatus(orderId: string, newStatus: OrderStatus): Promise<void> {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        items: true,
+        seller: true,
+        warehouse: true,
+        batch: true,
+      },
+    });
+
+    if (!order) {
+      throw new NotFoundException(`Order with ID ${orderId} not found`);
+    }
+
+    // Get the current time as the new starting point
+    const currentTime = new Date();
+    
+    // Calculate remaining time based on the new status
+    let estimatedTime: Date;
+    
+    if (order.isLocalDelivery) {
+      estimatedTime = await this.recalculateLocalDeliveryTime(order, currentTime, newStatus);
+    } else {
+      estimatedTime = await this.recalculateIntercityDeliveryTime(order, currentTime, newStatus);
+    }
+    
+    // Update the order with the new estimated delivery time
+    await this.prisma.order.update({
+      where: { id: orderId },
+      data: { estimatedDeliveryTime: estimatedTime }
+    });
+    
+    this.logger.log(`Recalculated estimated delivery time for order ${orderId} to ${estimatedTime} based on new status ${newStatus}`);
+  }
+
+  /**
+   * Recalculate local delivery time based on order status
+   */
+  private async recalculateLocalDeliveryTime(order: any, currentTime: Date, newStatus: OrderStatus): Promise<Date> {
+    let estimatedTime = new Date(currentTime);
+    
+    // Adjust estimated time based on the current status
+    switch (newStatus) {
+      case OrderStatus.PENDING:
+        // Full calculation from scratch
+        return this.estimateLocalDeliveryTime(order, currentTime);
+        
+      case OrderStatus.LOCAL_ASSIGNED_TO_PICKUP:
+        // Already assigned, subtract preparation time
+        estimatedTime.setMinutes(estimatedTime.getMinutes() - this.TIME_FACTORS.PICKUP_PREPARATION);
+        return this.estimateLocalDeliveryTime(order, estimatedTime);
+        
+      case OrderStatus.LOCAL_PICKED_UP:
+        // Already picked up, only consider remaining delivery time
+        if (order.pickupLatitude && order.pickupLongitude && 
+            order.dropLatitude && order.dropLongitude) {
+          const distanceKm = this.calculateDistance(
+            order.pickupLatitude,
+            order.pickupLongitude,
+            order.dropLatitude,
+            order.dropLongitude
+          );
+          
+          const travelTimeHours = distanceKm / this.AVERAGE_SPEED_KMH.LOCAL;
+          const trafficBufferMinutes = travelTimeHours * 60 * this.TIME_FACTORS.TRAFFIC_BUFFER;
+          const handlingTimeMinutes = this.calculateHandlingTime(order.items);
+          
+          const totalTimeMinutes = (travelTimeHours * 60) + handlingTimeMinutes + trafficBufferMinutes;
+          estimatedTime.setMinutes(estimatedTime.getMinutes() + totalTimeMinutes);
+        } else {
+          // Default time if coordinates not available
+          estimatedTime.setMinutes(estimatedTime.getMinutes() + this.TIME_FACTORS.LOCAL_TRANSIT);
+        }
+        break;
+        
+      case OrderStatus.LOCAL_DELIVERED:
+        // Already delivered, set to current time
+        return currentTime;
+        
+      default:
+        // For other statuses, use full calculation
+        return this.estimateLocalDeliveryTime(order, currentTime);
+    }
+    
+    return estimatedTime;
+  }
+
+  /**
+   * Recalculate intercity delivery time based on order status
+   */
+  private async recalculateIntercityDeliveryTime(order: any, currentTime: Date, newStatus: OrderStatus): Promise<Date> {
+    let estimatedTime = new Date(currentTime);
+    
+    // Adjust estimated time based on the current status
+    switch (newStatus) {
+      case OrderStatus.PENDING:
+        // Full calculation from scratch
+        return this.estimateIntercityDeliveryTime(order, currentTime);
+        
+      case OrderStatus.CITY_ASSIGNED_TO_PICKUP:
+        // Already assigned, subtract preparation time
+        estimatedTime.setMinutes(estimatedTime.getMinutes() - this.TIME_FACTORS.PICKUP_PREPARATION);
+        return this.estimateIntercityDeliveryTime(order, estimatedTime);
+        
+      case OrderStatus.CITY_PICKED_UP:
+        // If picked up, determine which stage of the journey
+        if (order.warehouse && !order.secondaryWarehouseId) {
+          // Between seller and source warehouse
+          if (order.pickupLatitude && order.pickupLongitude && 
+              order.warehouse.latitude && order.warehouse.longitude) {
+            const distanceToWarehouse = this.calculateDistance(
+              order.pickupLatitude,
+              order.pickupLongitude,
+              order.warehouse.latitude,
+              order.warehouse.longitude
+            );
+            
+            const travelTimeToWarehouse = (distanceToWarehouse / this.AVERAGE_SPEED_KMH.LOCAL) * 60;
+            estimatedTime.setMinutes(estimatedTime.getMinutes() + travelTimeToWarehouse);
+          } else {
+            estimatedTime.setMinutes(estimatedTime.getMinutes() + this.TIME_FACTORS.LOCAL_TRANSIT / 2);
+          }
+          
+          // Add remaining steps
+          estimatedTime.setMinutes(estimatedTime.getMinutes() + this.TIME_FACTORS.WAREHOUSE_PROCESSING);
+          estimatedTime.setMinutes(estimatedTime.getMinutes() + this.TIME_FACTORS.INTERCITY_TRANSIT);
+          estimatedTime.setMinutes(estimatedTime.getMinutes() + this.TIME_FACTORS.WAREHOUSE_PROCESSING);
+          estimatedTime.setMinutes(estimatedTime.getMinutes() + this.TIME_FACTORS.LOCAL_TRANSIT / 2);
+        } else if (order.secondaryWarehouseId) {
+          // Between warehouses or at destination warehouse
+          estimatedTime.setMinutes(estimatedTime.getMinutes() + this.TIME_FACTORS.INTERCITY_TRANSIT / 2);
+          estimatedTime.setMinutes(estimatedTime.getMinutes() + this.TIME_FACTORS.WAREHOUSE_PROCESSING);
+          estimatedTime.setMinutes(estimatedTime.getMinutes() + this.TIME_FACTORS.LOCAL_TRANSIT / 2);
+        } else {
+          // Default case
+          estimatedTime.setMinutes(estimatedTime.getMinutes() + this.TIME_FACTORS.INTERCITY_TRANSIT);
+        }
+        break;
+        
+      case OrderStatus.CITY_DELIVERED:
+        // Already delivered, set to current time
+        return currentTime;
+        
+      default:
+        // For other statuses, use full calculation
+        return this.estimateIntercityDeliveryTime(order, currentTime);
+    }
+    
+    // Add handling time for items
+    const handlingTimeMinutes = this.calculateHandlingTime(order.items);
+    estimatedTime.setMinutes(estimatedTime.getMinutes() + handlingTimeMinutes);
+    
+    return estimatedTime;
   }
 } 

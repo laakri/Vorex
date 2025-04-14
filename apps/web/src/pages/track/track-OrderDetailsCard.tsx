@@ -1,5 +1,5 @@
 import { format } from 'date-fns';
-import { Phone, MapPin, Package, Truck, User, Building } from 'lucide-react';
+import { Phone, MapPin, Package, Truck, User, Building, Calendar, Clock } from 'lucide-react';
 
 interface OrderDetailsCardProps {
   orderData: any;
@@ -8,6 +8,30 @@ interface OrderDetailsCardProps {
 const OrderDetailsCard = ({ orderData }: OrderDetailsCardProps) => {
   const formatDate = (dateString: string) => {
     return format(new Date(dateString), 'PPP');
+  };
+
+  const formatTime = (dateString: string) => {
+    return format(new Date(dateString), 'p');
+  };
+
+  const formatEstimatedDelivery = () => {
+    if (!orderData.estimatedDelivery) return 'Not available';
+    
+    const estimatedDate = new Date(orderData.estimatedDelivery);
+    const today = new Date();
+    
+    if (estimatedDate.toDateString() === today.toDateString()) {
+      return `Today, ${formatTime(orderData.estimatedDelivery)}`;
+    }
+    
+    const tomorrow = new Date();
+    tomorrow.setDate(today.getDate() + 1);
+    
+    if (estimatedDate.toDateString() === tomorrow.toDateString()) {
+      return `Tomorrow, ${formatTime(orderData.estimatedDelivery)}`;
+    }
+    
+    return `${formatDate(orderData.estimatedDelivery)}, ${formatTime(orderData.estimatedDelivery)}`;
   };
 
   return (
@@ -41,6 +65,48 @@ const OrderDetailsCard = ({ orderData }: OrderDetailsCardProps) => {
               <div className="pt-2">
                 <span className="text-muted-foreground">Notes:</span>
                 <p className="mt-1 rounded-md bg-muted/20 p-2 font-medium text-foreground">{orderData.notes}</p>
+              </div>
+            )}
+          </div>
+        </div>
+        
+        {/* Estimated Delivery */}
+        <div className="p-6">
+          <h3 className="mb-4 flex items-center gap-2 text-lg font-medium text-foreground">
+            <Calendar className="h-5 w-5 text-primary" />
+            Delivery Information
+          </h3>
+          
+          <div className="space-y-4">
+            <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+              <div className="flex items-center gap-2">
+                <Clock className="h-5 w-5 text-primary" />
+                <span className="font-medium text-foreground">Estimated Delivery:</span>
+              </div>
+              <p className="mt-2 text-lg font-semibold text-primary">{formatEstimatedDelivery()}</p>
+            </div>
+            
+            <div className="flex items-start gap-2">
+              <Truck className="mt-0.5 h-4 w-4 text-primary/70" />
+              <div>
+                <span className="text-muted-foreground">Delivery Type:</span>
+                <p className="font-medium text-foreground">
+                  {orderData.isLocalDelivery ? 'Local Delivery' : 'Intercity Delivery'}
+                </p>
+              </div>
+            </div>
+            
+            {orderData.batchInfo?.driver && (
+              <div className="flex items-start gap-2">
+                <User className="mt-0.5 h-4 w-4 text-primary/70" />
+                <div>
+                  <span className="text-muted-foreground">Driver:</span>
+                  <p className="font-medium text-foreground">{orderData.batchInfo.driver.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Vehicle: {orderData.batchInfo.driver.vehicle.make} {orderData.batchInfo.driver.vehicle.model} 
+                    ({orderData.batchInfo.driver.vehicle.plateNumber})
+                  </p>
+                </div>
               </div>
             )}
           </div>
@@ -112,7 +178,7 @@ const OrderDetailsCard = ({ orderData }: OrderDetailsCardProps) => {
             <div className="flex items-start gap-2">
               <Building className="mt-0.5 h-4 w-4 text-primary/70" />
               <div>
-                <span className="text-muted-foreground">Business Name:</span>
+                <span className="text-muted-foreground">Business:</span>
                 <p className="font-medium text-foreground">{orderData.sellerInfo.businessName}</p>
               </div>
             </div>
@@ -136,45 +202,6 @@ const OrderDetailsCard = ({ orderData }: OrderDetailsCardProps) => {
             </div>
           </div>
         </div>
-        
-        {/* Driver Info (if available) */}
-        {orderData.batchInfo?.driver && (
-          <div className="p-6">
-            <h3 className="mb-4 flex items-center gap-2 text-lg font-medium text-foreground">
-              <Truck className="h-5 w-5 text-primary" />
-              Driver Information
-            </h3>
-            
-            <div className="space-y-3 text-sm">
-              <div className="flex items-start gap-2">
-                <User className="mt-0.5 h-4 w-4 text-primary/70" />
-                <div>
-                  <span className="text-muted-foreground">Name:</span>
-                  <p className="font-medium text-foreground">{orderData.batchInfo.driver.name}</p>
-                </div>
-              </div>
-              
-              <div className="flex items-start gap-2">
-                <Phone className="mt-0.5 h-4 w-4 text-primary/70" />
-                <div>
-                  <span className="text-muted-foreground">Phone:</span>
-                  <p className="font-medium text-foreground">{orderData.batchInfo.driver.phone}</p>
-                </div>
-              </div>
-              
-              <div className="flex items-start gap-2">
-                <Truck className="mt-0.5 h-4 w-4 text-primary/70" />
-                <div>
-                  <span className="text-muted-foreground">Vehicle:</span>
-                  <p className="font-medium text-foreground">
-                    {orderData.batchInfo.driver.vehicle.make} {orderData.batchInfo.driver.vehicle.model} ({orderData.batchInfo.driver.vehicle.type})
-                  </p>
-                  <p className="text-xs text-muted-foreground">Plate: {orderData.batchInfo.driver.vehicle.plateNumber}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
