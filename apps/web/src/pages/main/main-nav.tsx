@@ -189,13 +189,13 @@ export function MainNav() {
                 <>
                   <Button
                     asChild
-                    variant="outline"
+                    variant="secondary"
                     size="sm"
                     className="gap-2"
                   >
                     <Link to="/role-selection">
                       <User className="h-4 w-4" />
-                      Switch Role
+                      Access App
                     </Link>
                   </Button>
                   <Button
@@ -289,7 +289,7 @@ export function MainNav() {
                         >
                           <Link to="/role-selection">
                             <User className="h-4 w-4" />
-                            Switch Role
+                            Access App
                           </Link>
                         </Button>
                         <Button 

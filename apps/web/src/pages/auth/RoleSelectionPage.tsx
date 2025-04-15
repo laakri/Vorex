@@ -3,20 +3,42 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Logo } from "@/components/logo";
 import { Brain, ShoppingCart, Truck, Warehouse } from "lucide-react";
+import { useAuthStore } from "@/stores/auth.store";
+
+type UserRole = "ADMIN" | "SELLER" | "WAREHOUSE_MANAGER" | "DRIVER";
 
 export function RoleSelectionPage() {
-  // Dummy user data for testing
-  const user = {
-    role: ["seller", "driver", "admin", "warehouse"], 
-  };
+  // Get user roles from auth store
+  const { user } = useAuthStore();
+  const userRoles = user?.role || [];
 
   // Define available platforms based on user roles
   const platforms = [
-    { name: "Seller", path: "/seller", icon: ShoppingCart, roles: user.role },
-    { name: "Driver", path: "/driver", icon: Truck, roles: user.role },
-    { name: "Admin", path: "/admin", icon: Brain, roles: user.role },
-    { name: "Warehouse", path: "/warehouse", icon: Warehouse, roles: user.role },
-  ].filter(platform => platform.roles?.includes(platform.name.toLowerCase()));
+    { 
+      name: "Seller", 
+      path: "/seller", 
+      icon: ShoppingCart, 
+      role: "SELLER" as UserRole
+    },
+    { 
+      name: "Driver", 
+      path: "/driver", 
+      icon: Truck, 
+      role: "DRIVER" as UserRole
+    },
+    { 
+      name: "Admin", 
+      path: "/admin", 
+      icon: Brain, 
+      role: "ADMIN" as UserRole
+    },
+    { 
+      name: "Warehouse", 
+      path: "/warehouse", 
+      icon: Warehouse, 
+      role: "WAREHOUSE_MANAGER" as UserRole
+    },
+  ].filter(platform => userRoles.includes(platform.role));
 
   return (
     <div className="flex flex-col items-center justify-center h-screen bg-background p-6">
