@@ -112,6 +112,7 @@ model Order {
   refund               Refund?
   routeStops           RouteStop[]
   notifications        Notification[]
+  driverEarnings       DriverEarnings[]
 }
 
 model OrderItem {
@@ -222,6 +223,7 @@ model Driver {
   user             User            @relation(fields: [userId], references: [id])
   vehicle          Vehicle?        @relation(fields: [vehicleId], references: [id])
   availabilityStatus DriverStatus    @default(ONLINE)
+  earnings         DriverEarnings[]
 }
 
 model Vehicle {
@@ -276,6 +278,7 @@ model DeliveryRoute {
   fromWarehouse     Warehouse?  @relation("FromWarehouse", fields: [fromWarehouseId], references: [id])
   toWarehouse       Warehouse?  @relation("ToWarehouse", fields: [toWarehouseId], references: [id])
   stops             RouteStop[]
+  driverEarnings    DriverEarnings[]
 }
 
 model RouteStop {
@@ -363,6 +366,7 @@ model Batch {
   warehouse     Warehouse      @relation(fields: [warehouseId], references: [id])
   route         DeliveryRoute?
   orders        Order[]
+  driverEarnings DriverEarnings[]
 }
 
 model MaintenanceRecord {
@@ -390,6 +394,26 @@ model VehicleIssue {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   vehicle     Vehicle  @relation(fields: [vehicleId], references: [id])
+}
+
+model DriverEarnings {
+  id            String   @id @default(cuid())
+  driverId      String
+  orderId       String
+  routeId       String?
+  batchId       String?
+  baseAmount    Float
+  bonusAmount   Float
+  totalAmount   Float
+  percentage    Float    @default(70) // Default percentage for driver
+  status        PaymentStatus @default(PENDING)
+  paidAt        DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  driver        Driver   @relation(fields: [driverId], references: [id])
+  order         Order    @relation(fields: [orderId], references: [id])
+  route         DeliveryRoute? @relation(fields: [routeId], references: [id])
+  batch         Batch?   @relation(fields: [batchId], references: [id])
 }
 
 enum Role {
@@ -485,4 +509,10 @@ enum BatchStatus {
   COLLECTING
   PROCESSING
   COMPLETED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  CANCELLED
 }

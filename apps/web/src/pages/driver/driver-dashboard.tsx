@@ -10,6 +10,7 @@ import {
   BarChart,
   Boxes,
   RotateCw,
+  ArrowRight,
 } from "lucide-react";
 import {
   LineChart,
@@ -30,7 +31,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -69,6 +69,16 @@ export function DriverDashboard() {
   } = data || {};
   
   const hasDeliveries = recentDeliveries.length > 0;
+  
+  // Format currency
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'TND',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount || 0);
+  };
   
   // If loading, show skeleton UI
   if (isLoading) {
@@ -179,44 +189,57 @@ export function DriverDashboard() {
         <TabsContent value="overview" className="space-y-4">
           {/* Quick Stats */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            {[
-              {
-                title: "Total Earnings",
-                value: `${deliveryMetrics.earnings?.toLocaleString() || '0'} DT`,
-                icon: <Wallet className="h-5 w-5 text-primary" />,
-              },
-              {
-                title: "Completed Deliveries",
-                value: deliveryMetrics.completed?.toString() || '0',
-                icon: <Package className="h-5 w-5 text-primary" />,
-              },
-              {
-                title: "Total Distance",
-                value: `${deliveryMetrics.totalDistance || '0'} km`,
-                icon: <Navigation2 className="h-5 w-5 text-primary" />,
-              },
-              {
-                title: "Success Rate",
-                value: `${performanceStats.successRate || '0'}%`,
-                icon: <CheckCircle className="h-5 w-5 text-primary" />,
-              }
-            ].map((metric) => (
-              <Card key={metric.title}>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between space-x-4">
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">
-                        {metric.title}
-                      </p>
-                      <p className="text-2xl font-bold">{metric.value}</p>
-                    </div>
-                    <div className="p-2 bg-primary/10 rounded-full">
-                      {metric.icon}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Deliveries</CardTitle>
+                <Package className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{deliveryMetrics.completed || 0}</div>
+                <p className="text-xs text-muted-foreground">
+                  Completed in {timeRange}
+                </p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Earnings</CardTitle>
+                <Wallet className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{formatCurrency(deliveryMetrics.earnings || 0)}</div>
+                <p className="text-xs text-muted-foreground">
+                  From {deliveryMetrics.completed || 0} deliveries
+                </p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Distance</CardTitle>
+                <Navigation2 className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{deliveryMetrics.totalDistance?.toFixed(1) || 0} km</div>
+                <p className="text-xs text-muted-foreground">
+                  Traveled in {timeRange}
+                </p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
+                <CheckCircle className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{performanceStats.successRate || 0}%</div>
+                <p className="text-xs text-muted-foreground">
+                  On-time: {performanceStats.onTimeDelivery || 0}%
+                </p>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Charts and Recent Deliveries */}
@@ -224,107 +247,89 @@ export function DriverDashboard() {
             {/* Earnings Chart */}
             <Card className="col-span-4">
               <CardHeader>
-                <CardTitle>Earnings & Deliveries</CardTitle>
-                <CardDescription>Daily earnings and delivery count</CardDescription>
+                <CardTitle>Earnings Trend</CardTitle>
+                <CardDescription>
+                  Your earnings over the past {timeRange}
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                {hasDeliveries && earningsData.daily?.length > 0 ? (
+                {earningsData.daily.length === 0 ? (
+                  <EmptyState
+                    icon={<BarChart className="h-4 w-4" />}
+                    title="No earnings data"
+                    description="Complete deliveries to see your earnings trend."
+                  />
+                ) : (
                   <div className="h-[300px]">
                     <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={earningsData.daily}>
-                        <XAxis
-                          dataKey="date"
-                          stroke="#888888"
-                          fontSize={12}
-                          tickLine={false}
-                          axisLine={false}
-                        />
-                        <YAxis
-                          stroke="#888888"
-                          fontSize={12}
-                          tickLine={false}
-                          axisLine={false}
-                          tickFormatter={(value) => `${value} DT`}
-                        />
-                        <RechartsTooltip
-                          content={({ active, payload }) => {
-                            if (active && payload && payload.length) {
-                              return (
-                                <div className="rounded-lg border bg-background p-2 shadow-sm">
-                                  <div className="grid grid-cols-2 gap-2">
-                                    <div className="flex flex-col">
-                                      <span className="text-xs text-muted-foreground">Earnings</span>
-                                      <span className="font-bold text-sm">{payload[0].value} DT</span>
-                                    </div>
-                                    <div className="flex flex-col">
-                                      <span className="text-xs text-muted-foreground">Deliveries</span>
-                                      <span className="font-bold text-sm">{payload[0].payload.deliveries}</span>
-                                    </div>
-                                  </div>
-                                </div>
-                              );
-                            }
-                            return null;
-                          }}
-                        />
+                      <LineChart
+                        data={earningsData.daily}
+                        margin={{
+                          top: 5,
+                          right: 30,
+                          left: 20,
+                          bottom: 5,
+                        }}
+                      >
+                        <XAxis dataKey="date" />
+                        <YAxis />
+                        <RechartsTooltip />
                         <Line
                           type="monotone"
                           dataKey="earnings"
-                          stroke="hsl(var(--primary))"
-                          strokeWidth={2}
-                          dot={false}
+                          stroke="#10b981"
+                          activeDot={{ r: 8 }}
                         />
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
-                ) : (
-                  <EmptyState
-                    icon={<Wallet className="h-10 w-10 text-muted-foreground" />}
-                    title="No Earnings Data"
-                    description="Complete deliveries to see your earnings trend"
-                    className="h-[300px]"
-                  />
                 )}
               </CardContent>
             </Card>
 
             {/* Recent Deliveries */}
             <Card className="col-span-3">
-              <CardHeader>
-                <CardTitle>Recent Deliveries</CardTitle>
-                <CardDescription>Latest completed routes</CardDescription>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Recent Deliveries</CardTitle>
+                  <CardDescription>
+                    Your most recent completed deliveries
+                  </CardDescription>
+                </div>
+                <Button variant="outline" size="sm" asChild>
+                  <a href="/driver/history">View All</a>
+                </Button>
               </CardHeader>
               <CardContent>
-                {hasDeliveries ? (
-                  <div className="space-y-8">
+                {!hasDeliveries ? (
+                  <EmptyState
+                    icon={<Package className="h-4 w-4" />}
+                    title="No recent deliveries"
+                    description="Complete deliveries to see them here."
+                  />
+                ) : (
+                  <div className="space-y-4">
                     {recentDeliveries.map((delivery: any) => (
-                      <div key={delivery.id} className="flex items-center">
-                        <div className="space-y-1 flex-1">
+                      <div key={delivery.id} className="flex items-center justify-between">
+                        <div className="space-y-1">
                           <p className="text-sm font-medium leading-none">
-                            {delivery.route || 'Route ID: ' + delivery.id.substring(0, 8)}
+                            {delivery.route}
                           </p>
-                          <div className="flex items-center text-sm text-muted-foreground gap-2">
-                            <Package className="h-4 w-4" />
-                            <span>{delivery.packages || 0} packages</span>
-                            <span>•</span>
-                            <span>{delivery.distance || 0} km</span>
-                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            {delivery.packages} packages • {delivery.distance.toFixed(1)} km
+                          </p>
                         </div>
-                        <div className="flex items-center gap-4">
-                          <Badge variant="default">
-                            {delivery.status || 'COMPLETED'}
+                        <div className="flex items-center space-x-2">
+                          <Badge variant="outline">
+                            {formatCurrency(delivery.earnings)}
                           </Badge>
-                          <span className="font-bold">{delivery.earnings || 0} DT</span>
+                          <Badge variant="secondary">
+                            {new Date(delivery.completedAt).toLocaleDateString()}
+                          </Badge>
                         </div>
                       </div>
                     ))}
                   </div>
-                ) : (
-                  <EmptyState
-                    icon={<Package className="h-10 w-10 text-muted-foreground" />}
-                    title="No Recent Deliveries"
-                    description="Your recent deliveries will appear here"
-                  />
                 )}
               </CardContent>
             </Card>
@@ -335,130 +340,118 @@ export function DriverDashboard() {
             {/* Vehicle Status */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Truck className="h-4 w-4" />
-                  Vehicle Status
-                </CardTitle>
-                <CardDescription>Current vehicle information</CardDescription>
+                <CardTitle>Vehicle Status</CardTitle>
+                <CardDescription>
+                  Current vehicle information
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                {vehicleInfo ? (
+                {!vehicleInfo.type ? (
+                  <EmptyState
+                    icon={<Truck className="h-4 w-4" />}
+                    title="No vehicle information"
+                    description="Add a vehicle to your profile to see status information."
+                  />
+                ) : (
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm">Type</span>
-                      <Badge variant="outline">{vehicleInfo.type || 'N/A'}</Badge>
+                      <div className="flex items-center space-x-2">
+                        <Truck className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm font-medium">Type</span>
+                      </div>
+                      <span className="text-sm">{vehicleInfo.type}</span>
                     </div>
+                    
                     <div className="flex items-center justify-between">
-                      <span className="text-sm">Status</span>
-                      <Badge 
-                        variant={vehicleInfo.status === 'ACTIVE' ? 'default' : 'destructive'}
-                      >
-                        {vehicleInfo.status || 'UNKNOWN'}
+                      <div className="flex items-center space-x-2">
+                        <Info className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm font-medium">Status</span>
+                      </div>
+                      <Badge variant={vehicleInfo.status === 'ACTIVE' ? 'default' : 'destructive'}>
+                        {vehicleInfo.status}
                       </Badge>
                     </div>
+                    
                     <div className="flex items-center justify-between">
-                      <span className="text-sm">Last Maintenance</span>
+                      <div className="flex items-center space-x-2">
+                        <RotateCw className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm font-medium">Last Maintenance</span>
+                      </div>
                       <span className="text-sm">
                         {vehicleInfo.lastMaintenance 
                           ? new Date(vehicleInfo.lastMaintenance).toLocaleDateString() 
-                          : 'Not available'}
+                          : 'N/A'}
                       </span>
                     </div>
+                    
                     <div className="flex items-center justify-between">
-                      <span className="text-sm">Next Maintenance</span>
-                      <span className="text-sm font-medium">
-                        {vehicleInfo.nextMaintenance
-                          ? new Date(vehicleInfo.nextMaintenance).toLocaleDateString()
+                      <div className="flex items-center space-x-2">
+                        <Boxes className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm font-medium">Next Maintenance</span>
+                      </div>
+                      <span className="text-sm">
+                        {vehicleInfo.nextMaintenance 
+                          ? new Date(vehicleInfo.nextMaintenance).toLocaleDateString() 
                           : 'N/A'}
                       </span>
                     </div>
                   </div>
-                ) : (
-                  <EmptyState
-                    icon={<Truck className="h-10 w-10 text-muted-foreground" />}
-                    title="No Vehicle Data"
-                    description="Vehicle information not available"
-                  />
                 )}
               </CardContent>
             </Card>
 
-            {/* Performance Stats */}
+            {/* Earnings Summary */}
             <Card>
-              <CardHeader>
-                <CardTitle>Performance</CardTitle>
-                <CardDescription>Delivery performance metrics</CardDescription>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Earnings Summary</CardTitle>
+                  <CardDescription>
+                    Your earnings breakdown
+                  </CardDescription>
+                </div>
+                <Button variant="outline" size="sm" asChild>
+                  <a href="/driver/earnings">View Details</a>
+                </Button>
               </CardHeader>
               <CardContent>
-                {performanceStats ? (
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm">Rating</span>
-                        <span className="font-medium">{performanceStats.rating || 0}/5</span>
-                      </div>
-                      <Progress value={(performanceStats.rating || 0) * 20} />
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Wallet className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm font-medium">Total Earnings</span>
                     </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm">On-time Delivery</span>
-                        <span className="font-medium">{performanceStats.onTimeDelivery || 0}%</span>
-                      </div>
-                      <Progress value={performanceStats.onTimeDelivery || 0} />
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm">Success Rate</span>
-                        <span className="font-medium">{performanceStats.successRate || 0}%</span>
-                      </div>
-                      <Progress value={performanceStats.successRate || 0} />
-                    </div>
+                    <span className="text-sm font-bold">{formatCurrency(deliveryMetrics.earnings || 0)}</span>
                   </div>
-                ) : (
-                  <EmptyState
-                    icon={<BarChart className="h-10 w-10 text-muted-foreground" />}
-                    title="No Performance Data"
-                    description="Complete deliveries to see performance metrics"
-                  />
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Delivery Types */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Delivery Types</CardTitle>
-                <CardDescription>Distribution by type</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {earningsData?.byType?.length > 0 ? (
-                  <div className="space-y-4">
-                    {earningsData.byType.map((type:any) => (
-                      <div key={type.name} className="flex items-center justify-between">
-                        <div className="space-y-1">
-                          <p className="text-sm font-medium leading-none">
-                            {type.name}
-                          </p>
-                          <div className="flex items-center gap-2">
-                            <Progress value={type.percentage} className="w-[60px]" />
-                            <span className="text-sm text-muted-foreground">
-                              {type.percentage}%
-                            </span>
-                          </div>
-                        </div>
-                        <div className="font-bold">
-                          {type.count} deliveries
-                        </div>
-                      </div>
-                    ))}
+                  
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <CheckCircle className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm font-medium">Base Amount</span>
+                    </div>
+                    <span className="text-sm">
+                      {formatCurrency((deliveryMetrics.earnings || 0) * 0.7)}
+                    </span>
                   </div>
-                ) : (
-                  <EmptyState
-                    icon={<Boxes className="h-10 w-10 text-muted-foreground" />}
-                    title="No Delivery Types"
-                    description="Complete deliveries to see type distribution"
-                  />
-                )}
+                  
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Wallet className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm font-medium">Bonus Amount</span>
+                    </div>
+                    <span className="text-sm">
+                      {formatCurrency((deliveryMetrics.earnings || 0) * 0.3)}
+                    </span>
+                  </div>
+                  
+                  <div className="pt-4">
+                    <Button className="w-full" asChild>
+                      <a href="/driver/earnings" className="flex items-center justify-center">
+                        View Earnings Details
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </a>
+                    </Button>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>

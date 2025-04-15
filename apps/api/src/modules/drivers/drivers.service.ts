@@ -8,6 +8,7 @@ import { DriverStatus, LicenseType } from '@prisma/client';
 import { EmailService } from '../email/email.service';
 import { EmailTemplate } from '../email/email.service';
 import { Role } from '@/common/enums/role.enum';
+import { DriverEarningsService } from './driver-earnings.service';
 
 // Define interfaces for the return types
 export interface DailyEarning {
@@ -26,7 +27,8 @@ export interface DeliveryType {
 export class DriversService {
   constructor(
     private prisma: PrismaService,
-    private emailService: EmailService
+    private emailService: EmailService,
+    private driverEarningsService: DriverEarningsService,
   ) {}
 
   async register(userId: string, createDriverDto: CreateDriverDto, createVehicleDto: CreateVehicleDto) {
@@ -303,13 +305,9 @@ export class DriversService {
       }
     });
 
-    // Calculate total earnings (mock calculation based on distance and packages)
-    const totalEarnings = completedRoutes.reduce((sum, route) => {
-      // Simple earnings calculation (can be replaced with actual business logic)
-      const baseEarnings = route.batch?.totalWeight ? route.batch.totalWeight * 0.5 : 20;
-      const stopBonus = (route.stops?.length || 0) * 2;
-      return sum + baseEarnings + stopBonus;
-    }, 0);
+    // Get driver earnings for the time range
+    const earningsData = await this.driverEarningsService.getDriverEarnings(driver.id, timeRange);
+    const totalEarnings = earningsData.summary.totalEarnings;
 
     // Calculate total distance
     const totalDistance = completedRoutes.reduce((sum, route) => {
@@ -325,10 +323,9 @@ export class DriversService {
       
       const packages = route.batch?.orderCount || route.stops.filter(s => !s.isPickup).length;
       
-      // Calculate earnings for this route
-      const baseEarnings = route.batch?.totalWeight ? route.batch.totalWeight * 0.5 : 20;
-      const stopBonus = (route.stops?.length || 0) * 2;
-      const earnings = baseEarnings + stopBonus;
+      // Find earnings for this route
+      const routeEarnings = earningsData.earnings.find(e => e.routeId === route.id);
+      const earnings = routeEarnings ? routeEarnings.totalAmount : 0;
 
       return {
         id: route.id,
@@ -342,7 +339,7 @@ export class DriversService {
     });
 
     // Calculate daily earnings data
-    const dailyEarnings = await this.generateDailyEarningsData(startDate, completedRoutes);
+    const dailyEarnings = await this.generateDailyEarningsData(startDate, earningsData.earnings);
 
     // Calculate success rate and on-time delivery rate
     const allRoutes = await this.prisma.deliveryRoute.count({
@@ -397,7 +394,7 @@ export class DriversService {
     };
   }
 
-  private async generateDailyEarningsData(startDate: Date, completedRoutes: any[]) {
+  private async generateDailyEarningsData(startDate: Date, earnings: any[]) {
     const result: DailyEarning[] = [];
     const endDate = new Date();
     const currentDate = new Date(startDate);
@@ -405,17 +402,11 @@ export class DriversService {
     // Create a map of dates to earnings
     const earningsByDate = new Map();
     
-    completedRoutes.forEach(route => {
-      if (route.completedAt) {
-        const dateStr = new Date(route.completedAt).toISOString().split('T')[0];
-        
-        // Calculate earnings for this route
-        const baseEarnings = route.batch?.totalWeight ? route.batch.totalWeight * 0.5 : 20;
-        const stopBonus = (route.stops?.length || 0) * 2;
-        const earnings = baseEarnings + stopBonus;
-        
+    earnings.forEach(earning => {
+      if (earning.createdAt) {
+        const dateStr = new Date(earning.createdAt).toISOString().split('T')[0];
         const current = earningsByDate.get(dateStr) || 0;
-        earningsByDate.set(dateStr, current + earnings);
+        earningsByDate.set(dateStr, current + earning.totalAmount);
       }
     });
     
@@ -427,8 +418,8 @@ export class DriversService {
       result.push({
         date: formattedDate,
         earnings: parseFloat((earningsByDate.get(dateStr) || 0).toFixed(2)),
-        deliveries: completedRoutes.filter(r => 
-          r.completedAt && new Date(r.completedAt).toISOString().split('T')[0] === dateStr
+        deliveries: earnings.filter(e => 
+          e.createdAt && new Date(e.createdAt).toISOString().split('T')[0] === dateStr
         ).length
       });
       

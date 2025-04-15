@@ -122,12 +122,12 @@ export function MainPricing() {
                       />
                       <span className="text-sm font-medium w-12">{weight} kg</span>
                     </div>
-                  </div>
-                  
+        </div>
+
                   <div>
                     <Label>Dimensions (cm)</Label>
                     <div className="grid grid-cols-3 gap-2 mt-2">
-                      <div>
+                <div>
                         <Label htmlFor="length" className="text-xs">Length</Label>
                         <Input 
                           id="length" 
@@ -137,7 +137,7 @@ export function MainPricing() {
                           className="h-8"
                         />
                       </div>
-                      <div>
+                        <div>
                         <Label htmlFor="width" className="text-xs">Width</Label>
                         <Input 
                           id="width" 
@@ -146,7 +146,7 @@ export function MainPricing() {
                           onChange={(e) => setDimensions({...dimensions, width: Number(e.target.value)})} 
                           className="h-8"
                         />
-                      </div>
+                        </div>
                       <div>
                         <Label htmlFor="height" className="text-xs">Height</Label>
                         <Input 
@@ -172,7 +172,7 @@ export function MainPricing() {
                     />
                   </div>
                 </div>
-                
+
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <Label htmlFor="fragile">Fragile Items</Label>
@@ -213,7 +213,7 @@ export function MainPricing() {
                     </select>
                   </div>
                   
-                  <div>
+                <div>
                     <Label htmlFor="deliveryGovernorate">Delivery Location</Label>
                     <select 
                       id="deliveryGovernorate" 
@@ -330,14 +330,14 @@ export function MainPricing() {
                     <div className="flex justify-between">
                       <span>Minimum Price:</span>
                       <span className="font-medium">7 DT</span>
-                    </div>
+                        </div>
                     <div className="flex justify-between">
                       <span>Maximum Price:</span>
                       <span className="font-medium">250 DT</span>
                     </div>
+                    </div>
                   </div>
-                </div>
-                
+
                 <div className="rounded-lg border bg-card p-6 shadow-sm">
                   <div className="mb-4 flex items-center gap-2">
                     <Package className="h-5 w-5 text-primary" />
@@ -355,14 +355,14 @@ export function MainPricing() {
                       <p className="text-sm text-muted-foreground">
                         Adds 10% to the final price for each fragile item. Includes special packaging and careful handling.
                       </p>
-                    </div>
-                    
+                  </div>
+
                     <div>
                       <div className="mb-1 flex items-center gap-2">
                         <AlertCircle className="h-4 w-4 text-red-500" />
                         <span className="font-medium">Perishable Items</span>
                       </div>
-                      <p className="text-sm text-muted-foreground">
+                    <p className="text-sm text-muted-foreground">
                         Adds 15% to the final price for each perishable item. Includes temperature-controlled transport when needed.
                       </p>
                     </div>

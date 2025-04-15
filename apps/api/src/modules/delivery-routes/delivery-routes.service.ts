@@ -10,12 +10,16 @@ import {
 } from '@prisma/client';
 import { UpdateRouteStopDto } from './dto/update-route-stop.dto';
 import { AssignDriverDto } from './dto/assign-driver.dto';
+import { DriverEarningsService } from '../drivers/driver-earnings.service';
 
 @Injectable()
 export class DeliveryRoutesService {
   private readonly logger = new Logger(DeliveryRoutesService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private driverEarningsService: DriverEarningsService,
+  ) {}
 
   @Cron('*/30 * * * * *') // Every 30 sec
   async processUnassignedBatches() {
@@ -828,5 +832,87 @@ export class DeliveryRoutesService {
     }
     
     return updatedStop;
+  }
+
+  /**
+   * Complete a delivery route
+   */
+  async completeRoute(routeId: string, driverId: string) {
+    try {
+      // Get the route
+      const route = await this.prisma.deliveryRoute.findUnique({
+        where: { id: routeId },
+        include: {
+          batch: {
+            include: {
+              orders: true,
+            },
+          },
+          stops: true,
+        },
+      });
+
+      if (!route) {
+        throw new Error(`Route with ID ${routeId} not found`);
+      }
+
+      // Verify the driver is assigned to this route
+      if (route.driverId !== driverId) {
+        throw new Error('You are not assigned to this route');
+      }
+
+      // Update route status to completed
+      const updatedRoute = await this.prisma.deliveryRoute.update({
+        where: { id: routeId },
+        data: {
+          status: 'COMPLETED',
+          completedAt: new Date(),
+        },
+        include: {
+          batch: true,
+        },
+      });
+
+      // Update batch status to completed
+      if (updatedRoute.batchId) {
+        await this.prisma.batch.update({
+          where: { id: updatedRoute.batchId },
+          data: {
+            status: 'COMPLETED',
+            completedTime: new Date(),
+          },
+        });
+      }
+
+      // Update all orders in the batch to delivered status
+      if (route.batch && route.batch.orders) {
+        for (const order of route.batch.orders) {
+          // Determine the appropriate delivered status based on delivery type
+          const deliveredStatus = order.isLocalDelivery 
+            ? 'LOCAL_DELIVERED' 
+            : 'CITY_DELIVERED';
+
+          await this.prisma.order.update({
+            where: { id: order.id },
+            data: {
+              status: deliveredStatus,
+            },
+          });
+
+          // Calculate and create driver earnings for this order
+          await this.driverEarningsService.calculateAndCreateEarnings(
+            order.id,
+            routeId,
+            route.batchId,
+            driverId,
+          );
+        }
+      }
+
+      return updatedRoute;
+    } catch (error) {
+      this.logger.error(`Error completing route: ${error.message}`, error.stack);
+      throw error;
+    }
   }
 } 

@@ -21,7 +21,7 @@
     "prisma:generate": "prisma generate",
     "db:push": "prisma db push",
     "seed:products": "ts-node prisma/seeds/test-adding-fake-products.ts",
-    "seed:reset-orders": "ts-node prisma/seeds/reset-and-create-orders.ts",
+    "seed:orders": "ts-node prisma/seeds/test-adding-fake-orders.ts",
     "seed:warehouses": "ts-node prisma/seeds/create-three-warehouses.ts"
   },
   "dependencies": {
