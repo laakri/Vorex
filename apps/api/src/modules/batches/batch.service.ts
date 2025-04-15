@@ -75,32 +75,42 @@ export class BatchService {
 
   constructor(private prisma: PrismaService) {}
 
-  // For local deliveries (every 30 sec)
-  @Cron('*/30 * * * *')
+  @Cron('*/30 * * * * *') // Run every 30 seconds
   async processBatches() {
     this.logger.log('Starting batch processing...');
     try {
+      // Process local pickups first
+      this.logger.log('Processing local pickups...');
       await this.processLocalPickups();
+      
+      // Process warehouse to local deliveries
+      this.logger.log('Processing warehouse to local deliveries...');
       await this.processWarehouseLocalDeliveries();
-      await this.processLocalWarehouseDeliveries();
+      
+      this.logger.log('Batch processing completed successfully');
     } catch (error) {
-      this.logger.error('Error processing batches:', error);
+      this.logger.error('Error in batch processing:', error);
+      throw error;
     }
   }
 
-  // @Cron('0 0 */4 * *')
-  @Cron('*/30 * * * *')
+  @Cron('*/30 * * * * *') // Run every 30 seconds
   async processIntercityBatches() {
     this.logger.log('Starting intercity batch processing...');
     try {
+      // Process intercity transfers
+      this.logger.log('Processing intercity transfers...');
       await this.processIntercityTransfers();
+      
+      this.logger.log('Intercity batch processing completed successfully');
     } catch (error) {
-      this.logger.error('Error processing intercity batches:', error);
+      this.logger.error('Error in intercity batch processing:', error);
+      throw error;
     }
   }
 
   private async processLocalPickups() {
-    this.logger.log('Processing local pickups...');
+    this.logger.log('Starting local pickup processing...');
     const pendingOrders = await this.prisma.order.findMany({
       where: {
         status: OrderStatus.PENDING,
@@ -118,24 +128,26 @@ export class BatchService {
     this.logger.log(`Found ${pendingOrders.length} pending orders for local pickup`);
     
     if (pendingOrders.length === 0) {
-      this.logger.log('No pending orders for local pickup found');
+      this.logger.log('No pending orders found for local pickup');
       return;
     }
 
+    // Group orders by nearest warehouse
     const ordersByWarehouse = this.groupOrdersByNearestWarehouse(pendingOrders);
     this.logger.log(`Grouped orders by warehouse: ${JSON.stringify(Object.keys(ordersByWarehouse).map(key => `${key}: ${ordersByWarehouse[key].length} orders`))}`);
     
     await this.createBatchesForOrders(
       ordersByWarehouse,
-       BatchType.LOCAL_PICKUP,
-       OrderStatus.LOCAL_ASSIGNED_TO_PICKUP);
+      BatchType.LOCAL_PICKUP,
+      OrderStatus.LOCAL_ASSIGNED_TO_PICKUP
+    );
   }
 
   private async processIntercityTransfers() {
-    this.logger.log('Processing intercity transfers...');
-    const readyForTransferOrders = await this.prisma.order.findMany({
+    this.logger.log('Starting intercity transfer processing...');
+    const pendingOrders = await this.prisma.order.findMany({
       where: {
-        status: OrderStatus.CITY_READY_FOR_INTERCITY_TRANSFER,
+        status: OrderStatus.PENDING,
         batchId: null,
         isLocalDelivery: false
       },
@@ -147,57 +159,26 @@ export class BatchService {
       }
     });
 
-    this.logger.log(`Found ${readyForTransferOrders.length} orders ready for intercity transfer`);
+    this.logger.log(`Found ${pendingOrders.length} pending orders for intercity transfer`);
     
-    if (readyForTransferOrders.length === 0) {
-      this.logger.log('No orders ready for intercity transfer found');
+    if (pendingOrders.length === 0) {
+      this.logger.log('No pending orders found for intercity transfer');
       return;
     }
 
-    const ordersByWarehouse = this.groupOrdersBySourceWarehouse(readyForTransferOrders);
+    // Group orders by source warehouse
+    const ordersByWarehouse = this.groupOrdersBySourceWarehouse(pendingOrders);
     this.logger.log(`Grouped orders by source warehouse: ${JSON.stringify(Object.keys(ordersByWarehouse).map(key => `${key}: ${ordersByWarehouse[key].length} orders`))}`);
     
     await this.createIntercityBatchesForOrders(
-      ordersByWarehouse, 
-      BatchType.INTERCITY, 
-      OrderStatus.CITY_READY_FOR_INTERCITY_TRANSFER_BATCHED
+      ordersByWarehouse,
+      BatchType.INTERCITY,
+      OrderStatus.CITY_ASSIGNED_TO_PICKUP
     );
   }
 
   private async processWarehouseLocalDeliveries() {
-    this.logger.log('Processing warehouse local deliveries...');
-    const readyForLocalDeliveryOrders = await this.prisma.order.findMany({
-      where: {
-        status: OrderStatus.CITY_READY_FOR_LOCAL_DELIVERY,
-        batchId: null
-      },
-      include: {
-        items: true
-      },
-      orderBy: {
-        createdAt: 'asc'
-      }
-    });
-
-    this.logger.log(`Found ${readyForLocalDeliveryOrders.length} orders ready for local delivery from warehouse`);
-    
-    if (readyForLocalDeliveryOrders.length === 0) {
-      this.logger.log('No orders ready for local delivery from warehouse found');
-      return;
-    }
-
-    const ordersByWarehouse = this.groupOrdersByWarehouse(readyForLocalDeliveryOrders);
-    this.logger.log(`Grouped orders by warehouse: ${JSON.stringify(Object.keys(ordersByWarehouse).map(key => `${key}: ${ordersByWarehouse[key].length} orders`))}`);
-    
-    await this.createBatchesForOrders(
-      ordersByWarehouse,
-      BatchType.LOCAL_WAREHOUSE_BUYERS,
-      OrderStatus.CITY_READY_FOR_LOCAL_DELIVERY_BATCHED
-    );
-  }
-
-  private async processLocalWarehouseDeliveries() {
-    this.logger.log('Processing local to warehouse deliveries...');
+    this.logger.log('Starting warehouse local delivery processing...');
     const readyForDeliveryOrders = await this.prisma.order.findMany({
       where: {
         status: OrderStatus.PENDING,
@@ -225,12 +206,11 @@ export class BatchService {
     await this.createBatchesForOrders(
       ordersByWarehouse,
       BatchType.LOCAL_SELLERS_WAREHOUSE,
-      OrderStatus.CITY_ASSIGNED_TO_PICKUP
+      OrderStatus.LOCAL_ASSIGNED_TO_PICKUP
     );
   }
 
   private async createBatchesForOrders(
-
     ordersByWarehouse: Record<string, OrderWithItems[]>,
     batchType: BatchType,
     initialStatus: OrderStatus
@@ -242,6 +222,7 @@ export class BatchService {
       
       // Only create batches if we have minimum orders or wait time exceeded
       if (orders.length >= this.batchConfig.minOrdersForBatch) {
+        this.logger.log(`Creating optimal batches for warehouse ${warehouseId} with ${orders.length} orders`);
         const batches = this.createOptimalBatches(orders, warehouseId);
         this.logger.log(`Created ${batches.length} optimal batches`);
         
@@ -249,13 +230,15 @@ export class BatchService {
           if (batch.orders.length >= this.batchConfig.minOrdersForBatch) {
             this.logger.log(`Creating batch with ${batch.orders.length} orders, total weight: ${batch.totalWeight}, total volume: ${batch.totalVolume}`);
             await this.createBatch(batch, batchType, initialStatus);
+          } else {
+            this.logger.log(`Skipping batch with insufficient orders: ${batch.orders.length} < ${this.batchConfig.minOrdersForBatch}`);
           }
         }
       } else {
         // Check if any orders have exceeded wait time
         const exceededWaitTime = this.hasAnyExceededWaitTime(orders);
         if (exceededWaitTime) {
-          this.logger.log(`Creating batch for orders that exceeded wait time`);
+          this.logger.log(`Creating batch for orders that exceeded wait time in warehouse ${warehouseId}`);
           const batch = {
             orders,
             totalWeight: orders.reduce((sum, order) => sum + this.calculateOrderWeight(order), 0),
@@ -274,6 +257,7 @@ export class BatchService {
     orders: OrderWithItems[], 
     warehouseId: string
   ): BatchGroup[] {
+    this.logger.log(`Creating optimal batches for ${orders.length} orders in warehouse ${warehouseId}`);
     const batches: BatchGroup[] = [];
     let currentBatch: BatchGroup = {
       orders: [],
@@ -286,11 +270,15 @@ export class BatchService {
       const orderWeight = this.calculateOrderWeight(order);
       const orderVolume = this.calculateOrderVolume(order);
 
+      this.logger.log(`Processing order ${order.id}: weight=${orderWeight}, volume=${orderVolume}`);
+
       if (this.canAddToBatch(currentBatch, orderWeight, orderVolume)) {
+        this.logger.log(`Adding order ${order.id} to current batch`);
         currentBatch.orders.push(order);
         currentBatch.totalWeight += orderWeight;
         currentBatch.totalVolume += orderVolume;
       } else {
+        this.logger.log(`Cannot add order ${order.id} to current batch, creating new batch`);
         if (currentBatch.orders.length > 0) {
           batches.push(currentBatch);
         }
@@ -304,15 +292,20 @@ export class BatchService {
     }
 
     if (currentBatch.orders.length > 0) {
+      this.logger.log(`Adding final batch with ${currentBatch.orders.length} orders`);
       batches.push(currentBatch);
     }
 
+    this.logger.log(`Created ${batches.length} optimal batches`);
     return batches;
   }
 
   private async createBatch(batch: BatchGroup, type: BatchType, initialStatus: OrderStatus) {
+    this.logger.log(`Creating batch of type ${type} with ${batch.orders.length} orders`);
+    
     // Validate warehouseId
     if (!batch.warehouseId) {
+      this.logger.error('Warehouse ID is null or undefined');
       throw new Error(`Warehouse ID is null or undefined.`);
     }
 
@@ -321,36 +314,55 @@ export class BatchService {
     });
 
     if (!existingWarehouse) {
+      this.logger.error(`Warehouse with ID ${batch.warehouseId} does not exist`);
       throw new Error(`Warehouse with ID ${batch.warehouseId} does not exist.`);
     }
 
-    const vehicleType = this.determineVehicleType(batch.totalWeight, batch.totalVolume);
+    // Determine vehicle type based on batch type and config
+    const config = type === BatchType.INTERCITY ? this.intercityBatchConfig : this.batchConfig;
+    const vehicleType = this.determineVehicleType(batch.totalWeight, batch.totalVolume, config);
+    
+    if (!vehicleType) {
+      this.logger.error(`No suitable vehicle type found for weight=${batch.totalWeight}, volume=${batch.totalVolume}`);
+      throw new Error(`No suitable vehicle type found for the batch requirements.`);
+    }
 
-    const createdBatch = await this.prisma.batch.create({
-      data: {
-        warehouseId: batch.warehouseId,
-        type,
-        status: BatchStatus.COLLECTING,
-        totalWeight: batch.totalWeight,
-        totalVolume: batch.totalVolume,
-        orderCount: batch.orders.length,
-        vehicleType,
-        orders: {
-          connect: batch.orders.map(order => ({ id: order.id })),
+    this.logger.log(`Determined vehicle type: ${vehicleType} for weight=${batch.totalWeight}, volume=${batch.totalVolume}`);
+
+    try {
+      const createdBatch = await this.prisma.batch.create({
+        data: {
+          warehouseId: batch.warehouseId,
+          type,
+          status: BatchStatus.COLLECTING,
+          totalWeight: batch.totalWeight,
+          totalVolume: batch.totalVolume,
+          orderCount: batch.orders.length,
+          vehicleType,
+          orders: {
+            connect: batch.orders.map(order => ({ id: order.id })),
+          },
         },
-      },
-    });
+      });
 
-    // Update order statuses
-    await this.prisma.order.updateMany({
-      where: {
-        id: { in: batch.orders.map(o => o.id) },
-      },
-      data: {
-        status: initialStatus,
-        batchId: createdBatch.id,
-      },
-    });
+      this.logger.log(`Created batch ${createdBatch.id} successfully`);
+
+      // Update order statuses
+      await this.prisma.order.updateMany({
+        where: {
+          id: { in: batch.orders.map(o => o.id) },
+        },
+        data: {
+          status: initialStatus,
+          batchId: createdBatch.id,
+        },
+      });
+
+      this.logger.log(`Updated status for ${batch.orders.length} orders to ${initialStatus}`);
+    } catch (error) {
+      this.logger.error('Error creating batch:', error);
+      throw error;
+    }
   }
 
   // Helper methods remain unchanged
@@ -383,9 +395,10 @@ export class BatchService {
            newCount <= this.batchConfig.maxOrdersPerBatch;
   }
 
-  private determineVehicleType(weight: number, volume: number): VehicleType {
-    const thresholds = this.batchConfig.vehicleTypeThresholds;
+  private determineVehicleType(weight: number, volume: number, config: BatchConfig): VehicleType | null {
+    const thresholds = config.vehicleTypeThresholds;
     
+    // Check each vehicle type in order of capacity
     if (weight <= thresholds.MOTORCYCLE.maxWeight && volume <= thresholds.MOTORCYCLE.maxVolume) {
       return VehicleType.MOTORCYCLE;
     }
@@ -398,7 +411,11 @@ export class BatchService {
     if (weight <= thresholds.SMALL_TRUCK.maxWeight && volume <= thresholds.SMALL_TRUCK.maxVolume) {
       return VehicleType.SMALL_TRUCK;
     }
-    return VehicleType.LARGE_TRUCK;
+    if (weight <= thresholds.LARGE_TRUCK.maxWeight && volume <= thresholds.LARGE_TRUCK.maxVolume) {
+      return VehicleType.LARGE_TRUCK;
+    }
+    
+    return null;
   }
 
   private groupOrdersByNearestWarehouse(orders: OrderWithItems[]): Record<string, OrderWithItems[]> {

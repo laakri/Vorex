@@ -9,11 +9,12 @@ import {
   NavigationMenuList,
   NavigationMenuTrigger,
 } from "@/components/ui/navigation-menu";
-import { Menu, X, Package } from "lucide-react";
+import { Menu, X, Package, LogOut, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { navigationMenuTriggerStyle } from "@/components/ui/navigation-menu";
 import { Logo } from "@/components/logo";
 import { ModeToggle } from "@/components/mode-toggle";
+import { useAuthStore } from "@/stores/auth.store";
 
 const solutions = [
   {
@@ -48,6 +49,7 @@ export function MainNav() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [showBanner, setShowBanner] = useState(true);
+  const { isAuthenticated, logout } = useAuthStore();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -57,6 +59,11 @@ export function MainNav() {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  const handleLogout = () => {
+    logout();
+    window.location.href = "/";
+  };
 
   return (
     <>
@@ -178,20 +185,47 @@ export function MainNav() {
 
             {/* Auth Buttons */}
             <div className="hidden lg:flex lg:items-center lg:gap-2">
-              <Button
-                asChild
-                variant="ghost"
-                size="sm"
-                className="text-sm font-medium"
-              >
-                <Link to="/auth/sign-in">Sign in</Link>
-              </Button>
-              <Button
-                asChild
-                size="sm"
-              >
-                <Link to="/auth/sign-up">Start shipping</Link>
-              </Button>
+              {isAuthenticated ? (
+                <>
+                  <Button
+                    asChild
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                  >
+                    <Link to="/role-selection">
+                      <User className="h-4 w-4" />
+                      Switch Role
+                    </Link>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="gap-2"
+                    onClick={handleLogout}
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Logout
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    asChild
+                    variant="ghost"
+                    size="sm"
+                    className="text-sm font-medium"
+                  >
+                    <Link to="/auth/sign-in">Sign in</Link>
+                  </Button>
+                  <Button
+                    asChild
+                    size="sm"
+                  >
+                    <Link to="/auth/sign-up">Start shipping</Link>
+                  </Button>
+                </>
+              )}
               <ModeToggle />
             </div>
 
@@ -212,7 +246,7 @@ export function MainNav() {
             </div>
           </div>
 
-          {/* Mobile Menu - Same as before */}
+          {/* Mobile Menu */}
           {mobileMenuOpen && (
             <div className="lg:hidden">
               <div className="fixed inset-x-0 top-16 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
@@ -246,16 +280,41 @@ export function MainNav() {
                   </div>
 
                   <div className="mt-6 px-3 space-y-2">
-                    <Button
-                      asChild
-                      variant="outline"
-                      className="w-full justify-center"
-                    >
-                      <Link to="/login">Sign in</Link>
-                    </Button>
-                    <Button asChild className="w-full justify-center">
-                      <Link to="/register">Start shipping</Link>
-                    </Button>
+                    {isAuthenticated ? (
+                      <>
+                        <Button
+                          asChild
+                          variant="outline"
+                          className="w-full justify-center gap-2"
+                        >
+                          <Link to="/role-selection">
+                            <User className="h-4 w-4" />
+                            Switch Role
+                          </Link>
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          className="w-full justify-center gap-2"
+                          onClick={handleLogout}
+                        >
+                          <LogOut className="h-4 w-4" />
+                          Logout
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button
+                          asChild
+                          variant="outline"
+                          className="w-full justify-center"
+                        >
+                          <Link to="/auth/sign-in">Sign in</Link>
+                        </Button>
+                        <Button asChild className="w-full justify-center">
+                          <Link to="/auth/sign-up">Start shipping</Link>
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>

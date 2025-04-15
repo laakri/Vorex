@@ -266,8 +266,11 @@ export function DriverApplication() {
       // Set verified driver status if registration is successful
       if (response.data) {
         const { user } = useAuthStore.getState();
-        if (user && user.role.includes("DRIVER") && !user.isVerifiedDriver) {
+        if (user && user.role.includes("DRIVER")) {
+          // Update the verified driver status in the auth store
           useAuthStore.getState().setVerifiedDriver(true);
+          
+          // No need to update the user object directly as setVerifiedDriver already does this
         }
         
         // Success toast

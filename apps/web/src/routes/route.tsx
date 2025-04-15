@@ -50,6 +50,7 @@ import NotificationPage from "@/pages/notification/NotificationPage";
 import AdminDashboard from "@/pages/admin/dashboard";
 import UsersPage from "@/pages/admin/users";
 import WarehousesPage from "@/pages/admin/warehouses";
+import { DriverEarnings } from "@/pages/driver/driver-earnings";
 
 export function AppRoutes() {
   return (
@@ -289,6 +290,16 @@ export function AppRoutes() {
             <ProtectedRoute>
               <DriverGuard>
                 <DriverHistory />
+              </DriverGuard>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="earnings"
+          element={
+            <ProtectedRoute>
+              <DriverGuard>
+                <DriverEarnings />
               </DriverGuard>
             </ProtectedRoute>
           }
