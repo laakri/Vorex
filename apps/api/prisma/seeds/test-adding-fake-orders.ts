@@ -266,7 +266,7 @@ async function createFakeOrders(count: number, userId?: string) {
   console.log(`Creating ${count} fake orders...`);
   
   // Delete existing orders first
-  await deleteExistingOrders();
+  //   await deleteExistingOrders();
   
   const createdOrders: any[] = [];
   
