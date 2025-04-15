@@ -139,7 +139,7 @@ export class DriverEarningsService {
   /**
    * Get earnings for a specific driver
    */
-  async getDriverEarnings(driverId: string, timeRange: string = '30d') {
+  async getDriverEarnings(driverId: string, timeRange: string = '30d', status?: string) {
     // Determine date range
     const now = new Date();
     let startDate: Date;
@@ -154,33 +154,43 @@ export class DriverEarningsService {
       case '90d':
         startDate = new Date(now.setDate(now.getDate() - 90));
         break;
+      case 'all':
+        startDate = new Date(0); // Beginning of time
+        break;
       default:
         startDate = new Date(now.setDate(now.getDate() - 30));
     }
 
+    // Build where clause
+    const where: any = {
+      driverId,
+      createdAt: {
+        gte: startDate,
+      },
+    };
+
+    // Add status filter if provided
+    if (status && status !== 'all') {
+      where.status = status;
+    }
+
     // Get earnings for the specified time range
     const earnings = await this.prisma.driverEarnings.findMany({
-      where: {
-        driverId,
-        createdAt: {
-          gte: startDate,
-        },
-      },
+      where,
       include: {
         order: {
           select: {
             id: true,
             status: true,
-            customerName: true,
-            deliveryPrice: true,
+            createdAt: true,
             isLocalDelivery: true,
           },
         },
         route: {
           select: {
             id: true,
+            status: true,
             totalDistance: true,
-            completedAt: true,
           },
         },
       },
@@ -191,22 +201,64 @@ export class DriverEarningsService {
 
     // Calculate summary statistics
     const totalEarnings = earnings.reduce((sum, earning) => sum + earning.totalAmount, 0);
-    const totalBaseAmount = earnings.reduce((sum, earning) => sum + earning.baseAmount, 0);
-    const totalBonusAmount = earnings.reduce((sum, earning) => sum + earning.bonusAmount, 0);
-    const pendingEarnings = earnings.filter(e => e.status === 'PENDING')
+    const baseAmount = earnings.reduce((sum, earning) => sum + earning.baseAmount, 0);
+    const bonusAmount = earnings.reduce((sum, earning) => sum + earning.bonusAmount, 0);
+    const pendingAmount = earnings
+      .filter(earning => earning.status === 'PENDING')
       .reduce((sum, earning) => sum + earning.totalAmount, 0);
-    const paidEarnings = earnings.filter(e => e.status === 'PAID')
+    const paidAmount = earnings
+      .filter(earning => earning.status === 'PAID')
       .reduce((sum, earning) => sum + earning.totalAmount, 0);
+
+    // Calculate earnings by status
+    const earningsByStatus = [
+      {
+        status: 'PENDING',
+        count: earnings.filter(e => e.status === 'PENDING').length,
+        amount: pendingAmount,
+      },
+      {
+        status: 'PAID',
+        count: earnings.filter(e => e.status === 'PAID').length,
+        amount: paidAmount,
+      },
+      {
+        status: 'CANCELLED',
+        count: earnings.filter(e => e.status === 'CANCELLED').length,
+        amount: earnings
+          .filter(e => e.status === 'CANCELLED')
+          .reduce((sum, earning) => sum + earning.totalAmount, 0),
+      },
+    ];
+
+    // Calculate earnings by type (local vs intercity)
+    const earningsByType = [
+      {
+        type: 'Local',
+        count: earnings.filter(e => e.order.isLocalDelivery).length,
+        amount: earnings
+          .filter(e => e.order.isLocalDelivery)
+          .reduce((sum, earning) => sum + earning.totalAmount, 0),
+      },
+      {
+        type: 'Intercity',
+        count: earnings.filter(e => !e.order.isLocalDelivery).length,
+        amount: earnings
+          .filter(e => !e.order.isLocalDelivery)
+          .reduce((sum, earning) => sum + earning.totalAmount, 0),
+      },
+    ];
 
     return {
       earnings,
       summary: {
         totalEarnings,
-        totalBaseAmount,
-        totalBonusAmount,
-        pendingEarnings,
-        paidEarnings,
-        count: earnings.length,
+        baseAmount,
+        bonusAmount,
+        pendingAmount,
+        paidAmount,
+        earningsByStatus,
+        earningsByType,
       },
     };
   }

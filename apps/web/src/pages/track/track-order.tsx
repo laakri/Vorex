@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import api from '@/lib/axios';
 import OrderStatusHeader from '@/pages/track/track-OrderStatusHeader';
@@ -105,6 +105,7 @@ const TrackOrderPage = () => {
   const [orderData, setOrderData] = useState<OrderTrackingData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchOrderData = async () => {
@@ -163,6 +164,10 @@ const TrackOrderPage = () => {
     }
   };
 
+  const handleGoBack = () => {
+    navigate(-1); // Go back to the previous page in history
+  };
+
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -177,13 +182,13 @@ const TrackOrderPage = () => {
       <div className="container mx-auto mt-10 max-w-4xl rounded-lg border border-red-200 bg-red-50 p-8 text-center">
         <h2 className="mb-4 text-2xl font-bold text-red-700">Error</h2>
         <p className="text-red-600">{error || 'Order information not found'}</p>
-        <Link 
-          to="/track" 
+        <button 
+          onClick={handleGoBack}
           className="mt-4 inline-flex items-center rounded-md bg-primary px-4 py-2 text-white hover:bg-primary/90"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Tracking
-        </Link>
+          Go Back
+        </button>
       </div>
     );
   }
@@ -193,13 +198,13 @@ const TrackOrderPage = () => {
       <div className="container mx-auto px-4 py-8 md:px-6 lg:max-w-6xl">
         {/* Header with back button */}
         <div className="mb-6 flex items-center">
-          <Link 
-            to="/track" 
+          <button 
+            onClick={handleGoBack}
             className="mr-4 flex items-center text-muted-foreground hover:text-foreground"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back
-          </Link>
+          </button>
           <div>
             <h1 className="text-2xl font-bold">Order Tracking</h1>
             <p className="text-sm text-muted-foreground">ID: {orderData.orderId}</p>

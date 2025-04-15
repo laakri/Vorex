@@ -11,6 +11,7 @@ import {
 import { UpdateRouteStopDto } from './dto/update-route-stop.dto';
 import { AssignDriverDto } from './dto/assign-driver.dto';
 import { DriverEarningsService } from '../drivers/driver-earnings.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class DeliveryRoutesService {
@@ -19,6 +20,7 @@ export class DeliveryRoutesService {
   constructor(
     private prisma: PrismaService,
     private driverEarningsService: DriverEarningsService,
+    private notificationsService: NotificationsService,
   ) {}
 
   @Cron('*/30 * * * * *') // Every 30 sec
@@ -106,7 +108,11 @@ export class DeliveryRoutesService {
 
   async assignDriverToRoute(routeId: string, dto: AssignDriverDto) {
     const route = await this.prisma.deliveryRoute.findUnique({
-      where: { id: routeId }
+      where: { id: routeId },
+      include: {
+        batch: true,
+        stops: true
+      }
     });
 
     if (!route) {
@@ -115,7 +121,10 @@ export class DeliveryRoutesService {
 
     // Check if driver exists and is available
     const driver = await this.prisma.driver.findUnique({
-      where: { id: dto.driverId }
+      where: { id: dto.driverId },
+      include: {
+        user: true
+      }
     });
 
     if (!driver) {
@@ -144,6 +153,62 @@ export class DeliveryRoutesService {
         status: BatchStatus.PROCESSING
       }
     });
+
+    // Create notification for the driver
+    await this.notificationsService.createNotification(
+      driver.userId,
+      'ORDER_STATUS_CHANGE',
+      'New Delivery Route Assigned',
+      `You have been assigned to a new delivery route with ${route.stops.length} stops.`,
+      { routeId, batchId: route.batchId }
+    );
+
+    // Create notification for the system (admin)
+    const adminUsers = await this.prisma.user.findMany({
+      where: {
+        role: {
+          has: 'ADMIN'
+        }
+      }
+    });
+
+    // Send notifications to all admin users
+    for (const admin of adminUsers) {
+      await this.notificationsService.createNotification(
+        admin.id,
+        'SYSTEM_ALERT',
+        'Driver Assigned to Route',
+        `Driver ${driver.user.fullName} has been assigned to route ${routeId}`,
+        { routeId, driverId: driver.id, batchId: route.batchId }
+      );
+    }
+
+    // Create notifications for customers with orders in this route
+    const orderIds = route.stops
+      .filter(stop => stop.orderId)
+      .map(stop => stop.orderId as string);
+
+    if (orderIds.length > 0) {
+      const orders = await this.prisma.order.findMany({
+        where: {
+          id: {
+            in: orderIds
+          }
+        }
+      });
+
+      for (const order of orders) {
+        // Create notification for the order
+        await this.notificationsService.createNotification(
+          order.customerEmail, // Using customerEmail as the identifier
+          'ORDER_STATUS_CHANGE',
+          'Your Order is Being Delivered',
+          `Your order #${order.id.substring(0, 8)} is now being delivered by ${driver.user.fullName}`,
+          { orderId: order.id, routeId },
+          order.id
+        );
+      }
+    }
 
     return updatedRoute;
   }

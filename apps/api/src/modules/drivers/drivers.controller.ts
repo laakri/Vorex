@@ -12,6 +12,7 @@ import {
   Request,
 } from '@nestjs/common';
 import { DriversService } from './drivers.service';
+import { DriverEarningsService } from './driver-earnings.service';
 import { CreateDriverDto } from './dto/create-driver.dto';
 import { CreateVehicleDto } from './dto/create-vehicle.dto';
 import { UpdateDriverProfileDto } from './dto/update-driver-profile.dto';
@@ -26,7 +27,10 @@ import { GetUser } from '@/common/decorators/get-user.decorator';
 @Controller('drivers')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class DriversController {
-  constructor(private readonly driversService: DriversService) {}
+  constructor(
+    private readonly driversService: DriversService,
+    private readonly driverEarningsService: DriverEarningsService,
+  ) {}
 
   @Post('register')
   @HttpCode(201)
@@ -124,5 +128,19 @@ export class DriversController {
     @Query('timeRange') timeRange: string = '7d'
   ) {
     return this.driversService.getDriverDashboard(req.user.id, timeRange);
+  }
+
+  @Get('earnings')
+  @Roles(Role.DRIVER)
+  async getDriverEarnings(
+    @GetUser('id') userId: string,
+    @Query('timeRange') timeRange: string = '30d',
+    @Query('status') status: string = 'all'
+  ) {
+    try {
+      return await this.driverEarningsService.getDriverEarnings(userId, timeRange);
+    } catch (error) {
+      throw new BadRequestException(error.message);
+    }
   }
 } 

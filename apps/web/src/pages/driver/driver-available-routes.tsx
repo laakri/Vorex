@@ -25,6 +25,7 @@ import {
   PackageCheck,
   Loader2,
   CheckCircle,
+  ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -50,6 +51,7 @@ import api from "@/lib/axios";
 import { useAuthStore } from "@/stores/auth.store";
 import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
+import { useNavigate } from "react-router-dom";
 
 // Type definitions
 interface Warehouse {
@@ -148,6 +150,7 @@ export function DriverAvailableRoutes() {
   const [viewType, setViewType] = useState<"grid" | "list">("grid");
   const { toast } = useToast();
   const user = useAuthStore(state => state.user);
+  const navigate = useNavigate();
   
   // Fetch available routes
   const fetchRoutes = useCallback(async (showRefreshIndicator = false) => {
@@ -260,8 +263,11 @@ export function DriverAvailableRoutes() {
         variant: "default",
       });
       
-      // Refresh the routes to update the UI
-      fetchRoutes(true);
+      // Close the route details dialog if it's open
+      setShowRouteDetails(false);
+      
+      // Navigate to the available delivery page
+      navigate('/driver/active-delivery');
       
     } catch (err: any) {
       console.error("Error accepting route:", err);
@@ -318,7 +324,12 @@ export function DriverAvailableRoutes() {
       ))}
     </div>
   );
-  
+
+  // Function to navigate to order tracking page
+  const navigateToOrderTracking = (orderId: string) => {
+    navigate(`/track/${orderId}`);
+  };
+
   return (
     <div className="h-full flex flex-col bg-background">
       {/* Header with Stats */}
@@ -742,7 +753,7 @@ export function DriverAvailableRoutes() {
           <DialogContent className="max-w-4xl p-0 overflow-hidden flex flex-col">
             <div className="flex flex-col md:flex-row">
               {/* Left Sidebar */}
-              <div className="w-full md:w-1/3  p-6 border-r">
+              <div className="w-full md:w-1/3 p-6 border-r">
                 <div className="space-y-6">
                   {/* Route ID and Status */}
                   <div>
@@ -754,10 +765,10 @@ export function DriverAvailableRoutes() {
                       <Badge 
                         className={cn(
                           "px-2.5 py-0.5 text-xs",
-                          selectedRoute.status === "PENDING" ? "bg-amber-100 text-amber-800" : 
-                          selectedRoute.status === "IN_PROGRESS" ? "bg-blue-100 text-blue-800" :
-                          selectedRoute.status === "COMPLETED" ? "bg-green-100 text-green-800" : 
-                          "bg-red-100 text-red-800"
+                          selectedRoute.status === "PENDING" ? "bg-secondary text-secondary-foreground" : 
+                          selectedRoute.status === "IN_PROGRESS" ? "bg-primary text-primary-foreground" :
+                          selectedRoute.status === "COMPLETED" ? "bg-accent text-accent-foreground" : 
+                          "bg-destructive text-destructive-foreground"
                         )}
                       >
                         {selectedRoute.status}
@@ -851,17 +862,17 @@ export function DriverAvailableRoutes() {
                     {/* From/To Header */}
                     <div className="flex items-center gap-2 text-sm">
                       <div className="flex items-center gap-1.5">
-                        <div className="h-6 w-6 rounded-full bg-blue-100 flex items-center justify-center">
-                          <Warehouse className="h-3.5 w-3.5 text-blue-600" />
+                        <div className="h-6 w-6 rounded-full bg-secondary flex items-center justify-center">
+                          <Warehouse className="h-3.5 w-3.5 text-secondary-foreground" />
                         </div>
                         <span className="font-medium">Origin</span>
                       </div>
                       
-                      <div className="flex-1 h-0.5 border-t border-dashed border-gray-200 mx-2"></div>
+                      <div className="flex-1 h-0.5 border-t border-dashed border-muted mx-2"></div>
                       
                       <div className="flex items-center gap-1.5">
-                        <div className="h-6 w-6 rounded-full bg-green-100 flex items-center justify-center">
-                          <MapPin className="h-3.5 w-3.5 text-green-600" />
+                        <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center">
+                          <MapPin className="h-3.5 w-3.5 text-primary-foreground" />
                         </div>
                         <span className="font-medium">Destination</span>
                       </div>
@@ -869,7 +880,7 @@ export function DriverAvailableRoutes() {
 
                     {/* Warehouse Details */}
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded-lg">
+                      <div className="p-3 bg-secondary/20 rounded-lg">
                         <p className="font-medium">{selectedRoute.fromWarehouse?.name || 'N/A'}</p>
                         <p className="text-sm text-muted-foreground mt-1">
                           {selectedRoute.fromWarehouse?.address || 'No address available'}
@@ -877,14 +888,14 @@ export function DriverAvailableRoutes() {
                       </div>
                       
                       {selectedRoute.toWarehouse ? (
-                        <div className="p-3 bg-green-50 dark:bg-green-950 rounded-lg">
+                        <div className="p-3 bg-primary/20 rounded-lg">
                           <p className="font-medium">{selectedRoute.toWarehouse.name}</p>
                           <p className="text-sm text-muted-foreground mt-1">
                             {selectedRoute.toWarehouse.address}
                           </p>
                         </div>
                       ) : (
-                        <div className="p-3 bg-green-50 dark:bg-green-950 rounded-lg flex items-center justify-center text-muted-foreground text-sm">
+                        <div className="p-3 bg-primary/20 rounded-lg flex items-center justify-center text-muted-foreground text-sm">
                           Multiple destinations
                         </div>
                       )}
@@ -894,7 +905,7 @@ export function DriverAvailableRoutes() {
 
                 {/* Route Stops */}
                 <div className="flex-1 overflow-hidden">
-                  <div className="p-4 border-b bg-gray-50 dark:bg-gray-900">
+                  <div className="p-4 border-b bg-muted">
                     <h4 className="font-medium flex items-center">
                       <MapPin className="h-4 w-4 mr-2" />
                       Route Stops ({selectedRoute.stops.length})
@@ -903,7 +914,7 @@ export function DriverAvailableRoutes() {
                   
                   <ScrollArea className="h-[calc(80vh-13rem)]">
                     <div className="p-4">
-                      <div className="relative pl-6 border-l border-gray-200 dark:border-gray-800 space-y-0">
+                      <div className="relative pl-6 border-l border-muted space-y-0">
                         {selectedRoute.stops.map((stop, index) => (
                           <div key={stop.id} className="mb-5 last:mb-0">
                             {/* Timeline Node */}
@@ -911,21 +922,21 @@ export function DriverAvailableRoutes() {
                               className={cn(
                                 "absolute left-0 w-6 h-6 -translate-x-3 rounded-full flex items-center justify-center",
                                 stop.isPickup 
-                                  ? "bg-blue-100 dark:bg-blue-900" 
-                                  : "bg-green-100 dark:bg-green-900",
-                                stop.isCompleted && "ring-2 ring-offset-2 ring-gray-100 dark:ring-gray-800"
+                                  ? "bg-secondary" 
+                                  : "bg-primary",
+                                stop.isCompleted && "ring-2 ring-offset-2 ring-muted"
                               )}
                             >
                               {stop.isPickup 
-                                ? <Package className={cn("h-3 w-3", stop.isCompleted ? "text-blue-600" : "text-blue-500")} /> 
-                                : <MapPin className={cn("h-3 w-3", stop.isCompleted ? "text-green-600" : "text-green-500")} />}
+                                ? <Package className={cn("h-3 w-3", stop.isCompleted ? "text-secondary-foreground" : "text-secondary-foreground")} /> 
+                                : <MapPin className={cn("h-3 w-3", stop.isCompleted ? "text-primary-foreground" : "text-primary-foreground")} />}
                             </div>
                             
                             {/* Stop Card */}
                             <div className="ml-5">
                               <Card className={cn(
                                 "p-4 border", 
-                                stop.isCompleted ? "bg-gray-50 dark:bg-gray-900" : "bg-white dark:bg-gray-950"
+                                stop.isCompleted ? "bg-muted" : "bg-card"
                               )}>
                                 {/* Header */}
                                 <div className="flex justify-between mb-2">
@@ -936,8 +947,8 @@ export function DriverAvailableRoutes() {
                                       className={cn(
                                         "text-xs",
                                         stop.isPickup 
-                                          ? "text-blue-600 bg-blue-50 dark:bg-blue-950 border-blue-200"
-                                          : "text-green-600 bg-green-50 dark:bg-green-950 border-green-200"
+                                          ? "text-secondary-foreground bg-secondary/20 border-secondary"
+                                          : "text-primary-foreground bg-primary/20 border-primary"
                                       )}
                                     >
                                       {stop.isPickup ? "Pickup" : "Delivery"}
@@ -945,7 +956,7 @@ export function DriverAvailableRoutes() {
                                   </div>
                                   
                                   {stop.isCompleted && (
-                                    <Badge variant="outline" className="text-xs bg-green-50 text-green-600 border-green-200">
+                                    <Badge variant="outline" className="text-xs bg-accent text-accent-foreground border-accent">
                                       <CheckCircle2 className="h-3 w-3 mr-1" />
                                       Completed
                                     </Badge>
@@ -971,6 +982,21 @@ export function DriverAvailableRoutes() {
                                     </div>
                                   )}
                                 </div>
+                                
+                                {/* Order Details Button */}
+                                {stop.orderId && (
+                                  <div className="mt-3 flex justify-end">
+                                    <Button 
+                                      variant="outline" 
+                                      size="sm" 
+                                      className="text-xs"
+                                      onClick={() => navigateToOrderTracking(stop.orderId!)}
+                                    >
+                                      <ExternalLink className="h-3 w-3 mr-1" />
+                                      View Order Details
+                                    </Button>
+                                  </div>
+                                )}
                               </Card>
                             </div>
                           </div>
@@ -983,7 +1009,7 @@ export function DriverAvailableRoutes() {
             </div>
             
             {/* Footer Actions */}
-            <div className="p-4 border-t flex justify-between items-center bg-gray-50 dark:bg-gray-900">
+            <div className="p-4 border-t flex justify-between items-center bg-muted">
               <Button 
                 variant="ghost"
                 size="sm"
@@ -998,7 +1024,7 @@ export function DriverAvailableRoutes() {
                 <Button
                   variant="default"
                   size="sm"
-                  className="bg-green-600 hover:bg-green-700 text-white"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
                   onClick={() => acceptRoute(selectedRoute.id)}
                   disabled={acceptingRouteId === selectedRoute.id}
                 >
