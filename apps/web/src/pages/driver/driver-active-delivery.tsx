@@ -378,6 +378,31 @@ export function ActiveDelivery() {
     }
   }
 
+  // Complete the entire route
+  const completeRoute = async () => {
+    if (!activeRoute) return
+
+    try {
+      await api.patch(`/delivery-routes/${activeRoute.id}/complete`)
+      
+      toast({
+        title: "Route completed",
+        description: "The delivery route has been marked as completed",
+        variant: "default",
+      })
+      
+      // Redirect to available routes page
+      window.location.href = "/driver/available-routes"
+    } catch (error) {
+      console.error("Error completing route:", error)
+      toast({
+        title: "Error",
+        description: "Failed to complete the route",
+        variant: "destructive",
+      })
+    }
+  }
+
   // Filter stops for pending and completed tabs
   const pendingStops = activeRoute?.stops?.filter((stop) => !stop.isCompleted) || []
   const completedStops = activeRoute?.stops?.filter((stop) => stop.isCompleted) || []
@@ -679,6 +704,13 @@ export function ActiveDelivery() {
                           <div className="p-8 text-center">
                             <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-3" />
                             <h3 className="text-lg font-medium">All stops completed</h3>
+                            <p className="text-muted-foreground mt-2 mb-4">
+                              You've completed all stops in this route. You can now complete the entire route.
+                            </p>
+                            <Button onClick={completeRoute} className="mt-2">
+                              <CheckCircle2 className="h-4 w-4 mr-2" />
+                              Complete Route
+                            </Button>
                           </div>
                         ) : (
                           <div className="divide-y">
@@ -1054,6 +1086,13 @@ export function ActiveDelivery() {
                           <div className="p-8 text-center">
                             <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-3" />
                             <h3 className="text-lg font-medium">All stops completed</h3>
+                            <p className="text-muted-foreground mt-2 mb-4">
+                              You've completed all stops in this route. You can now complete the entire route.
+                            </p>
+                            <Button onClick={completeRoute} className="mt-2">
+                              <CheckCircle2 className="h-4 w-4 mr-2" />
+                              Complete Route
+                            </Button>
                           </div>
                         ) : (
                           <div className="divide-y">

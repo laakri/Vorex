@@ -11,6 +11,7 @@ import {
   LogOut,
   ChevronLeft,
   Navigation,
+  DollarSign,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -46,6 +47,11 @@ const menuItems = [
     title: "History",
     icon: Clock,
     href: "/driver/history",
+  },
+  {
+    title: "Earnings",
+    icon: DollarSign,
+    href: "/driver/earnings",
   },
   {
     title: "Vehicle Info",

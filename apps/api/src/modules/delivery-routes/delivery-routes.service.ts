@@ -194,19 +194,28 @@ export class DeliveryRoutesService {
           id: {
             in: orderIds
           }
+        },
+        include: {
+          seller: {
+            include: {
+              user: true
+            }
+          }
         }
       });
 
       for (const order of orders) {
-        // Create notification for the order
-        await this.notificationsService.createNotification(
-          order.customerEmail, // Using customerEmail as the identifier
-          'ORDER_STATUS_CHANGE',
-          'Your Order is Being Delivered',
-          `Your order #${order.id.substring(0, 8)} is now being delivered by ${driver.user.fullName}`,
-          { orderId: order.id, routeId },
-          order.id
-        );
+        // Only create notification if the seller has a user account
+        if (order.seller?.user) {
+          await this.notificationsService.createNotification(
+            order.seller.user.id,
+            'ORDER_STATUS_CHANGE',
+            'Your Order is Being Delivered',
+            `Your order #${order.id.substring(0, 8)} is now being delivered by ${driver.user.fullName}`,
+            { orderId: order.id, routeId },
+            order.id
+          );
+        }
       }
     }
 
@@ -592,19 +601,22 @@ export class DeliveryRoutesService {
   }
 
   private async markRouteAsCompleted(routeId: string) {
-    await this.prisma.deliveryRoute.update({
+    const route = await this.prisma.deliveryRoute.update({
       where: { id: routeId },
       data: {
         status: RouteStatus.COMPLETED,
         completedAt: new Date()
+      },
+      include: {
+        batch: {
+          include: {
+            orders: true
+          }
+        }
       }
     });
     
     // Also mark the associated batch as completed
-    const route = await this.prisma.deliveryRoute.findUnique({
-      where: { id: routeId }
-    });
-    
     if (route?.batchId) {
       // First update the batch status
       await this.prisma.batch.update({
@@ -663,6 +675,24 @@ export class DeliveryRoutesService {
             data: { status: newStatus }
           });
           this.logger.log(`Updated order ${order.id} status to ${newStatus} as part of batch completion`);
+
+          // Calculate and create driver earnings for this order
+          if (route.driverId) {
+            try {
+              await this.driverEarningsService.calculateAndCreateEarnings(
+                order.id,
+                routeId,
+                route.batchId,
+                route.driverId
+              );
+              this.logger.log(`Created earnings for order ${order.id} and driver ${route.driverId}`);
+            } catch (error) {
+              this.logger.error(`Error creating earnings for order ${order.id}: ${error.message}`);
+              // Continue with other orders even if earnings calculation fails
+            }
+          } else {
+            this.logger.warn(`No driver assigned to route ${routeId}, skipping earnings calculation`);
+          }
         } catch (error) {
           this.logger.error(`Error updating order ${order.id} status during batch completion: ${error.message}`);
           // Continue with other orders even if one fails

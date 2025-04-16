@@ -130,4 +130,22 @@ export class DeliveryRoutesController {
       notes: data.notes
     });
   }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch(':id/complete')
+  async completeRoute(
+    @Param('id') id: string,
+    @GetUser('id') userId: string
+  ) {
+    // Get driver ID from user ID
+    const driver = await this.prisma.driver.findFirst({
+      where: { userId }
+    });
+    
+    if (!driver) {
+      throw new NotFoundException('Driver not found for this user');
+    }
+    
+    return this.deliveryRoutesService.completeRoute(id, driver.id);
+  }
 } 

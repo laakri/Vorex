@@ -5,10 +5,11 @@ import { DeliveryRoutesService } from './delivery-routes.service';
 import { PrismaModule } from 'prisma/prisma.module';
 import { DriversModule } from '../drivers/drivers.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { DriverEarningsService } from '../drivers/driver-earnings.service';
 
 @Module({
   imports: [PrismaModule, DriversModule, NotificationsModule],
-  providers: [DeliveryRoutesService, PrismaService],
+  providers: [DeliveryRoutesService, PrismaService, DriverEarningsService],
   controllers: [DeliveryRoutesController],
   exports: [DeliveryRoutesService]
 })

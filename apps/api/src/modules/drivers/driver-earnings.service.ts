@@ -1,39 +1,64 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
-import { OrderStatus } from '@prisma/client';
+import { OrderStatus, PaymentStatus, Order, DeliveryRoute, Batch, DriverEarnings } from '@prisma/client';
+
+// Define interfaces for type safety
+interface OrderWithItems extends Order {
+  items: Array<{
+    id: string;
+    fragile: boolean;
+    perishable: boolean;
+  }>;
+}
+
+interface RouteWithStops extends DeliveryRoute {
+  stops: Array<{
+    id: string;
+    isPickup: boolean;
+  }>;
+}
+
+interface EarningsConfig {
+  defaultDriverPercentage: number;
+  bonusFactors: {
+    distance: number;
+    stopCount: number;
+    specialHandling: number;
+  };
+}
 
 @Injectable()
 export class DriverEarningsService {
   private readonly logger = new Logger(DriverEarningsService.name);
-
-  // Default percentage for driver earnings - reduced from 70% to 40%
-  private readonly DEFAULT_DRIVER_PERCENTAGE = 40;
-
-  // Simplified bonus factors - only keeping essential ones
-  private readonly BONUS_FACTORS = {
-    DISTANCE: 0.2, // DT per km (reduced from 0.5)
-    STOP_COUNT: 1, // DT per stop (reduced from 2)
-    SPECIAL_HANDLING: 2, // DT for fragile or perishable items (reduced from 5)
+  private readonly config: EarningsConfig = {
+    defaultDriverPercentage: 40,
+    bonusFactors: {
+      distance: 0.2,
+      stopCount: 1,
+      specialHandling: 2,
+    },
   };
 
   constructor(private prisma: PrismaService) {}
 
   /**
    * Calculate driver earnings for a completed delivery
-   * @param orderId The ID of the completed order
-   * @param routeId The ID of the delivery route
-   * @param batchId The ID of the batch
-   * @param driverId The ID of the driver
-   * @returns The created driver earnings record
    */
   async calculateAndCreateEarnings(
     orderId: string,
     routeId: string,
     batchId: string,
     driverId: string,
-  ) {
+  ): Promise<DriverEarnings> {
     try {
-      // Get the order details
+      console.log('Starting earnings calculation for:', {
+        orderId,
+        routeId,
+        batchId,
+        driverId,
+      });
+
+      // Get the order details with proper typing
       const order = await this.prisma.order.findUnique({
         where: { id: orderId },
         include: {
@@ -46,11 +71,18 @@ export class DriverEarningsService {
         },
       });
 
+      console.log('Found order:', {
+        orderId: order?.id,
+        deliveryPrice: order?.deliveryPrice,
+        status: order?.status,
+        itemsCount: order?.items?.length,
+      });
+
       if (!order) {
-        throw new Error(`Order with ID ${orderId} not found`);
+        throw new NotFoundException(`Order with ID ${orderId} not found`);
       }
 
-      // Get the route details
+      // Get the route details with proper typing
       const route = await this.prisma.deliveryRoute.findUnique({
         where: { id: routeId },
         include: {
@@ -58,8 +90,14 @@ export class DriverEarningsService {
         },
       });
 
+      console.log('Found route:', {
+        routeId: route?.id,
+        totalDistance: route?.totalDistance,
+        stopsCount: route?.stops?.length,
+      });
+
       if (!route) {
-        throw new Error(`Route with ID ${routeId} not found`);
+        throw new NotFoundException(`Route with ID ${routeId} not found`);
       }
 
       // Get the batch details
@@ -67,18 +105,55 @@ export class DriverEarningsService {
         where: { id: batchId },
       });
 
+      console.log('Found batch:', {
+        batchId: batch?.id,
+        status: batch?.status,
+      });
+
       if (!batch) {
-        throw new Error(`Batch with ID ${batchId} not found`);
+        throw new NotFoundException(`Batch with ID ${batchId} not found`);
+      }
+
+      // Validate driver exists
+      const driver = await this.prisma.driver.findUnique({
+        where: { id: driverId },
+      });
+
+      console.log('Found driver:', {
+        driverId: driver?.id,
+        availabilityStatus: driver?.availabilityStatus,
+      });
+
+      if (!driver) {
+        throw new NotFoundException(`Driver with ID ${driverId} not found`);
       }
 
       // Calculate base amount (percentage of delivery price)
-      const baseAmount = (order.deliveryPrice * this.DEFAULT_DRIVER_PERCENTAGE) / 100;
+      const baseAmount = (order.deliveryPrice * this.config.defaultDriverPercentage) / 100;
+      console.log('Calculated base amount:', {
+        deliveryPrice: order.deliveryPrice,
+        percentage: this.config.defaultDriverPercentage,
+        baseAmount,
+      });
 
-      // Calculate bonus amounts
-      const bonusAmount = await this.calculateBonusAmount(order, route, batch);
+      // Calculate bonus amounts with proper typing
+      const bonusAmount = await this.calculateBonusAmount(
+        order as OrderWithItems,
+        route as RouteWithStops,
+        batch
+      );
+      console.log('Calculated bonus amount:', {
+        bonusAmount,
+        factors: this.config.bonusFactors,
+      });
 
       // Calculate total amount
       const totalAmount = baseAmount + bonusAmount;
+      console.log('Final earnings calculation:', {
+        baseAmount,
+        bonusAmount,
+        totalAmount,
+      });
 
       // Create driver earnings record
       const driverEarnings = await this.prisma.driverEarnings.create({
@@ -90,47 +165,59 @@ export class DriverEarningsService {
           baseAmount,
           bonusAmount,
           totalAmount,
-          percentage: this.DEFAULT_DRIVER_PERCENTAGE,
-          status: 'PENDING',
+          percentage: this.config.defaultDriverPercentage,
+          status: PaymentStatus.PENDING,
         },
       });
 
-      this.logger.log(
-        `Created driver earnings record: ${driverEarnings.id} for driver ${driverId} and order ${orderId}`,
-      );
+      console.log('Created driver earnings record:', {
+        earningsId: driverEarnings.id,
+        totalAmount: driverEarnings.totalAmount,
+        status: driverEarnings.status,
+      });
 
       return driverEarnings;
     } catch (error) {
+      console.error('Error in calculateAndCreateEarnings:', {
+        error: error.message,
+        stack: error.stack,
+      });
       this.logger.error(
         `Error calculating driver earnings: ${error.message}`,
         error.stack,
       );
-      throw error;
+      throw error instanceof NotFoundException 
+        ? error 
+        : new BadRequestException('Failed to calculate driver earnings');
     }
   }
 
   /**
-   * Calculate bonus amount based on simplified factors
+   * Calculate bonus amount based on factors
    */
-  private async calculateBonusAmount(order: any, route: any, batch: any): Promise<number> {
+  private async calculateBonusAmount(
+    order: OrderWithItems,
+    route: RouteWithStops,
+    batch: Batch
+  ): Promise<number> {
     let bonusAmount = 0;
 
     // Distance bonus
     if (route.totalDistance) {
-      bonusAmount += route.totalDistance * this.BONUS_FACTORS.DISTANCE;
+      bonusAmount += route.totalDistance * this.config.bonusFactors.distance;
     }
 
     // Stop count bonus
     if (route.stops && route.stops.length > 0) {
-      bonusAmount += route.stops.length * this.BONUS_FACTORS.STOP_COUNT;
+      bonusAmount += route.stops.length * this.config.bonusFactors.stopCount;
     }
 
     // Special handling bonus - only for fragile/perishable items
     const specialHandlingItems = order.items.filter(
-      (item: any) => item.fragile || item.perishable,
+      (item) => item.fragile || item.perishable,
     );
     if (specialHandlingItems.length > 0) {
-      bonusAmount += specialHandlingItems.length * this.BONUS_FACTORS.SPECIAL_HANDLING;
+      bonusAmount += specialHandlingItems.length * this.config.bonusFactors.specialHandling;
     }
 
     return bonusAmount;
