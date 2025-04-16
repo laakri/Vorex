@@ -13,6 +13,7 @@ import {
   BadRequestException,
   Req,
   ParseUUIDPipe,
+  Res,
 } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
@@ -46,6 +47,36 @@ export class PublicOrdersController {
         throw error;
       }
       throw new InternalServerErrorException('Failed to fetch tracking information');
+    }
+  }
+
+  @Get(':orderId/invoice')
+  async getInvoiceData(@Param('orderId') orderId: string) {
+    try {
+      return await this.ordersService.getInvoiceData(orderId);
+    } catch (error) {
+      console.error('Error fetching invoice data:', error);
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to fetch invoice data');
+    }
+  }
+
+  @Get(':orderId/invoice/download')
+  async downloadInvoice(@Param('orderId') orderId: string, @Res() res: any) {
+    try {
+      const pdfBuffer = await this.ordersService.generateInvoicePDF(orderId);
+      
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename=invoice-${orderId}.pdf`);
+      res.send(pdfBuffer);
+    } catch (error) {
+      console.error('Error generating invoice PDF:', error);
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to generate invoice PDF');
     }
   }
 }

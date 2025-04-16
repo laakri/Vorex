@@ -18,6 +18,8 @@ import { SellerDashboard } from "@/pages/seller/seller-dashboard";
 import { ProductsPage } from "@/pages/seller/products/products";
 import { OrdersPage } from "@/pages/seller/orders/orders";
 import { StoreSettingsPage } from "@/pages/seller/settings/store-settings";
+import InvoicePage from "@/pages/seller/orders/invoice";
+import SellerGuide from "@/pages/seller/seller-guide";
 // Driver layers
 import { DriverLayout } from "@/layers/driver-layout";
 import { DriverApplication } from "@/pages/driver/driver-application";
@@ -135,11 +137,31 @@ export function AppRoutes() {
           }
         />
         <Route
+          path="orders/:orderId/invoice"
+          element={
+            <ProtectedRoute>
+              <SellerGuard>
+                <InvoicePage />
+              </SellerGuard>
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="settings"
           element={
             <ProtectedRoute>
               <SellerGuard>
                 <StoreSettingsPage />
+              </SellerGuard>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="guide"
+          element={
+            <ProtectedRoute>
+              <SellerGuard>
+                <SellerGuide />
               </SellerGuard>
             </ProtectedRoute>
           }
@@ -335,6 +357,9 @@ export function AppRoutes() {
           }
         />
       </Route>
+
+      {/* Direct Invoice Access */}
+      <Route path="/invoice/:orderId" element={<InvoicePage />} />
     </Routes>
   );
 }

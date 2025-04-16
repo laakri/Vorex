@@ -6,6 +6,8 @@ import { Governorate, WAREHOUSE_COVERAGE } from '@/config/constants';
 import { NotificationsService } from '../notifications/notifications.service';
 import { DeliveryPricingService } from './delivery-pricing.service';
 import { DeliveryTimeEstimationService } from './delivery-time-estimation.service';
+import PDFDocument from 'pdfkit';
+import { Response } from 'express';
 
 @Injectable()
 export class OrdersService {
@@ -973,5 +975,167 @@ export class OrdersService {
     }
     
     return [];
+  }
+
+  async getInvoiceData(orderId: string) {
+    try {
+      const order = await this.prisma.order.findUnique({
+        where: { id: orderId },
+        include: {
+          items: {
+            include: {
+              product: {
+                select: {
+                  name: true,
+                  price: true,
+                  sku: true
+                }
+              }
+            }
+          },
+          seller: {
+            select: {
+              businessName: true,
+              address: true,
+              city: true,
+              governorate: true,
+              phone: true
+            }
+          }
+        }
+      });
+
+      if (!order) {
+        throw new NotFoundException(`Order with ID ${orderId} not found`);
+      }
+
+      // Calculate subtotal
+      const subtotal = order.items.reduce((sum, item) => {
+        return sum + (item.quantity * item.price);
+      }, 0);
+
+      // Format items for invoice
+      const formattedItems = order.items.map(item => ({
+        name: item.product.name,
+        quantity: item.quantity,
+        price: item.price,
+        total: item.quantity * item.price
+      }));
+
+      return {
+        orderId: order.id,
+        customerName: order.customerName,
+        customerEmail: order.customerEmail,
+        customerPhone: order.phone,
+        items: formattedItems,
+        subtotal,
+        tax: 0, // No tax in Tunisia
+        total: order.totalAmount,
+        status: order.status,
+        createdAt: order.createdAt,
+        deliveryAddress: `${order.address}, ${order.city}, ${order.governorate}, ${order.postalCode}`,
+        paymentMethod: 'Not specified', // Default value since paymentMethod might not exist
+        sellerInfo: {
+          businessName: order.seller.businessName,
+          address: order.seller.address,
+          city: order.seller.city,
+          governorate: order.seller.governorate,
+          phone: order.seller.phone
+        }
+      };
+    } catch (error) {
+      console.error('Error getting invoice data:', error);
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to get invoice data');
+    }
+  }
+
+  async generateInvoicePDF(orderId: string): Promise<Buffer> {
+    try {
+      const invoiceData = await this.getInvoiceData(orderId);
+      
+      return new Promise((resolve, reject) => {
+        try {
+          // Create a new PDF document
+          const doc = new PDFDocument({ 
+            size: 'A4', 
+            margin: 50,
+            bufferPages: true
+          });
+          
+          const chunks: Buffer[] = [];
+          
+          // Collect PDF data chunks
+          doc.on('data', chunk => chunks.push(chunk));
+          doc.on('end', () => resolve(Buffer.concat(chunks)));
+          doc.on('error', reject);
+          
+          // Add company logo
+          // doc.image('path/to/logo.png', 50, 45, { width: 50 });
+          
+          // Add invoice header
+          doc.fontSize(20).text('INVOICE', 50, 50);
+          doc.fontSize(10).text(`Invoice #: ${invoiceData.orderId}`, 50, 80);
+          doc.text(`Date: ${new Date(invoiceData.createdAt).toLocaleDateString()}`, 50, 95);
+          doc.text(`Status: ${invoiceData.status}`, 50, 110);
+          
+          // Add seller information
+          doc.fontSize(12).text('From:', 50, 150);
+          doc.fontSize(10).text(invoiceData.sellerInfo.businessName, 50, 165);
+          doc.text(invoiceData.sellerInfo.address, 50, 180);
+          doc.text(`${invoiceData.sellerInfo.city}, ${invoiceData.sellerInfo.governorate}`, 50, 195);
+          doc.text(`Phone: ${invoiceData.sellerInfo.phone}`, 50, 210);
+          
+          // Add customer information
+          doc.fontSize(12).text('To:', 300, 150);
+          doc.fontSize(10).text(invoiceData.customerName, 300, 165);
+          doc.text(invoiceData.customerEmail, 300, 180);
+          doc.text(invoiceData.customerPhone, 300, 195);
+          doc.text(invoiceData.deliveryAddress, 300, 210, { width: 200 });
+          
+          // Add items table
+          doc.fontSize(12).text('Items', 50, 280);
+          
+          // Table header
+          doc.fontSize(10);
+          doc.text('Item', 50, 300);
+          doc.text('Quantity', 200, 300);
+          doc.text('Price', 300, 300);
+          doc.text('Total', 400, 300);
+          
+          // Table rows
+          let y = 320;
+          invoiceData.items.forEach(item => {
+            doc.text(item.name, 50, y);
+            doc.text(item.quantity.toString(), 200, y);
+            doc.text(`$${item.price.toFixed(2)}`, 300, y);
+            doc.text(`$${item.total.toFixed(2)}`, 400, y);
+            y += 20;
+          });
+          
+          // Add totals
+          y += 20;
+          doc.text('Total:', 300, y);
+          doc.text(`$${invoiceData.total.toFixed(2)}`, 400, y);
+          
+          // Add footer
+          doc.fontSize(10).text('Thank you for your business!', 50, 700);
+          
+          // Finalize the PDF
+          doc.end();
+        } catch (error) {
+          console.error('Error in PDF generation:', error);
+          reject(error);
+        }
+      });
+    } catch (error) {
+      console.error('Error generating invoice PDF:', error);
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to generate invoice PDF');
+    }
   }
 } 

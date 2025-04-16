@@ -36,6 +36,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { Link } from "react-router-dom";
 
 export function DriverDashboard() {
   const [timeRange, setTimeRange] = useState<string>("7d");
@@ -445,10 +446,10 @@ export function DriverDashboard() {
                   
                   <div className="pt-4">
                     <Button className="w-full" asChild>
-                      <a href="/driver/earnings" className="flex items-center justify-center">
+                        <Link to="/driver/earnings" className="flex items-center justify-center">
                         View Earnings Details
                         <ArrowRight className="ml-2 h-4 w-4" />
-                      </a>
+                      </Link>
                     </Button>
                   </div>
                 </div>

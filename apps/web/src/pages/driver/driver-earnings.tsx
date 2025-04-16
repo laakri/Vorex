@@ -11,6 +11,14 @@ import {
   Boxes,
 } from "lucide-react";
 import api from "@/lib/axios";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  ResponsiveContainer,
+  Tooltip as RechartsTooltip,
+} from "recharts";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import {
@@ -49,15 +57,14 @@ interface Earning {
   updatedAt: string;
   order: {
     id: string;
-    trackingId: string;
     status: string;
     createdAt: string;
+    isLocalDelivery: boolean;
   };
   route: {
     id: string;
-    name: string;
-    distance: number;
     status: string;
+    totalDistance: number;
   };
 }
 
@@ -73,8 +80,6 @@ interface EarningsByType {
   amount: number;
 }
 
-
-
 export function DriverEarnings() {
   const [timeRange, setTimeRange] = useState<string>("30d");
   const [filterStatus, setFilterStatus] = useState<string>("all");
@@ -86,6 +91,7 @@ export function DriverEarnings() {
     queryFn: async () => {
       try {
         const response = await api.get(`/drivers/earnings?timeRange=${timeRange}&status=${filterStatus}`);
+        console.log("earnings", response.data);
         return response.data;
       } catch (err) {
         toast({
@@ -131,10 +137,42 @@ export function DriverEarnings() {
     });
   };
 
+  // Prepare chart data
+  const prepareChartData = () => {
+    if (!earnings.length) return [];
+
+    // Group earnings by date
+    const earningsByDate = earnings.reduce((acc: Record<string, number>, earning: Earning) => {
+      const date = new Date(earning.createdAt).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+      });
+      
+      if (!acc[date]) {
+        acc[date] = 0;
+      }
+      
+      acc[date] += earning.totalAmount;
+      return acc;
+    }, {});
+
+    // Sort dates
+    const sortedDates = Object.keys(earningsByDate).sort((a, b) => {
+      const dateA = new Date(a);
+      const dateB = new Date(b);
+      return dateA.getTime() - dateB.getTime();
+    });
+
+    return sortedDates.map(date => ({
+      date,
+      earnings: earningsByDate[date]
+    }));
+  };
+
   // If loading, show skeleton UI
   if (isLoading) {
     return (
-      <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
+      <div className="flex-1 space-y-4 p-4 md:p-8 pt-6 overflow-auto">
         <div className="flex items-center justify-between space-y-2">
           <div>
             <h2 className="text-3xl font-bold tracking-tight">Driver Earnings</h2>
@@ -212,7 +250,7 @@ export function DriverEarnings() {
   // If error, show error state
   if (error) {
     return (
-      <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
+      <div className="flex-1 space-y-4 p-4 md:p-8 pt-6 overflow-auto">
         <div className="flex items-center justify-between space-y-2">
           <div>
             <h2 className="text-3xl font-bold tracking-tight">Driver Earnings</h2>
@@ -245,7 +283,7 @@ export function DriverEarnings() {
   }
   
   return (
-    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
+    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6 overflow-auto">
       <div className="flex items-center justify-between space-y-2">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Driver Earnings</h2>
@@ -362,10 +400,31 @@ export function DriverEarnings() {
               />
             ) : (
               <div className="h-[300px]">
-                {/* Chart would go here */}
-                <div className="flex items-center justify-center h-full text-muted-foreground">
-                  Chart visualization coming soon
-                </div>
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart
+                    data={prepareChartData()}
+                    margin={{
+                      top: 5,
+                      right: 30,
+                      left: 20,
+                      bottom: 5,
+                    }}
+                  >
+                    <XAxis dataKey="date" />
+                    <YAxis 
+                      tickFormatter={(value) => formatCurrency(value)}
+                    />
+                    <RechartsTooltip 
+                      formatter={(value: number) => [formatCurrency(value), 'Earnings']}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="earnings"
+                      stroke="#10b981"
+                      activeDot={{ r: 8 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
               </div>
             )}
           </CardContent>
@@ -420,7 +479,7 @@ export function DriverEarnings() {
               description="Complete deliveries to see your earnings history."
             />
           ) : (
-            <div className="rounded-md border">
+            <div className="rounded-md border overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -439,7 +498,7 @@ export function DriverEarnings() {
                       <TableCell>{formatDate(earning.createdAt)}</TableCell>
                       <TableCell>
                         <div className="flex flex-col">
-                          <span className="font-medium">{earning.order.trackingId}</span>
+                          <span className="font-medium">{earning.order.id.substring(0, 8)}</span>
                           <span className="text-xs text-muted-foreground">
                             {earning.order.status}
                           </span>
@@ -447,9 +506,9 @@ export function DriverEarnings() {
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col">
-                          <span className="font-medium">{earning.route.name}</span>
+                          <span className="font-medium">Route {earning.route.id.substring(0, 8)}</span>
                           <span className="text-xs text-muted-foreground">
-                            {earning.route.distance.toFixed(1)} km
+                            {earning.route.totalDistance ? `${earning.route.totalDistance.toFixed(1)} km` : 'N/A'}
                           </span>
                         </div>
                       </TableCell>

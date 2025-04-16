@@ -787,9 +787,17 @@ export class DeliveryRoutesService {
     const stop = await this.prisma.routeStop.findUnique({
       where: { id: stopId },
       include: { 
-        route: true,
-        order: true,  // Include the order data
-        warehouse: true  // Include warehouse data
+        route: {
+          include: {
+            batch: {
+              include: {
+                orders: true
+              }
+            }
+          }
+        },
+        order: true,
+        warehouse: true
       }
     });
     
@@ -814,7 +822,11 @@ export class DeliveryRoutesService {
         warehouse: true,
         route: {
           include: {
-            batch: true
+            batch: {
+              include: {
+                orders: true
+              }
+            }
           }
         }
       }
@@ -845,11 +857,14 @@ export class DeliveryRoutesService {
         
         // If all stops are completed, mark the route as completed
         if (allCompleted) {
-          await this.prisma.deliveryRoute.update({
+          const updatedRoute = await this.prisma.deliveryRoute.update({
             where: { id: stop.routeId },
             data: {
               status: RouteStatus.COMPLETED,
               completedAt: new Date()
+            },
+            include: {
+              batch: true
             }
           });
           this.logger.log(`Route ${stop.routeId} marked as completed`);
@@ -878,7 +893,7 @@ export class DeliveryRoutesService {
             
             this.logger.log(`Found ${batchOrders.length} orders in batch ${stop.route.batchId} that need status updates`);
             
-            // Update each order based on the batch type
+            // Update each order based on the batch type and calculate earnings
             for (const order of batchOrders) {
               let newStatus: OrderStatus;
               
@@ -912,9 +927,24 @@ export class DeliveryRoutesService {
                   where: { id: order.id },
                   data: { status: newStatus }
                 });
-                this.logger.log(`Updated order ${order.id} status to ${newStatus} as part of batch completion`);
+
+                // Calculate and create driver earnings for this order
+                if (stop.route.driverId) {
+                  try {
+                    await this.driverEarningsService.calculateAndCreateEarnings(
+                      order.id,
+                      stop.routeId,
+                      stop.route.batchId,
+                      stop.route.driverId
+                    );
+                    this.logger.log(`Created earnings for order ${order.id} and driver ${stop.route.driverId}`);
+                  } catch (error) {
+                    this.logger.error(`Error creating earnings for order ${order.id}: ${error.message}`);
+                    // Continue with other orders even if earnings calculation fails
+                  }
+                }
               } catch (error) {
-                this.logger.error(`Error updating order ${order.id} status during batch completion: ${error.message}`);
+                this.logger.error(`Error updating order ${order.id} status: ${error.message}`);
                 // Continue with other orders even if one fails
               }
             }
@@ -979,7 +1009,7 @@ export class DeliveryRoutesService {
         });
       }
 
-      // Update all orders in the batch to delivered status
+      // Update all orders in the batch to delivered status and calculate earnings
       if (route.batch && route.batch.orders) {
         for (const order of route.batch.orders) {
           // Determine the appropriate delivered status based on delivery type
@@ -987,6 +1017,7 @@ export class DeliveryRoutesService {
             ? 'LOCAL_DELIVERED' 
             : 'CITY_DELIVERED';
 
+          // Update order status
           await this.prisma.order.update({
             where: { id: order.id },
             data: {
@@ -995,12 +1026,18 @@ export class DeliveryRoutesService {
           });
 
           // Calculate and create driver earnings for this order
-          await this.driverEarningsService.calculateAndCreateEarnings(
-            order.id,
-            routeId,
-            route.batchId,
-            driverId,
-          );
+          try {
+            await this.driverEarningsService.calculateAndCreateEarnings(
+              order.id,
+              routeId,
+              route.batchId,
+              driverId,
+            );
+            this.logger.log(`Created earnings for order ${order.id} and driver ${driverId}`);
+          } catch (error) {
+            this.logger.error(`Error creating earnings for order ${order.id}: ${error.message}`);
+            // Continue with other orders even if earnings calculation fails
+          }
         }
       }
 

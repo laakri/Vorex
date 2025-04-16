@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, Package, Truck, AlertCircle, Plus } from "lucide-react";
+import { Search, Package, Truck, AlertCircle, Plus, MapPin, FileText } from "lucide-react";
 import { format } from "date-fns";
 import api from "@/lib/axios";
 import { Button } from "@/components/ui/button";
@@ -34,6 +34,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { CancelOrderDialog } from "./cancel-order-dialog";
+import { Link } from "react-router-dom";
 
 // Enums
 export enum OrderStatus {
@@ -351,15 +352,36 @@ export function OrdersPage(): JSX.Element {
                           {format(new Date(order.createdAt), "dd MMM yyyy HH:mm")}
                         </TableCell>
                         <TableCell>
-                          {order.status === OrderStatus.PENDING && (
-                            <Button 
-                              variant="destructive" 
+                          <div className="flex items-center gap-2">
+                            {order.status === OrderStatus.PENDING && (
+                              <Button 
+                                variant="destructive" 
+                                size="sm"
+                                onClick={() => handleCancelOrder(order.id)}
+                              >
+                                Cancel
+                              </Button>
+                            )}
+                            <Button
+                              variant="outline"
                               size="sm"
-                              onClick={() => handleCancelOrder(order.id)}
+                              onClick={() => window.location.href = `/track/${order.id}`}
                             >
-                              Cancel
+                              <MapPin className="h-4 w-4 mr-1" />
+                              Track
                             </Button>
-                          )}
+                            <Link to={`/seller/orders/${order.id}/invoice`}>    
+
+                              <Button
+                                variant="outline"
+                                size="sm"
+                            >
+                              <FileText className="h-4 w-4 mr-1" />
+                              Invoice
+                            </Button>
+                            </Link>
+
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}

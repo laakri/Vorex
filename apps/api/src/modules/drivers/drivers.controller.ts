@@ -10,6 +10,7 @@ import {
   Param,
   Query,
   Request,
+  NotFoundException,
 } from '@nestjs/common';
 import { DriversService } from './drivers.service';
 import { DriverEarningsService } from './driver-earnings.service';
@@ -23,6 +24,7 @@ import { RolesGuard } from '@/common/guards/roles.guard';
 import { Roles } from '@/common/decorators/roles.decorator';
 import { Role } from '@/common/enums/role.enum';
 import { GetUser } from '@/common/decorators/get-user.decorator';
+import { PrismaService } from 'prisma/prisma.service';
 
 @Controller('drivers')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -30,6 +32,7 @@ export class DriversController {
   constructor(
     private readonly driversService: DriversService,
     private readonly driverEarningsService: DriverEarningsService,
+    private readonly prisma: PrismaService
   ) {}
 
   @Post('register')
@@ -138,7 +141,16 @@ export class DriversController {
     @Query('status') status: string = 'all'
   ) {
     try {
-      return await this.driverEarningsService.getDriverEarnings(userId, timeRange);
+      // First get the driver's ID from their user ID
+      const driver = await this.prisma.driver.findUnique({
+        where: { userId }
+      });
+
+      if (!driver) {
+        throw new NotFoundException('Driver profile not found');
+      }
+
+      return await this.driverEarningsService.getDriverEarnings(driver.id, timeRange, status);
     } catch (error) {
       throw new BadRequestException(error.message);
     }

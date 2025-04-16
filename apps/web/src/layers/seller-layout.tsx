@@ -60,8 +60,11 @@ const menuItems = [
     icon: Store,
     href: "/seller/settings",
   },
-  
- 
+  {
+    title: "Guide",
+    icon: BookOpen,
+    href: "/seller/guide",
+  },
 ];
 
 export function SellerLayout() {
@@ -80,12 +83,11 @@ export function SellerLayout() {
       if (window.innerWidth < 1080) {
         setCollapsed(true);
         setShowInfoCard(false);
-        setIsRightSidebarOpen(false)
+        setIsRightSidebarOpen(false);
       } else {
         setCollapsed(false);
         setShowInfoCard(true);
-        setIsRightSidebarOpen(true)
-
+        setIsRightSidebarOpen(true);
       }
     };
 
@@ -98,6 +100,13 @@ export function SellerLayout() {
     // Cleanup
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // Update info card visibility when sidebar is collapsed
+  useEffect(() => {
+    if (collapsed) {
+      setShowInfoCard(false);
+    }
+  }, [collapsed]);
 
   const getInitials = (name?: string) => {
     if (!name) return "U";
@@ -180,8 +189,8 @@ export function SellerLayout() {
           </div>
         </nav>
 
-        {/* Informational Card about Driver Role - Hide on small screens */}
-        {showInfoCard && (
+        {/* Informational Card about Driver Role - Hide on small screens and when collapsed */}
+        {showInfoCard && !collapsed && (
           <div className="px-3 py-2 hidden md:block">
             <Card className="p-4 bg-card shadow-md relative">
               <h2 className="text-md font-semibold">Did you know?</h2>
@@ -197,7 +206,7 @@ export function SellerLayout() {
               >
                 <X className="h-4 w-4" />
               </Button>
-              <Button onClick={() => handlePlatformChange("driver")} className="mt-2 text-md " size="sm">
+              <Button onClick={() => handlePlatformChange("driver")} className="mt-2 text-md" size="sm">
                 Switch to Driver
               </Button>
             </Card>
@@ -310,12 +319,12 @@ export function SellerLayout() {
             <Outlet />
           </div>
 
-          {/* Toggle Right Sidebar Button */}
+          {/* Toggle Right Sidebar Button - Only show on larger screens */}
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setIsRightSidebarOpen(!isRightSidebarOpen)}
-            className="fixed top-4 right-4 h-8 w-8 p-0 rounded-full shadow-md border z-10 bg-background"
+            className="fixed top-4 right-4 h-8 w-8 p-0 rounded-full shadow-md border z-10 bg-background hidden md:flex"
             title={isRightSidebarOpen ? "Close sidebar" : "Open sidebar"}
           >
             <ChevronRight
