@@ -19,6 +19,7 @@ import api from '../../lib/axios';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MainTabParamList } from '../../navigation/types';
+import { RouteMapNavigation } from '../../components/RouteMapNavigation';
 
 // Replace date-fns with custom formatter
 const formatDate = (dateString: string) => {
@@ -105,6 +106,7 @@ export const ActiveRoutesScreen = () => {
   const [isCompleteDialogOpen, setIsCompleteDialogOpen] = useState(false);
   const [notes, setNotes] = useState('');
   const [activeTab, setActiveTab] = useState('overview');
+  const [isMapVisible, setIsMapVisible] = useState(false);
   const navigation = useNavigation<ActiveRoutesScreenNavigationProp>();
 
   const fetchActiveRoute = useCallback(async () => {
@@ -131,10 +133,8 @@ export const ActiveRoutesScreen = () => {
   };
 
   const startNavigation = (stop: RouteStop) => {
-    // Open in Google Maps or other map app
-    const url = `https://www.google.com/maps/dir/?api=1&destination=${stop.latitude},${stop.longitude}`;
-    // You'll need to implement a way to open URLs in React Native
-    // For example, using Linking from react-native
+    setSelectedStop(stop);
+    setIsMapVisible(true);
   };
 
   const handleCompleteStop = (stop: RouteStop) => {
@@ -545,6 +545,17 @@ export const ActiveRoutesScreen = () => {
           </View>
         </View>
       </Modal>
+
+      <RouteMapNavigation
+        visible={isMapVisible}
+        onClose={() => setIsMapVisible(false)}
+        nextStop={selectedStop ? {
+          latitude: selectedStop.latitude,
+          longitude: selectedStop.longitude,
+          address: selectedStop.address,
+          isPickup: selectedStop.isPickup,
+        } : null}
+      />
     </SafeAreaView>
   );
 };
