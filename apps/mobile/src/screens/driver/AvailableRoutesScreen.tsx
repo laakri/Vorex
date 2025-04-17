@@ -131,6 +131,17 @@ export const AvailableRoutesScreen = () => {
 
   const filteredRoutes = routes
     .filter(route => {
+      // Log each route's status for debugging
+      console.log('Route status:', {
+        id: route.id,
+        status: route.status,
+        driverId: route.driverId,
+        batchType: route.batch.type
+      });
+
+      // Show routes that are PENDING and not assigned to any driver
+      const isAvailable = route.status === 'PENDING' && !route.driverId;
+      
       if (filterVehicle !== 'all' && route.batch.vehicleType !== filterVehicle) {
         return false;
       }
@@ -155,7 +166,7 @@ export const AvailableRoutesScreen = () => {
         );
       }
       
-      return true;
+      return isAvailable;
     })
     .sort((a, b) => {
       if (sortBy === 'distance') {
@@ -170,24 +181,56 @@ export const AvailableRoutesScreen = () => {
       return 0;
     });
 
+  // Add logging for filtered routes
+  useEffect(() => {
+    console.log('Filtered routes:', filteredRoutes.map(r => ({
+      id: r.id,
+      status: r.status,
+      driverId: r.driverId
+    })));
+  }, [filteredRoutes]);
+
   const handleAcceptRoute = async (route: Route) => {
     try {
       setAcceptingRouteId(route.id);
-      const response = await api.post(`/delivery-routes/${route.batchId}/assign`, {
+      console.log('Attempting to accept route:', {
+        routeId: route.id,
+        batchId: route.batchId,
         driverId: route.driverId
       });
       
-      if (response.data.success) {
-        Alert.alert('Success', 'Route accepted successfully!');
+      const response = await api.post(`/delivery-routes/${route.id}/assign`, {
+        driverId: route.driverId
+      });
+      
+      console.log('Route acceptance response:', response.data);
+      
+      Alert.alert('Success', 'Route accepted successfully!');
+      
+      await fetchRoutes();
+      
+      setTimeout(() => {
         navigation.navigate('ActiveRoutes');
-      } else {
-        throw new Error(response.data.message || 'Failed to accept route');
-      }
+      }, 500);
+      
     } catch (err: any) {
-      console.error('Error accepting route:', err);
+      console.error('Error accepting route:', {
+        error: err,
+        response: err.response?.data,
+        status: err.response?.status,
+        message: err.message
+      });
+      
+      let errorMessage = 'Failed to accept route. Please try again.';
+      if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
       Alert.alert(
         'Error',
-        err.response?.data?.message || err.message || 'Failed to accept route. Please try again.'
+        errorMessage
       );
     } finally {
       setAcceptingRouteId(null);

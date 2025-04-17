@@ -539,7 +539,7 @@ export const ActiveRoutesScreen = () => {
                 onPress={completeStop}
               >
                 <Ionicons name="checkmark-outline" size={20} color={colors.foreground} />
-                <Text style={styles.modalConfirmButtonText}>Confirm Completion</Text>
+                <Text style={styles.modalConfirmButtonText}>Confirm</Text>
               </TouchableOpacity>
             </View>
           </View>
