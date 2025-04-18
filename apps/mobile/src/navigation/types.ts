@@ -17,4 +17,5 @@ export type MainTabParamList = {
   History: undefined;
   Vehicle: undefined;
   Settings: undefined;
+  OrderDetails: { orderId: string };
 }; 

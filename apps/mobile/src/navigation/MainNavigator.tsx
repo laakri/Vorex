@@ -8,6 +8,7 @@ import { HelpScreen } from '../screens/driver/HelpScreen';
 import { MainTabParamList } from './types';
 import { ActiveRoutesScreen } from '../screens/driver/ActiveRoutesScreen';
 import { AvailableRoutesScreen } from '../screens/driver/AvailableRoutesScreen';
+import { OrderDetailsScreen } from '../screens/driver/OrderDetailsScreen';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
@@ -52,6 +53,14 @@ export const MainNavigator = () => {
       <Tab.Screen name="Earnings" component={EarningsScreen} />
       <Tab.Screen name="ActiveRoutes" component={ActiveRoutesScreen} />
       <Tab.Screen name="AvailableRoutes" component={AvailableRoutesScreen} />
+      <Tab.Screen
+        name="OrderDetails"
+        component={OrderDetailsScreen}
+        options={{
+          title: 'Order Details',
+          headerShown: true,
+        }}
+      />
     </Tab.Navigator>
   );
 }; 

@@ -4,10 +4,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 export const VehicleInfoScreen = () => {
   return (
-    <SafeAreaView className="flex-1 bg-background">
-      <View className="flex-1 p-4">
-        <Text className="text-2xl font-bold text-foreground">Vehicle Info</Text>
+    <SafeAreaView style={{ flex: 1, backgroundColor: 'background' }}>
+      <View style={{ flex: 1, padding: 16 }}>
+        <Text style={{ fontSize: 24, fontWeight: 'bold', color: 'foreground' }}>Vehicle Info</Text>
       </View>
     </SafeAreaView>
   );
-}; 
+}

@@ -113,6 +113,7 @@ export const ActiveRoutesScreen = () => {
     try {
       setLoading(true);
       const response = await api.get('/delivery-routes/driver/active');
+      console.log(response.data);
       setActiveRoute(response.data);
     } catch (error) {
       console.error('Failed to fetch active route:', error);
@@ -316,6 +317,18 @@ export const ActiveRoutesScreen = () => {
 
               <View style={styles.nextStopActions}>
                 <TouchableOpacity
+                  style={[styles.actionButton, styles.viewButton]}
+                  onPress={() => {
+                    if (nextStop?.order?.id) {
+                      navigation.navigate('OrderDetails', { orderId: nextStop.order.id });
+                    } else {
+                      Alert.alert('No Order', 'No order details found for this stop.');
+                    }
+                  }}
+                >
+                  <Text style={styles.viewButtonText}>View</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
                   style={styles.actionButton}
                   onPress={() => startNavigation(nextStop)}
                 >
@@ -329,6 +342,7 @@ export const ActiveRoutesScreen = () => {
                   <Ionicons name="checkmark-outline" size={20} color={colors.foreground} />
                   <Text style={styles.actionButtonText}>Complete</Text>
                 </TouchableOpacity>
+                
               </View>
             </View>
           </View>
@@ -734,6 +748,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.success,
   },
   actionButtonText: {
+    color: colors.foreground,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  viewButton: {
+    backgroundColor: colors.accent,
+  },
+  viewButtonText: {
     color: colors.foreground,
     fontSize: 16,
     fontWeight: '600',
