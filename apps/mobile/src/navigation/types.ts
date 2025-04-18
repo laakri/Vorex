@@ -10,12 +10,21 @@ export type AuthStackParamList = {
 
 export type MainTabParamList = {
   Dashboard: undefined;
+  Profile: undefined;
+  Earnings: undefined;
   ActiveRoutes: undefined;
   AvailableRoutes: undefined;
-  Earnings: undefined;
-  Profile: undefined;
+  OrderDetails: { orderId: string };
+  History: undefined;
+  Notifications: undefined;
+  Vehicle: undefined;
+  Settings: undefined;
+};
+
+// Define the nested Profile stack screens
+export type ProfileStackParamList = {
+  ProfileMain: undefined;
   History: undefined;
   Vehicle: undefined;
   Settings: undefined;
-  OrderDetails: { orderId: string };
 }; 

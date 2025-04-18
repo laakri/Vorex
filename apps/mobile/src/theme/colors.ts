@@ -4,7 +4,7 @@ export const colors = {
   foreground: 'hsl(60 9.1% 97.8%)',
   primary: 'hsl(20.5 90.2% 48.2%)',
   secondary: 'hsl(12 6.5% 15.1%)',
-  muted: 'hsl(12 6.5% 15.1%)',
+  muted: 'hsl(12 6.5% 40%)',
   accent: 'hsl(12 6.5% 15.1%)',
   destructive: 'hsl(0 72.2% 50.6%)',
   border: 'hsl(12 6.5% 15.1%)',
@@ -37,4 +37,7 @@ export const colors = {
   chart3: 'hsl(30 80% 55%)',
   chart4: 'hsl(280 65% 60%)',
   chart5: 'hsl(340 75% 55%)',
+
+  // Add a card color for better styling consistency
+  card: 'hsl(24 9.8% 20%)',
 } as const; 

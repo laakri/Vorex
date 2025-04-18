@@ -3,10 +3,10 @@ import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useAuthStore } from '../stores/auth.store';
-import { RootStackParamList, AuthStackParamList, MainTabParamList } from './types';
+import { RootStackParamList, AuthStackParamList, MainTabParamList, ProfileStackParamList } from './types';
 import { colors } from '../theme/colors';
 import { Ionicons } from '@expo/vector-icons';
-import { Platform } from 'react-native';
+import { Platform, Text, View } from 'react-native';
 import type { NativeStackNavigationOptions } from '@react-navigation/native-stack';
 import { DashboardScreen } from '../screens/driver/DashboardScreen';
 import { ActiveRoutesScreen } from '../screens/driver/ActiveRoutesScreen';
@@ -15,11 +15,19 @@ import { EarningsScreen } from '../screens/driver/EarningsScreen';
 import { ProfileScreen } from '../screens/driver/ProfileScreen';
 import { SignInScreen } from '../screens/auth/SignInScreen';
 import SignUpScreen from '../screens/auth/SignUpScreen';
+import { HistoryScreen } from '../screens/driver/HistoryScreen';
+import { VehicleInfoScreen } from '../screens/driver/VehicleInfoScreen';
+import { SettingsScreen } from '../screens/driver/SettingsScreen';
+import { NotificationScreen } from '../screens/driver/notification/NotificationScreen';
+import { NotificationButton } from '../components/NotificationButton';
 
 // Create navigators
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const MainTab = createBottomTabNavigator<MainTabParamList>();
+const ProfileStack = createNativeStackNavigator<ProfileStackParamList>();
+
+
 
 // Common stack screen options
 const commonStackScreenOptions: NativeStackNavigationOptions = {
@@ -84,6 +92,42 @@ const AuthNavigator = () => {
 
 // Main Tab Navigator
 const MainNavigator = () => {
+  // Create a nested Profile navigator
+  const ProfileNavigator = () => {
+    return (
+      <ProfileStack.Navigator
+        screenOptions={{
+          headerStyle: {
+            backgroundColor: colors.background,
+          },
+          headerShadowVisible: false,
+          headerTintColor: colors.foreground,
+        }}
+      >
+        <ProfileStack.Screen 
+          name="ProfileMain" 
+          component={ProfileScreen} 
+          options={{ title: 'Profile', headerShown: false }} 
+        />
+        <ProfileStack.Screen 
+          name="History" 
+          component={HistoryScreen} 
+          options={{ title: 'History' }} 
+        />
+        <ProfileStack.Screen 
+          name="Vehicle" 
+          component={VehicleInfoScreen} 
+          options={{ title: 'Vehicle Info' }} 
+        />
+        <ProfileStack.Screen 
+          name="Settings" 
+          component={SettingsScreen} 
+          options={{ title: 'Settings' }} 
+        />
+      </ProfileStack.Navigator>
+    );
+  };
+
   return (
     <MainTab.Navigator
       screenOptions={({ route }) => ({
@@ -101,6 +145,8 @@ const MainNavigator = () => {
             iconName = focused ? 'wallet' : 'wallet-outline';
           } else if (route.name === 'Profile') {
             iconName = focused ? 'person' : 'person-outline';
+          } else if (route.name === 'Notifications') {
+            return <NotificationButton focused={focused} />;
           }
 
           return <Ionicons name={iconName as any} size={size} color={color} />;
@@ -136,10 +182,18 @@ const MainNavigator = () => {
         }}
       />
       <MainTab.Screen 
+        name="Notifications" 
+        component={NotificationScreen}
+        options={{
+          title: 'Notifications',
+        }}
+      />
+      <MainTab.Screen 
         name="Profile" 
-        component={ProfileScreen}
+        component={ProfileNavigator}
         options={{
           title: 'Profile',
+          headerShown: false,
         }}
       />
     </MainTab.Navigator>

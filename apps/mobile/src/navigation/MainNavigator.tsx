@@ -9,6 +9,9 @@ import { MainTabParamList } from './types';
 import { ActiveRoutesScreen } from '../screens/driver/ActiveRoutesScreen';
 import { AvailableRoutesScreen } from '../screens/driver/AvailableRoutesScreen';
 import { OrderDetailsScreen } from '../screens/driver/OrderDetailsScreen';
+import { HistoryScreen } from '../screens/driver/HistoryScreen';
+import { NotificationScreen } from '../screens/driver/notification/NotificationScreen';
+import { NotificationButton } from '../screens/driver/notification/NotificationButton';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
@@ -29,6 +32,10 @@ export const MainNavigator = () => {
             iconName = focused ? 'navigate' : 'navigate-outline';
           } else if (route.name === 'AvailableRoutes') {
             iconName = focused ? 'map' : 'map-outline';
+          } else if (route.name === 'History') {
+            iconName = focused ? 'time' : 'time-outline';
+          } else if (route.name === 'Notifications') {
+            return <NotificationButton focused={focused} />;
           }
 
           return <Ionicons name={iconName as any} size={size} color={color} />;
@@ -58,6 +65,15 @@ export const MainNavigator = () => {
         component={OrderDetailsScreen}
         options={{
           title: 'Order Details',
+          headerShown: true,
+        }}
+      />
+      <Tab.Screen name="History" component={HistoryScreen} />
+      <Tab.Screen 
+        name="Notifications" 
+        component={NotificationScreen}
+        options={{
+          title: 'Notifications',
           headerShown: true,
         }}
       />
