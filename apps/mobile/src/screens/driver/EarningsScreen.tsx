@@ -143,7 +143,7 @@ export const EarningsScreen = () => {
           <View style={styles.statCard}>
             <View style={styles.statHeader}>
               <Text style={styles.statLabel}>Total Earnings</Text>
-              <Ionicons name="wallet" size={16} color={colors.muted} />
+              <Ionicons name="wallet" size={16} color={colors.primary} />
             </View>
             <Text style={styles.statValue}>
               {formatCurrency(summary.totalEarnings)}
@@ -156,7 +156,7 @@ export const EarningsScreen = () => {
           <View style={styles.statCard}>
             <View style={styles.statHeader}>
               <Text style={styles.statLabel}>Base Amount</Text>
-              <Ionicons name="checkmark-circle" size={16} color={colors.muted} />
+              <Ionicons name="checkmark-circle" size={16} color={colors.primary} />
             </View>
             <Text style={styles.statValue}>
               {formatCurrency(summary.baseAmount)}
@@ -169,7 +169,7 @@ export const EarningsScreen = () => {
           <View style={styles.statCard}>
             <View style={styles.statHeader}>
               <Text style={styles.statLabel}>Bonus Amount</Text>
-              <Ionicons name="gift" size={16} color={colors.muted} />
+              <Ionicons name="gift" size={16} color={colors.primary} />
             </View>
             <Text style={styles.statValue}>
               {formatCurrency(summary.bonusAmount)}
@@ -182,7 +182,7 @@ export const EarningsScreen = () => {
           <View style={styles.statCard}>
             <View style={styles.statHeader}>
               <Text style={styles.statLabel}>Pending Payment</Text>
-              <Ionicons name="time" size={16} color={colors.muted} />
+              <Ionicons name="time" size={16} color={colors.primary} />
             </View>
             <Text style={styles.statValue}>
               {formatCurrency(summary.pendingAmount)}
@@ -197,7 +197,7 @@ export const EarningsScreen = () => {
           <Text style={styles.sectionTitle}>Earnings by Type</Text>
           {summary.earningsByType.length === 0 ? (
             <View style={styles.emptyState}>
-              <Ionicons name="pie-chart" size={32} color={colors.muted} />
+              <Ionicons name="pie-chart" size={32} color={colors.primary} />
               <Text style={styles.emptyStateText}>No type data</Text>
             </View>
           ) : (
@@ -226,7 +226,7 @@ export const EarningsScreen = () => {
           <Text style={styles.sectionTitle}>Earnings History</Text>
           {earnings.length === 0 ? (
             <View style={styles.emptyState}>
-              <Ionicons name="list" size={32} color={colors.muted} />
+              <Ionicons name="list" size={32} color={colors.primary} />
               <Text style={styles.emptyStateText}>No earnings history</Text>
             </View>
           ) : (
@@ -336,7 +336,7 @@ const styles = StyleSheet.create({
   statCard: {
     flex: 1,
     minWidth: 150,
-    backgroundColor: colors.card,
+    backgroundColor: colors.secondary,
     borderRadius: 8,
     padding: 16,
   },
@@ -347,9 +347,9 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   statLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: colors.muted,
+    fontSize: 12,
+    color: colors.textMuted,
+    textAlign: 'center',
   },
   statValue: {
     fontSize: 24,
@@ -358,11 +358,11 @@ const styles = StyleSheet.create({
   },
   statSubtext: {
     fontSize: 12,
-    color: colors.muted,
+    color: colors.foreground,
     marginTop: 4,
   },
   chartContainer: {
-    backgroundColor: colors.card,
+    backgroundColor: colors.secondary,
     borderRadius: 8,
     padding: 16,
     marginBottom: 24,
@@ -383,7 +383,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   typeContainer: {
-    backgroundColor: colors.card,
+    backgroundColor: colors.secondary,
     borderRadius: 8,
     padding: 16,
     marginBottom: 24,
@@ -419,7 +419,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   historyContainer: {
-    backgroundColor: colors.card,
+    backgroundColor: colors.secondary,
     borderRadius: 8,
     padding: 16,
   },
