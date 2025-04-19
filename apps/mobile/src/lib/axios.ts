@@ -2,6 +2,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL } from '../config';
 import { Platform } from 'react-native';
+import { useAuthStore } from '../stores/auth.store';
 
 // Create axios instance with default config
 const api = axios.create({
@@ -64,8 +65,10 @@ api.interceptors.response.use(
     // Handle 401 Unauthorized
     if (error.response?.status === 401) {
       try {
+        // Clear the token from storage
         await AsyncStorage.removeItem('token');
-        // The auth store will handle the navigation
+        // Clear the auth store state
+        useAuthStore.getState().logout();
       } catch (storageError) {
         console.error('Error removing token:', storageError);
       }

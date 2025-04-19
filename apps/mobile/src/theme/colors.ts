@@ -4,11 +4,11 @@ export const colors = {
   foreground: 'hsl(60 9.1% 97.8%)',
   primary: 'hsl(20.5 90.2% 48.2%)',
   secondary: 'hsl(12 6.5% 15.1%)',
-  muted: 'hsl(12 6.5% 40%)',
-  accent: 'hsl(12 6.5% 15.1%)',
-  destructive: 'hsl(0 72.2% 50.6%)',
+  muted: 'hsl(12 6.5% 15.1%)',
+  accent: 'hsl(24 9.8% 10%)',
+  destructive: 'hsl(0 84.2% 60.2%)',
   border: 'hsl(12 6.5% 15.1%)',
-  input: 'hsl(12 6.5% 15.1%)',
+  input: 'hsl(24 9.8% 10%)',
   ring: 'hsl(20.5 90.2% 48.2%)',
 
   // Status colors
@@ -32,12 +32,12 @@ export const colors = {
   driverPrimaryLight: 'hsl(20.5 90.2% 58.2%)',
 
   // Chart colors
-  chart1: 'hsl(220 70% 50%)',
-  chart2: 'hsl(160 60% 45%)',
-  chart3: 'hsl(30 80% 55%)',
-  chart4: 'hsl(280 65% 60%)',
+  chart1: 'hsl(142.1 76.2% 36.3%)',
+  chart2: 'hsl(221.2 83.2% 53.3%)',
+  chart3: 'hsl(262.1 83.3% 57.8%)',
+  chart4: 'hsl(316.4 70% 50.4%)',
   chart5: 'hsl(340 75% 55%)',
 
-  // Add a card color for better styling consistency
-  card: 'hsl(24 9.8% 20%)',
+  // New card color
+  card: 'hsl(24 9.8% 10%)',
 } as const; 

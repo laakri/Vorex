@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -20,14 +20,13 @@ import { VehicleInfoScreen } from '../screens/driver/VehicleInfoScreen';
 import { SettingsScreen } from '../screens/driver/SettingsScreen';
 import { NotificationScreen } from '../screens/driver/notification/NotificationScreen';
 import { NotificationButton } from '../components/NotificationButton';
+import { DriverApplicationScreen } from '../screens/driver/DriverApplicationScreen';
 
 // Create navigators
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const MainTab = createBottomTabNavigator<MainTabParamList>();
 const ProfileStack = createNativeStackNavigator<ProfileStackParamList>();
-
-
 
 // Common stack screen options
 const commonStackScreenOptions: NativeStackNavigationOptions = {
@@ -202,7 +201,11 @@ const MainNavigator = () => {
 
 // Root Navigator
 export const AppNavigator = () => {
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const { user, isAuthenticated, isVerifiedDriver } = useAuthStore();
+
+  // Role-based navigation guard
+  const shouldShowDriverApplication = isAuthenticated && user && !user.role.includes('DRIVER');
+  const shouldShowDashboard = isAuthenticated && user && user.role.includes('DRIVER');
 
   const theme = {
     ...DefaultTheme,
@@ -226,8 +229,15 @@ export const AppNavigator = () => {
           headerShown: false,
         }}
       >
-        {isAuthenticated ? (
-          <RootStack.Screen name="Main" component={MainNavigator} />
+        {!isAuthenticated ? (
+          <RootStack.Screen name="Auth" component={AuthNavigator} />
+        ) : shouldShowDriverApplication ? (
+          <RootStack.Screen name="DriverApplication" component={DriverApplicationScreen} />
+        ) : shouldShowDashboard ? (
+          <>
+            <RootStack.Screen name="Main" component={MainNavigator} />
+            <RootStack.Screen name="VehicleInfo" component={VehicleInfoScreen} />
+          </>
         ) : (
           <RootStack.Screen name="Auth" component={AuthNavigator} />
         )}

@@ -1,5 +1,6 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { DashboardScreen } from '../screens/driver/DashboardScreen';
 import { ProfileScreen } from '../screens/driver/ProfileScreen';
@@ -14,6 +15,22 @@ import { NotificationScreen } from '../screens/driver/notification/NotificationS
 import { NotificationButton } from '../screens/driver/notification/NotificationButton';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
+const OrderStack = createNativeStackNavigator();
+
+const OrderStackNavigator = () => {
+  return (
+    <OrderStack.Navigator>
+      <OrderStack.Screen 
+        name="OrderDetails" 
+        component={OrderDetailsScreen}
+        options={{
+          headerShown: true,
+          title: 'Order Details',
+        }}
+      />
+    </OrderStack.Navigator>
+  );
+};
 
 export const MainNavigator = () => {
   return (
@@ -60,12 +77,12 @@ export const MainNavigator = () => {
       <Tab.Screen name="Earnings" component={EarningsScreen} />
       <Tab.Screen name="ActiveRoutes" component={ActiveRoutesScreen} />
       <Tab.Screen name="AvailableRoutes" component={AvailableRoutesScreen} />
-      <Tab.Screen
-        name="OrderDetails"
-        component={OrderDetailsScreen}
+      <Tab.Screen 
+        name="OrderDetails" 
+        component={OrderStackNavigator}
         options={{
-          title: 'Order Details',
-          headerShown: true,
+          headerShown: false,
+          tabBarButton: () => null,
         }}
       />
       <Tab.Screen name="History" component={HistoryScreen} />

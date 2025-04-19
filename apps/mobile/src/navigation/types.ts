@@ -1,6 +1,8 @@
 export type RootStackParamList = {
   Auth: undefined;
   Main: undefined;
+  DriverApplication: undefined;
+  VehicleInfo: undefined;
 };
 
 export type AuthStackParamList = {
@@ -14,11 +16,11 @@ export type MainTabParamList = {
   Earnings: undefined;
   ActiveRoutes: undefined;
   AvailableRoutes: undefined;
-  OrderDetails: { orderId: string };
   History: undefined;
-  Notifications: undefined;
-  Vehicle: undefined;
+  VehicleInfo: undefined;
   Settings: undefined;
+  OrderDetails: { orderId: string };
+  Notifications: undefined;
 };
 
 // Define the nested Profile stack screens

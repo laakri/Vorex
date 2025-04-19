@@ -293,7 +293,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   errorText: {
-    color: colors.muted,
+    color: colors.textMuted,
     textAlign: 'center',
     marginTop: 8,
   },
@@ -307,7 +307,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 14,
-    color: colors.muted,
+    color: colors.textMuted,
     marginTop: 4,
   },
   timeRangeContainer: {
@@ -320,8 +320,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: colors.muted,
+    backgroundColor: colors.card,
     borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   timeRangeText: {
     color: colors.foreground,
@@ -336,9 +338,11 @@ const styles = StyleSheet.create({
   statCard: {
     flex: 1,
     minWidth: 150,
-    backgroundColor: colors.secondary,
-    borderRadius: 8,
+    backgroundColor: colors.card,
+    borderRadius: 12,
     padding: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   statHeader: {
     flexDirection: 'row',
@@ -358,14 +362,16 @@ const styles = StyleSheet.create({
   },
   statSubtext: {
     fontSize: 12,
-    color: colors.foreground,
+    color: colors.textMuted,
     marginTop: 4,
   },
   chartContainer: {
-    backgroundColor: colors.secondary,
-    borderRadius: 8,
+    backgroundColor: colors.card,
+    borderRadius: 12,
     padding: 16,
     marginBottom: 24,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   sectionTitle: {
     fontSize: 18,
@@ -379,14 +385,16 @@ const styles = StyleSheet.create({
     paddingVertical: 32,
   },
   emptyStateText: {
-    color: colors.muted,
+    color: colors.textMuted,
     marginTop: 8,
   },
   typeContainer: {
-    backgroundColor: colors.secondary,
-    borderRadius: 8,
+    backgroundColor: colors.card,
+    borderRadius: 12,
     padding: 16,
     marginBottom: 24,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   typeList: {
     gap: 16,
@@ -409,7 +417,7 @@ const styles = StyleSheet.create({
   },
   progressBar: {
     height: 8,
-    backgroundColor: colors.muted,
+    backgroundColor: colors.background,
     borderRadius: 4,
     overflow: 'hidden',
   },
@@ -419,9 +427,11 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   historyContainer: {
-    backgroundColor: colors.secondary,
-    borderRadius: 8,
+    backgroundColor: colors.card,
+    borderRadius: 12,
     padding: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   historyList: {
     gap: 16,
@@ -429,7 +439,7 @@ const styles = StyleSheet.create({
   historyItem: {
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: colors.muted,
+    borderBottomColor: colors.border,
   },
   historyHeader: {
     flexDirection: 'row',
@@ -438,7 +448,7 @@ const styles = StyleSheet.create({
   },
   historyDate: {
     fontSize: 14,
-    color: colors.muted,
+    color: colors.textMuted,
   },
   statusBadge: {
     paddingHorizontal: 8,
@@ -449,7 +459,7 @@ const styles = StyleSheet.create({
     backgroundColor: `${colors.success}20`,
   },
   statusPending: {
-    backgroundColor: colors.muted,
+    backgroundColor: `${colors.warning}20`,
   },
   statusText: {
     fontSize: 12,
@@ -458,7 +468,7 @@ const styles = StyleSheet.create({
     color: colors.success,
   },
   statusTextPending: {
-    color: colors.muted,
+    color: colors.warning,
   },
   historyContent: {
     flexDirection: 'row',
@@ -471,7 +481,7 @@ const styles = StyleSheet.create({
   },
   routeId: {
     fontSize: 12,
-    color: colors.muted,
+    color: colors.textMuted,
   },
   amount: {
     fontSize: 18,
@@ -483,6 +493,8 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: 'hidden',
     backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
 });
 

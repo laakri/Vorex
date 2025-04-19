@@ -113,7 +113,7 @@ export const ActiveRoutesScreen = () => {
     try {
       setLoading(true);
       const response = await api.get('/delivery-routes/driver/active');
-      console.log(response.data);
+      console.log('Fetched active route:', response.data);
       setActiveRoute(response.data);
     } catch (error) {
       console.error('Failed to fetch active route:', error);
@@ -124,14 +124,35 @@ export const ActiveRoutesScreen = () => {
     }
   }, []);
 
+  // Add polling effect
   useEffect(() => {
+    const POLLING_INTERVAL = 30000; // 30 seconds
+
+    // Initial fetch
     fetchActiveRoute();
+
+    // Set up polling
+    const pollingInterval = setInterval(fetchActiveRoute, POLLING_INTERVAL);
+
+    // Cleanup
+    return () => clearInterval(pollingInterval);
   }, [fetchActiveRoute]);
 
-  const refreshData = () => {
+  // Add focus listener
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      console.log('Screen focused, refreshing data...');
+      fetchActiveRoute();
+    });
+
+    return unsubscribe;
+  }, [navigation, fetchActiveRoute]);
+
+  const refreshData = useCallback(() => {
+    console.log('Manual refresh triggered');
     setRefreshing(true);
     fetchActiveRoute();
-  };
+  }, [fetchActiveRoute]);
 
   const startNavigation = (stop: RouteStop) => {
     setSelectedStop(stop);
@@ -185,6 +206,10 @@ export const ActiveRoutesScreen = () => {
 
   // Get next stop
   const nextStop = pendingStops.length > 0 ? pendingStops[0] : null;
+
+  const handleDeliveryPress = (delivery: any) => {
+    navigation.navigate('OrderDetails', { orderId: delivery.id });
+  };
 
   if (loading && !refreshing) {
     return (
@@ -316,18 +341,7 @@ export const ActiveRoutesScreen = () => {
               )}
 
               <View style={styles.nextStopActions}>
-                <TouchableOpacity
-                  style={[styles.actionButton, styles.viewButton]}
-                  onPress={() => {
-                    if (nextStop?.order?.id) {
-                      navigation.navigate('OrderDetails', { orderId: nextStop.order.id });
-                    } else {
-                      Alert.alert('No Order', 'No order details found for this stop.');
-                    }
-                  }}
-                >
-                  <Text style={styles.viewButtonText}>View</Text>
-                </TouchableOpacity>
+                
                 <TouchableOpacity
                   style={styles.actionButton}
                   onPress={() => startNavigation(nextStop)}
