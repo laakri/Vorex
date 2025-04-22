@@ -9,7 +9,7 @@ import { MainContact } from "@/pages/main/main-contact";
 // Auth layers
 import { AuthLayout } from "@/layers/auth-layout";
 import { SignIn } from "@/pages/auth/sign-in";
-import { SignUp } from "@/pages/auth/sign-up";
+import SignUp from "@/pages/auth/sign-up";
 import Unauthorized from "@/pages/auth/Unauthorized";
 import { VerifyEmail } from "@/pages/auth/verify-email";
 import { ForgotPassword } from "@/pages/auth/forgot-password";

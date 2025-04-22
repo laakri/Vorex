@@ -3,19 +3,21 @@ import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuthStore } from "@/stores/auth.store";
+import { Card } from "@/components/ui/card";
+import { CheckCircle2, ArrowRight } from "lucide-react";
 
-export function SignUp() {
+export default function SignUp() {
   const navigate = useNavigate();
   const signUp = useAuthStore((state) => state.signUp);
   const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
+    fullName: "",
     email: "",
     password: "",
     confirmPassword: "",
   });
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,12 +32,12 @@ export function SignUp() {
 
     try {
       await signUp({
-        firstName: formData.firstName,
-        lastName: formData.lastName,
+        fullName: formData.fullName,
         email: formData.email,
         password: formData.password,
       });
-      navigate("/seller/onboarding");
+      // Show success message instead of navigating directly to onboarding
+      setIsSuccess(true);
     } catch (err: any) {
       setError(err.response?.data?.message || "Failed to create account");
     } finally {
@@ -50,34 +52,82 @@ export function SignUp() {
     }));
   };
 
+  // Show success screen after registration
+  if (isSuccess) {
+    return (
+      <div className="space-y-6">
+        <Card className="p-6 bg-muted/30 border-muted">
+          <div className="flex flex-col items-center text-center space-y-4">
+            <CheckCircle2 className="h-16 w-16 text-primary" />
+            <h2 className="text-2xl font-bold">Almost there!</h2>
+            <p className="text-muted-foreground">
+              We've sent a verification email to <strong>{formData.email}</strong>
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Please check your inbox and click the verification link to activate your account.
+              If you don't see the email, check your spam folder.
+            </p>
+            
+            <div className="mt-4">
+              <Button 
+                variant="ghost" 
+                onClick={() => navigate("/auth/sign-in")}
+                className="flex items-center"
+              >
+                Continue to Login
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </Card>
+
+        <div className="text-center">
+          <p className="text-sm text-muted-foreground">
+            Didn't receive the email?{" "}
+            <Button 
+              variant="link" 
+              className="p-0 h-auto"
+              onClick={async () => {
+                try {
+                  // Make an API call to resend verification email
+                  await fetch(`${import.meta.env.VITE_API_URL}/auth/resend-verification`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: formData.email }),
+                  });
+                  alert('Verification email resent. Please check your inbox.');
+                } catch (error) {
+                  console.error('Failed to resend verification email', error);
+                  alert('Failed to resend verification email. Please try again later.');
+                }
+              }}
+            >
+              Resend verification email
+            </Button>
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="space-y-2 text-center">
         <h1 className="text-3xl font-bold">Create an Account</h1>
         <p className="text-muted-foreground">
-          Enter your details to get started as a seller
+          Enter your details to get started
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid sm:grid-cols-2 gap-4">
-          <Input
-            name="firstName"
-            placeholder="First Name"
-            className="h-12 bg-muted/50"
-            value={formData.firstName}
-            onChange={handleChange}
-            required
-          />
-          <Input
-            name="lastName"
-            placeholder="Last Name"
-            className="h-12 bg-muted/50"
-            value={formData.lastName}
-            onChange={handleChange}
-            required
-          />
-        </div>
+        <Input
+          name="fullName"
+          placeholder="Full Name"
+          className="h-12 bg-muted/50"
+          value={formData.fullName}
+          onChange={handleChange}
+          required
+        />
 
         <Input
           name="email"

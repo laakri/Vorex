@@ -4,6 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuthStore } from "@/stores/auth.store";
 import { Separator } from "@/components/ui/separator";
+import { AlertCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import api from "@/lib/axios";
 
 export function SignIn() {
   const navigate = useNavigate();
@@ -12,11 +15,14 @@ export function SignIn() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isResendingVerification, setIsResendingVerification] = useState(false);
+  const [showResendVerification, setShowResendVerification] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setIsLoading(true);
+    setShowResendVerification(false);
 
     try {
       console.log('Attempting login with:', { email });
@@ -32,13 +38,39 @@ export function SignIn() {
       }
     } catch (err: any) {
       console.error('Login error:', err);
-      setError(
+      const errorMessage = 
         err.response?.data?.message || 
         err.response?.data?.error || 
-        'Failed to sign in. Please check your credentials.'
-      );
+        'Failed to sign in. Please check your credentials.';
+      
+      setError(errorMessage);
+      
+      // Check if the error is related to email verification
+      if (errorMessage.toLowerCase().includes('verify') && 
+          errorMessage.toLowerCase().includes('email')) {
+        setShowResendVerification(true);
+      }
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    if (!email) {
+      setError("Please enter your email address to resend verification");
+      return;
+    }
+    
+    setIsResendingVerification(true);
+    try {
+      await api.post("/auth/resend-verification", { email });
+      setError("");
+      setShowResendVerification(false);
+      alert("Verification email has been sent. Please check your inbox.");
+    } catch (err) {
+      console.error("Failed to resend verification email:", err);
+    } finally {
+      setIsResendingVerification(false);
     }
   };
 
@@ -81,7 +113,25 @@ export function SignIn() {
         </div>
 
         {error && (
-          <p className="text-sm text-destructive text-center">{error}</p>
+          <Alert variant="destructive" className="py-2">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription className="text-sm ml-2">{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {showResendVerification && (
+          <div className="text-center text-sm">
+            <p className="mb-2">Need a new verification email?</p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleResendVerification}
+              disabled={isResendingVerification}
+            >
+              {isResendingVerification ? "Sending..." : "Resend verification email"}
+            </Button>
+          </div>
         )}
 
         <Button

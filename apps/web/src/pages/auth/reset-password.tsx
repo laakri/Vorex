@@ -83,8 +83,8 @@ export const ResetPassword = () => {
   // Show error if no token provided
   if (!token) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-muted/40">
-        <Card className="w-[450px] max-w-[90%]">
+      <div className="flex justify-center items-center min-h-screen">
+        <Card className="w-[450px] max-w-[90%] ">
           <CardHeader>
             <CardTitle className="text-2xl">Reset Password</CardTitle>
             <CardDescription>Invalid reset link</CardDescription>
@@ -108,8 +108,8 @@ export const ResetPassword = () => {
   // Show success message after reset
   if (status === "success") {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-muted/40">
-        <Card className="w-[450px] max-w-[90%]">
+      <div className="flex justify-center items-center min-h-screen ">
+        <Card className="w-[450px] max-w-[90%] ">
           <CardHeader>
             <CardTitle className="text-2xl">Password Reset</CardTitle>
             <CardDescription>Your password has been reset</CardDescription>
@@ -132,7 +132,7 @@ export const ResetPassword = () => {
   }
 
   return (
-    <div className="flex justify-center items-center min-h-screen bg-muted/40">
+    <div className="flex justify-center items-center min-h-screen ">
       <Card className="w-[450px] max-w-[90%]">
         <CardHeader>
           <CardTitle className="text-2xl">Reset Your Password</CardTitle>
