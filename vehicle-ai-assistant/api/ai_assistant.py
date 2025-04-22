@@ -26,19 +26,31 @@ class VehicleAIAssistant:
         else:
             self.use_mock = False
         
+        # Load vehicle data
+        self.vehicle_data = self._load_vehicle_data()
+        
         # Initialize conversation history
         self.conversation_history = []
     
-    def generate_response(self, user_message, vehicle_data):
+    def _load_vehicle_data(self):
+        """Load vehicle data from JSON file."""
+        try:
+            with open('static/vehicle-data.json', 'r') as f:
+                return json.load(f)
+        except Exception as e:
+            logger.error(f"Error loading vehicle data: {str(e)}")
+            return None
+    
+    def generate_response(self, user_message):
         """Generate AI response based on user message and vehicle data."""
         
         # If using mock responses (no API key)
         if self.use_mock:
-            return self._generate_mock_response(user_message, vehicle_data)
+            return self._generate_mock_response(user_message)
         
         try:
             # Format vehicle data
-            vehicle_info = self._format_vehicle_data(vehicle_data)
+            vehicle_info = self._format_vehicle_data()
             
             # Update conversation history
             self.conversation_history.append({"role": "user", "content": user_message})
@@ -52,7 +64,7 @@ class VehicleAIAssistant:
             
             Use this information to provide helpful, accurate responses about the vehicle.
             If the user asks about something not related to their vehicle, politely redirect them.
-            If you're asked about maintenance schedules, insurance, registration deadlines, or vehicle status, 
+            If you're asked about maintenance schedules, insurance, or vehicle status, 
             use the provided data to give specific, personalized answers.
             
             Current date: {datetime.now().strftime('%Y-%m-%d')}
@@ -90,64 +102,107 @@ class VehicleAIAssistant:
         except Exception as e:
             logger.error(f"Error generating AI response: {str(e)}")
             # Fallback to mock response in case of error
-            return self._generate_mock_response(user_message, vehicle_data)
+            return self._generate_mock_response(user_message)
     
-    def _format_vehicle_data(self, vehicle_data):
+    def _format_vehicle_data(self):
         """Format vehicle data for inclusion in the prompt."""
+        if not self.vehicle_data:
+            return "No vehicle data available."
+        
         try:
-            vehicles = vehicle_data.get("vehicles", [])
-            if not vehicles:
-                return "No vehicle data available."
+            vehicle = self.vehicle_data["vehicle"]
+            driver = self.vehicle_data["driver"]
             
-            formatted_data = []
-            for vehicle in vehicles:
-                # Format dates for better readability
-                reg_expiry = vehicle.get('registrationExpiry')
-                if reg_expiry:
-                    reg_expiry = reg_expiry[:10] if isinstance(reg_expiry, str) else str(reg_expiry)
-                
-                ins_expiry = vehicle.get('insuranceExpiry')
-                if ins_expiry:
-                    ins_expiry = ins_expiry[:10] if isinstance(ins_expiry, str) else str(ins_expiry)
-                
-                # Format vehicle info
-                vehicle_info = f"""
-                Vehicle: {vehicle.get('year', 'N/A')} {vehicle.get('make', 'N/A')} {vehicle.get('model', 'N/A')}
-                License Plate: {vehicle.get('licensePlate', 'N/A')}
-                Registration Expires: {reg_expiry}
-                Insurance Expires: {ins_expiry}
-                Status: {vehicle.get('status', 'N/A')}
-                """
-                formatted_data.append(vehicle_info)
+            # Format maintenance records
+            maintenance_records = "\n".join([
+                f"- {record['type']} ({record['date']}): {record['description']} (${record['cost']})"
+                for record in vehicle["maintenanceRecords"]
+            ])
             
-            return "\n".join(formatted_data)
+            # Format current issues
+            current_issues = "\n".join([
+                f"- {issue['title']} ({issue['status']}): {issue['description']}"
+                for issue in vehicle["issues"]
+                if issue["status"] != "RESOLVED"
+            ])
+            
+            # Format vehicle info
+            formatted_data = f"""
+            Vehicle Information:
+            - Make/Model: {vehicle['make']} {vehicle['model']} ({vehicle['year']})
+            - Plate Number: {vehicle['plateNumber']}
+            - Type: {vehicle['type']}
+            - Capacity: {vehicle['capacity']} kg
+            - Max Weight: {vehicle['maxWeight']} kg
+            - Current Status: {vehicle['currentStatus']}
+            - Odometer: {vehicle['odometer']} km
+            - Last Maintenance: {vehicle['lastMaintenance']}
+            - Next Maintenance: {vehicle['nextMaintenance']}
+            
+            Insurance Information:
+            - Provider: {vehicle['insurance']['provider']}
+            - Policy Number: {vehicle['insurance']['policyNumber']}
+            - Coverage: {vehicle['insurance']['coverage']}
+            - Valid Until: {vehicle['insurance']['endDate']}
+            
+            Recent Maintenance Records:
+            {maintenance_records}
+            
+            Current Issues:
+            {current_issues}
+            
+            Driver Information:
+            - Name: {driver['name']}
+            - License Number: {driver['licenseNumber']}
+            - License Type: {driver['licenseType']}
+            - License Expiry: {driver['licenseExpiry']}
+            - Rating: {driver['rating']}/5
+            - Total Deliveries: {driver['totalDeliveries']}
+            - Status: {driver['availabilityStatus']}
+            """
+            
+            return formatted_data
             
         except Exception as e:
             logger.error(f"Error formatting vehicle data: {str(e)}")
             return "Error formatting vehicle data."
     
-    def _generate_mock_response(self, user_message, vehicle_data):
+    def _generate_mock_response(self, user_message):
         """Generate mock responses when Gemini API is not available."""
+        if not self.vehicle_data:
+            return "I'm sorry, I don't have access to vehicle data at the moment."
         
-        # Get vehicle info if available
-        vehicle_info = ""
-        vehicles = vehicle_data.get("vehicles", [])
-        if vehicles:
-            vehicle = vehicles[0]  # Take first vehicle
-            vehicle_info = f"{vehicle.get('year', '')} {vehicle.get('make', '')} {vehicle.get('model', '')}"
+        vehicle = self.vehicle_data["vehicle"]
+        driver = self.vehicle_data["driver"]
         
         # Common queries and responses
         if "insurance" in user_message.lower():
-            return f"Your insurance for the {vehicle_info} expires on {vehicles[0].get('insuranceExpiry', 'not specified')}. Make sure to renew it before the expiration date to maintain coverage."
-        
-        elif "registration" in user_message.lower():
-            return f"The registration for your {vehicle_info} expires on {vehicles[0].get('registrationExpiry', 'not specified')}. Remember to renew it on time to avoid penalties."
+            return f"Your insurance with {vehicle['insurance']['provider']} (Policy: {vehicle['insurance']['policyNumber']}) is valid until {vehicle['insurance']['endDate']}. The coverage includes {vehicle['insurance']['coverage']}."
         
         elif "maintenance" in user_message.lower() or "service" in user_message.lower():
-            return f"Based on standard maintenance schedules for a {vehicle_info}, you should have regular oil changes every 5,000-7,500 miles, rotate tires every 6,000-8,000 miles, and check brakes every 10,000-12,000 miles."
+            next_maintenance = vehicle['nextMaintenance']
+            last_maintenance = vehicle['lastMaintenance']
+            return f"Your last maintenance was on {last_maintenance} and the next scheduled maintenance is on {next_maintenance}. Recent maintenance includes: " + \
+                   ", ".join([f"{record['type']} on {record['date']}" for record in vehicle['maintenanceRecords'][:3]])
+        
+        elif "issues" in user_message.lower() or "problems" in user_message.lower():
+            current_issues = [issue for issue in vehicle['issues'] if issue['status'] != 'RESOLVED']
+            if current_issues:
+                return "Current vehicle issues:\n" + "\n".join([
+                    f"- {issue['title']} ({issue['priority']} priority): {issue['description']}"
+                    for issue in current_issues
+                ])
+            return "There are no current issues with your vehicle."
         
         elif "status" in user_message.lower():
-            return f"Your {vehicle_info} is currently {vehicles[0].get('status', 'in an unknown status')}."
+            return f"Your {vehicle['make']} {vehicle['model']} is currently {vehicle['currentStatus']}. The odometer reading is {vehicle['odometer']} km."
+        
+        elif "driver" in user_message.lower():
+            return f"Driver Information:\n" + \
+                   f"Name: {driver['name']}\n" + \
+                   f"License: {driver['licenseNumber']} (Type {driver['licenseType']})\n" + \
+                   f"Rating: {driver['rating']}/5 from {driver['totalDeliveries']} deliveries\n" + \
+                   f"Current Status: {driver['availabilityStatus']}"
         
         else:
-            return f"I'm your vehicle assistant for your {vehicle_info}. I can help with information about your vehicle's registration, insurance, maintenance schedule, and status. What would you like to know?" 
+            return f"I'm your vehicle assistant for your {vehicle['make']} {vehicle['model']}. I can help with information about your vehicle's insurance, maintenance, current issues, and status. What would you like to know?" 

@@ -1,0 +1,103 @@
+{
+  "vehicle": {
+    "plateNumber": "TUN-5432",
+    "type": "VAN",
+    "make": "Mercedes-Benz",
+    "model": "Sprinter",
+    "year": 2019,
+    "capacity": 1350.0,
+    "maxWeight": 2500.0,
+    "currentStatus": "ACTIVE",
+    "lastMaintenance": "2023-05-15",
+    "nextMaintenance": "2023-11-15",
+    "odometer": 67432,
+    "insurance": {
+      "provider": "SafeGuard Insurance",
+      "policyNumber": "POL-78923-VH",
+      "startDate": "2023-01-01",
+      "endDate": "2023-12-31",
+      "coverage": "Full coverage with roadside assistance"
+    },
+    "maintenanceRecords": [
+      {
+        "type": "Oil Change",
+        "date": "2023-05-15",
+        "odometer": 62000,
+        "description": "Regular oil change with filter replacement",
+        "cost": 120.50,
+        "status": "COMPLETED"
+      },
+      {
+        "type": "Brake Service",
+        "date": "2023-03-22",
+        "odometer": 58000,
+        "description": "Front brake pads replacement and rotor inspection",
+        "cost": 350.00,
+        "status": "COMPLETED"
+      },
+      {
+        "type": "Transmission Service",
+        "date": "2023-01-10",
+        "odometer": 52000,
+        "description": "Transmission fluid flush and filter change",
+        "cost": 280.75,
+        "status": "COMPLETED"
+      },
+      {
+        "type": "Tire Rotation",
+        "date": "2023-04-05",
+        "odometer": 60000,
+        "description": "Tire rotation and pressure check",
+        "cost": 45.00,
+        "status": "COMPLETED"
+      },
+      {
+        "type": "Annual Inspection",
+        "date": "2023-11-20",
+        "odometer": 70000,
+        "description": "Scheduled annual inspection and maintenance",
+        "cost": 500.00,
+        "status": "SCHEDULED"
+      }
+    ],
+    "issues": [
+      {
+        "title": "Check Engine Light",
+        "description": "Check engine light comes on intermittently during highway driving",
+        "reportedAt": "2023-06-10",
+        "status": "PENDING",
+        "priority": "MEDIUM"
+      },
+      {
+        "title": "Air Conditioning",
+        "description": "AC not cooling properly on hot days",
+        "reportedAt": "2023-05-28",
+        "status": "IN_PROGRESS",
+        "priority": "LOW"
+      },
+      {
+        "title": "Door Lock Malfunction",
+        "description": "Rear left door sometimes fails to lock electronically",
+        "reportedAt": "2023-04-17",
+        "status": "RESOLVED",
+        "priority": "HIGH"
+      }
+    ]
+  },
+  "driver": {
+    "name": "Ahmed Mohamed",
+    "email": "ahmed.driver@example.com",
+    "licenseNumber": "DL-7852369",
+    "licenseType": "C",
+    "licenseExpiry": "2025-08-15",
+    "address": "123 Transport Avenue",
+    "city": "Tunis",
+    "postalCode": "1000",
+    "governorate": "Tunis",
+    "phone": "+216 98 765 4321",
+    "emergencyContact": "+216 23 456 7890",
+    "rating": 4.8,
+    "totalDeliveries": 342,
+    "availabilityStatus": "ONLINE"
+  }
+} 
