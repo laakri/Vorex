@@ -15,4 +15,6 @@ export const NotificationType = {
     | 'NEW_ORDER'
     | 'ACCOUNT_UPDATE'
     | 'SYSTEM_ALERT'
+    | 'INFO'
+    | 'SUCCESS'
     | 'PROMOTION';

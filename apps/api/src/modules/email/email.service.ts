@@ -21,7 +21,9 @@ export enum EmailTemplate {
   DRIVER_WELCOME = 'driver-welcome',
   DRIVER_REJECTED = 'driver-rejected',
   ADMIN_DRIVER_REVIEW = 'admin-driver-review',
-  SELLER_WELCOME = 'seller-welcome'
+  SELLER_WELCOME = 'seller-welcome',
+  EMAIL_VERIFICATION = 'email-verification',
+  PASSWORD_RESET = 'password-reset'
 }
 
 @Injectable()
@@ -49,9 +51,13 @@ export class EmailService {
   private loadTemplates() {
     this.templates = new Map();
     Object.values(EmailTemplate).forEach((template) => {
-      const templatePath = join(__dirname, 'templates', `${template}.hbs`);
-      const templateContent = readFileSync(templatePath, 'utf-8');
-      this.templates.set(template, Handlebars.compile(templateContent));
+      try {
+        const templatePath = join(__dirname, 'templates', `${template}.hbs`);
+        const templateContent = readFileSync(templatePath, 'utf-8');
+        this.templates.set(template, Handlebars.compile(templateContent));
+      } catch (error) {
+        console.warn(`Template ${template} not found or could not be loaded`);
+      }
     });
   }
 
@@ -68,6 +74,34 @@ export class EmailService {
       to: options.to,
       subject: options.subject,
       html,
+    });
+  }
+
+  async sendVerificationEmail(email: string, name: string, token: string) {
+    const verificationLink = `${this.configService.get('FRONTEND_URL')}/auth/verify-email?token=${token}`;
+    
+    await this.sendEmail({
+      to: email,
+      subject: 'Verify Your Email Address',
+      template: EmailTemplate.EMAIL_VERIFICATION,
+      context: {
+        name,
+        verificationLink,
+      },
+    });
+  }
+
+  async sendPasswordResetEmail(email: string, name: string, token: string) {
+    const resetLink = `${this.configService.get('FRONTEND_URL')}/auth/reset-password?token=${token}`;
+    
+    await this.sendEmail({
+      to: email,
+      subject: 'Reset Your Password',
+      template: EmailTemplate.PASSWORD_RESET,
+      context: {
+        name,
+        resetLink,
+      },
     });
   }
 } 

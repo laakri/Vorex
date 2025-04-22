@@ -20,9 +20,13 @@ model User {
   driver           Driver?
   seller           Seller?
   warehouseManager WarehouseManager?
-  notifications     Notification[]  
-
+  notifications    Notification[]  
+  isEmailVerified  Boolean           @default(false)
+  verificationToken String?
+  resetPasswordToken String?
+  resetPasswordExpires DateTime?
 }
+
 model Notification {
   id           String    @id @default(cuid())
   userId       String
