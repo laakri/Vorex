@@ -3,239 +3,313 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vehicle AI Assistant - Vorex</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <title>Vehicle AI Assistant</title>
     <style>
+        :root {
+            --primary-color: #2563eb;
+            --background-color: #f8fafc;
+            --text-color: #1e293b;
+            --border-color: #e2e8f0;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            color: var(--primary-color);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            color: #64748b;
+        }
+
         .chat-container {
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .chat-messages {
             height: 400px;
             overflow-y: auto;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            padding: 15px;
-            margin-bottom: 15px;
-            background-color: #f9f9f9;
+            margin-bottom: 1rem;
+            padding: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
         }
+
         .message {
-            margin-bottom: 10px;
-            padding: 10px;
-            border-radius: 5px;
+            margin-bottom: 1rem;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
             max-width: 80%;
         }
+
         .user-message {
-            background-color: #d1e7ff;
+            background-color: var(--primary-color);
+            color: white;
             margin-left: auto;
-            text-align: right;
         }
+
         .assistant-message {
-            background-color: #e9ecef;
+            background-color: #f1f5f9;
+            margin-right: auto;
         }
-        .vehicle-info {
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            padding: 15px;
-            margin-bottom: 15px;
+
+        .input-container {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            font-size: 1rem;
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: #1d4ed8;
+        }
+
+        .status {
+            text-align: center;
+            color: #64748b;
+            margin-top: 1rem;
+        }
+
+        .voice-controls {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .voice-button {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background-color: #f1f5f9;
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .voice-button:hover {
+            background-color: #e2e8f0;
+        }
+
+        .voice-button.active {
+            background-color: #dc2626;
+            color: white;
+            border-color: #dc2626;
+        }
+
+        .voice-button svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .voice-status {
+            font-size: 0.875rem;
+            color: #64748b;
+            margin-top: 0.5rem;
         }
     </style>
 </head>
 <body>
-    <div class="container mt-5">
-        <div class="row">
-            <div class="col-md-12 text-center">
-                <h1>Vehicle AI Assistant</h1>
-                <p class="lead">Your intelligent assistant for vehicle information and maintenance</p>
-            </div>
+    <div class="container">
+        <div class="header">
+            <h1>Vehicle AI Assistant</h1>
+            <p>Your intelligent vehicle maintenance and diagnostics companion</p>
         </div>
 
-        <div class="row mt-4">
-            <div class="col-md-4">
-                <!-- Driver selection -->
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h5>Driver Information</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="mb-3">
-                            <label for="driverId" class="form-label">Select Driver ID</label>
-                            <input type="text" class="form-control" id="driverId" placeholder="Enter driver ID">
-                        </div>
-                        <button id="loadDriverBtn" class="btn btn-primary">Load Driver Data</button>
-                    </div>
-                </div>
-
-                <!-- Vehicle information display -->
-                <div class="card">
-                    <div class="card-header">
-                        <h5>Vehicle Information</h5>
-                    </div>
-                    <div class="card-body">
-                        <div id="vehicleInfo" class="vehicle-info">
-                            <p class="text-muted">Vehicle information will appear here after selecting a driver.</p>
-                        </div>
-                    </div>
-                </div>
+        <div class="chat-container">
+            <div class="voice-controls">
+                <button class="voice-button" id="start-listening">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M8.25 4.5a3.75 3.75 0 117.5 0v8.25a3.75 3.75 0 11-7.5 0V4.5z" />
+                        <path d="M6 10.5a.75.75 0 01.75.75v1.5a5.25 5.25 0 1010.5 0v-1.5a.75.75 0 011.5 0v1.5a6.751 6.751 0 01-6 6.709v2.291h3a.75.75 0 010 1.5h-7.5a.75.75 0 010-1.5h3v-2.291a6.751 6.751 0 01-6-6.709v-1.5A.75.75 0 016 10.5z" />
+                    </svg>
+                    Start Listening
+                </button>
+                <button class="voice-button" id="stop-listening" disabled>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M8.25 4.5a3.75 3.75 0 117.5 0v8.25a3.75 3.75 0 11-7.5 0V4.5z" />
+                        <path d="M6 10.5a.75.75 0 01.75.75v1.5a5.25 5.25 0 1010.5 0v-1.5a.75.75 0 011.5 0v1.5a6.751 6.751 0 01-6 6.709v2.291h3a.75.75 0 010 1.5h-7.5a.75.75 0 010-1.5h3v-2.291a6.751 6.751 0 01-6-6.709v-1.5A.75.75 0 016 10.5z" />
+                    </svg>
+                    Stop Listening
+                </button>
             </div>
+            <div class="voice-status" id="voice-status">Click "Start Listening" to begin voice interaction</div>
 
-            <div class="col-md-8">
-                <!-- Chat interface -->
-                <div class="card">
-                    <div class="card-header">
-                        <h5>Chat with Vehicle Assistant</h5>
-                    </div>
-                    <div class="card-body">
-                        <div id="chatContainer" class="chat-container"></div>
-                        <div class="input-group">
-                            <input type="text" id="messageInput" class="form-control" placeholder="Ask about your vehicle...">
-                            <button id="sendMessageBtn" class="btn btn-primary">Send</button>
-                        </div>
-                    </div>
-                </div>
+            <div class="chat-messages" id="chat-messages">
+                <!-- Messages will be dynamically added here -->
+            </div>
+            
+            <div class="input-container">
+                <input type="text" id="user-input" placeholder="Ask about your vehicle..." />
+                <button id="send-button">Send</button>
+            </div>
+            
+            <div class="status" id="status">
+                Ready to assist
             </div>
         </div>
     </div>
 
     <script>
-        // Current driver ID
-        let currentDriverId = null;
-        
-        // DOM elements
-        const driverIdInput = document.getElementById('driverId');
-        const loadDriverBtn = document.getElementById('loadDriverBtn');
-        const vehicleInfoDiv = document.getElementById('vehicleInfo');
-        const chatContainer = document.getElementById('chatContainer');
-        const messageInput = document.getElementById('messageInput');
-        const sendMessageBtn = document.getElementById('sendMessageBtn');
-        
-        // Load driver data
-        loadDriverBtn.addEventListener('click', async () => {
-            const driverId = driverIdInput.value.trim();
-            if (!driverId) {
-                alert('Please enter a driver ID');
-                return;
+        const chatMessages = document.getElementById('chat-messages');
+        const userInput = document.getElementById('user-input');
+        const sendButton = document.getElementById('send-button');
+        const status = document.getElementById('status');
+        const startListeningBtn = document.getElementById('start-listening');
+        const stopListeningBtn = document.getElementById('stop-listening');
+        const voiceStatus = document.getElementById('voice-status');
+
+        let recognition = null;
+        let synthesis = window.speechSynthesis;
+
+        // Initialize speech recognition
+        if ('webkitSpeechRecognition' in window) {
+            recognition = new webkitSpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.lang = 'en-US';
+
+            recognition.onstart = () => {
+                startListeningBtn.disabled = true;
+                stopListeningBtn.disabled = false;
+                voiceStatus.textContent = 'Listening...';
+                startListeningBtn.classList.add('active');
+            };
+
+            recognition.onend = () => {
+                startListeningBtn.disabled = false;
+                stopListeningBtn.disabled = true;
+                voiceStatus.textContent = 'Click "Start Listening" to begin voice interaction';
+                startListeningBtn.classList.remove('active');
+            };
+
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                userInput.value = transcript;
+                sendMessage();
+            };
+
+            recognition.onerror = (event) => {
+                console.error('Speech recognition error:', event.error);
+                voiceStatus.textContent = `Error: ${event.error}`;
+            };
+        } else {
+            voiceStatus.textContent = 'Speech recognition not supported in this browser';
+            startListeningBtn.disabled = true;
+        }
+
+        function speak(text) {
+            if (synthesis.speaking) {
+                synthesis.cancel();
             }
             
-            try {
-                const response = await fetch(`/api/vehicle-data/${driverId}`);
-                const data = await response.json();
-                
-                if (data.error) {
-                    vehicleInfoDiv.innerHTML = `<p class="text-danger">${data.error}</p>`;
-                    return;
-                }
-                
-                // Store current driver ID
-                currentDriverId = driverId;
-                
-                // Display vehicle information
-                displayVehicleInfo(data.vehicles);
-                
-                // Add welcome message
-                addAssistantMessage("Hello! I'm your vehicle assistant. How can I help you today?");
-                
-            } catch (error) {
-                console.error('Error loading driver data:', error);
-                vehicleInfoDiv.innerHTML = `<p class="text-danger">Error loading driver data. Please try again.</p>`;
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.rate = 1;
+            utterance.pitch = 1;
+            synthesis.speak(utterance);
+        }
+
+        function addMessage(text, isUser = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user-message' : 'assistant-message'}`;
+            messageDiv.textContent = text;
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            if (!isUser) {
+                speak(text);
             }
+        }
+
+        async function sendMessage() {
+            const message = userInput.value.trim();
+            if (!message) return;
+
+            addMessage(message, true);
+            userInput.value = '';
+            status.textContent = 'Processing...';
+
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ message }),
+                });
+
+                const data = await response.json();
+                addMessage(data.response);
+                status.textContent = 'Ready to assist';
+            } catch (error) {
+                console.error('Error:', error);
+                addMessage('Sorry, there was an error processing your request.');
+                status.textContent = 'Error occurred';
+            }
+        }
+
+        startListeningBtn.addEventListener('click', () => {
+            recognition.start();
         });
-        
-        // Send message
-        sendMessageBtn.addEventListener('click', sendMessage);
-        messageInput.addEventListener('keypress', (e) => {
+
+        stopListeningBtn.addEventListener('click', () => {
+            recognition.stop();
+        });
+
+        sendButton.addEventListener('click', sendMessage);
+        userInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 sendMessage();
             }
         });
-        
-        function sendMessage() {
-            const message = messageInput.value.trim();
-            if (!message) return;
-            
-            if (!currentDriverId) {
-                alert('Please load a driver first');
-                return;
-            }
-            
-            // Add user message to chat
-            addUserMessage(message);
-            
-            // Clear input
-            messageInput.value = '';
-            
-            // Send to API
-            fetch('/api/assistant/chat', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    driver_id: currentDriverId,
-                    message: message
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                // Add assistant message to chat
-                addAssistantMessage(data.response);
-            })
-            .catch(error => {
-                console.error('Error sending message:', error);
-                addAssistantMessage('Sorry, I encountered an error processing your request.');
-            });
-        }
-        
-        function displayVehicleInfo(vehicles) {
-            if (!vehicles || vehicles.length === 0) {
-                vehicleInfoDiv.innerHTML = `<p class="text-muted">No vehicle information available.</p>`;
-                return;
-            }
-            
-            let html = '';
-            
-            vehicles.forEach((vehicle, index) => {
-                html += `
-                    <div class="mb-3">
-                        <h6>${vehicle.year} ${vehicle.make} ${vehicle.model}</h6>
-                        <p><strong>Color:</strong> ${vehicle.color || 'N/A'}</p>
-                        <p><strong>License Plate:</strong> ${vehicle.licensePlate || 'N/A'}</p>
-                        <p><strong>Registration Expires:</strong> ${formatDate(vehicle.registrationExpiry)}</p>
-                        <p><strong>Insurance Expires:</strong> ${formatDate(vehicle.insuranceExpiry)}</p>
-                        <p><strong>Status:</strong> ${vehicle.status || 'N/A'}</p>
-                    </div>
-                `;
-                
-                if (index < vehicles.length - 1) {
-                    html += '<hr>';
-                }
-            });
-            
-            vehicleInfoDiv.innerHTML = html;
-        }
-        
-        function addUserMessage(message) {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = 'message user-message';
-            messageDiv.textContent = message;
-            chatContainer.appendChild(messageDiv);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-        }
-        
-        function addAssistantMessage(message) {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = 'message assistant-message';
-            messageDiv.textContent = message;
-            chatContainer.appendChild(messageDiv);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-        }
-        
-        function formatDate(dateString) {
-            if (!dateString) return 'N/A';
-            
-            // Handle both string and date objects
-            const date = new Date(dateString);
-            if (isNaN(date.getTime())) return dateString;
-            
-            return date.toLocaleDateString();
-        }
     </script>
 </body>
 </html> 
