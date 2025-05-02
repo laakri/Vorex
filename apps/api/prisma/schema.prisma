@@ -45,7 +45,7 @@ model Notification {
 model Seller {
   id              String    @id @default(cuid())
   userId          String    @unique
-  apiKey String? @unique
+  apiKey          String?   @unique
   businessName    String
   businessType    String
   description     String?
@@ -65,6 +65,7 @@ model Seller {
   orders          Order[]
   products        Product[]
   user            User      @relation(fields: [userId], references: [id])
+  apiLogs         ApiLog[]
 }
 
 model Product {
@@ -419,6 +420,16 @@ model DriverEarnings {
   order         Order    @relation(fields: [orderId], references: [id])
   route         DeliveryRoute? @relation(fields: [routeId], references: [id])
   batch         Batch?   @relation(fields: [batchId], references: [id])
+}
+
+model ApiLog {
+  id           String   @id @default(cuid())
+  sellerId     String
+  endpoint     String
+  status       Int
+  responseTime Int
+  timestamp    DateTime @default(now())
+  seller       Seller   @relation(fields: [sellerId], references: [id])
 }
 
 enum Role {

@@ -2,21 +2,40 @@ import { Controller, Post, Get, Body, Param, UseGuards, Req, UnauthorizedExcepti
 import { SellerApiService } from './seller-api.service';
 import { CreateOrderDto } from '../orders/dto/create-order.dto';
 import { ApiKeyGuard } from '@/guards/api-key.guard';
+import { JwtGuard } from '@/guards/jwt.guard';
 
 @Controller('seller-api')
 export class SellerApiController {
   constructor(private readonly sellerApiService: SellerApiService) {}
 
+  @Get('me')
+  @UseGuards(JwtGuard)
+  async getApiKey(@Req() req: any) {
+    if (!req.user || !req.user.id) throw new UnauthorizedException();
+    const apiKey = await this.sellerApiService.getApiKey(req.user.id);
+    const stats = await this.sellerApiService.getApiStats(req.user.id);
+    return { apiKey, stats };
+  }
+
+  @Get('history')
+  @UseGuards(JwtGuard)
+  async getApiHistory(@Req() req: any) {
+    if (!req.user || !req.user.id) throw new UnauthorizedException();
+    return this.sellerApiService.getApiHistory(req.user.id);
+  }
+
   @Post('generate-key')
+  @UseGuards(JwtGuard)
   async generateApiKey(@Req() req: any) {
     if (!req.user || !req.user.id) throw new UnauthorizedException();
     return this.sellerApiService.generateApiKey(req.user.id);
   }
 
   @Post('revoke-key')
-  @UseGuards(ApiKeyGuard)
+  @UseGuards(JwtGuard)
   async revokeApiKey(@Req() req: any) {
-    return this.sellerApiService.revokeApiKey(req.headers['x-api-key'] as string);
+    if (!req.user || !req.user.id) throw new UnauthorizedException();
+    return this.sellerApiService.revokeApiKey(req.user.id);
   }
 
   @Post('orders')
