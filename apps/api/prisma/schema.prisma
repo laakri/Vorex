@@ -45,6 +45,7 @@ model Notification {
 model Seller {
   id              String    @id @default(cuid())
   userId          String    @unique
+  apiKey String? @unique
   businessName    String
   businessType    String
   description     String?

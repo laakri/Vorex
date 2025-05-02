@@ -16,6 +16,7 @@ import { DeliveryRoutesModule } from './modules/delivery-routes/delivery-routes.
 import { VehiclesModule } from './modules/vehicles/vehicles.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { SellerApiModule } from './modules/seller-api/seller-api.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
     VehiclesModule,
     AdminModule,
     NotificationsModule,
+    SellerApiModule,
   ],
   controllers: [AppController],
   providers: [AppService],

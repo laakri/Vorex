@@ -21,6 +21,7 @@ import {
   CheckCircle2,
   BookOpen,
   Video,
+  Code,
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useState, useEffect } from "react";
@@ -64,6 +65,11 @@ const menuItems = [
     title: "Guide",
     icon: BookOpen,
     href: "/seller/guide",
+  },
+  {
+    title: "API Access",
+    icon: Code,
+    href: "/seller/api",
   },
 ];
 

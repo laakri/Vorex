@@ -58,6 +58,7 @@ import WarehousesPage from "@/pages/admin/warehouses";
 import { DriverEarnings } from "@/pages/driver/driver-earnings";
 // Add voice agent import
 import { VoiceAgent } from "@/components/VoiceAgent";
+import { SellerApiPage } from "@/pages/seller/seller-api";
 
 export function AppRoutes() {
   return (
@@ -190,6 +191,16 @@ export function AppRoutes() {
             <ProtectedRoute>
               <SellerGuard>
                 <SellerGuide />
+              </SellerGuard>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="api"
+          element={
+            <ProtectedRoute>
+              <SellerGuard>
+                <SellerApiPage />
               </SellerGuard>
             </ProtectedRoute>
           }

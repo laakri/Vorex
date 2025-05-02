@@ -19,14 +19,10 @@ import warehouse from "@/assets/warehouse.jpg";
 export function MainHomePage() {
   return (
     <>
-      <section className="relative min-h-screen overflow-hidden bg-gradient-to-b from-background to-background/90">
+      <section className="relative min-h-screen overflow-hidden ">
         {/* 3D-like mesh grid background */}
         <div className="absolute inset-0 z-0 bg-[radial-gradient(circle_at_center,_rgba(var(--primary-rgb),0.03)_1px,_transparent_1px)] bg-[length:24px_24px]"></div>
         
-        {/* Abstract shapes */}
-        <div className="absolute -left-64 -top-64 w-[40rem] h-[40rem] rounded-full bg-primary/5 blur-3xl"></div>
-        <div className="absolute -right-64 top-1/3 w-[30rem] h-[30rem] rounded-full bg-red-500/5 blur-3xl"></div>
-        <div className="absolute left-1/3 bottom-0 w-[35rem] h-[35rem] rounded-full bg-purple-500/5 blur-3xl"></div>
         
         {/* Animated particles */}
         <div className="particle-container absolute inset-0 z-0 opacity-40">
