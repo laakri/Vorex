@@ -4,7 +4,7 @@ import { RolesGuard } from '@/common/guards/roles.guard';
 import { Roles } from '@/common/decorators/roles.decorator';
 import { Role } from '@/common/enums/role.enum';
 import { AdminService } from './admin.service';
-import { AdminGuard } from '@/guards/admin.guard';
+import { AdminGuard } from '@/common/guards/admin.guard';
 import { Role as PrismaRole } from '@prisma/client';
 
 @Controller('admin')

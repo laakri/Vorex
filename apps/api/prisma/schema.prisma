@@ -426,9 +426,14 @@ model ApiLog {
   id           String   @id @default(cuid())
   sellerId     String
   endpoint     String
+  method       String   @default("GET")
+  requestBody  Json?    // Store request body for debugging
+  responseBody Json?    // Store response for debugging
   status       Int
   responseTime Int
   timestamp    DateTime @default(now())
+  ip           String?  // Store client IP for security monitoring
+  userAgent    String?  // Store user agent for analytics
   seller       Seller   @relation(fields: [sellerId], references: [id])
 }
 
