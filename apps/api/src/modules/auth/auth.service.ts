@@ -8,7 +8,6 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
-import * as bcrypt from 'bcrypt';
 import { PrismaService } from 'prisma/prisma.service';
 import { Role } from '@/common/enums/role.enum';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -17,7 +16,6 @@ import { RequestPasswordResetDto, ResetPasswordDto } from './dto/reset-password.
 import { VerifyEmailDto } from './dto/verify-email.dto';
 import { EmailService } from '../email/email.service';
 import { randomBytes } from 'crypto';
-
 
 @Injectable()
 export class AuthService {
@@ -38,7 +36,7 @@ export class AuthService {
       throw new ConflictException('Email already exists');
     }
 
-    const hashedPassword = await bcrypt.hash(dto.password, 10);
+    const hashedPassword = await Bun.password.hash(dto.password);
     
     // Generate verification token
     const verificationToken = randomBytes(32).toString('hex');
@@ -130,7 +128,7 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const isPasswordValid = await bcrypt.compare(dto.password, user.password);
+    const isPasswordValid = await Bun.password.verify(dto.password, user.password);
     console.log('Password valid:', isPasswordValid);
 
     if (!isPasswordValid) {
@@ -173,7 +171,7 @@ export class AuthService {
       where: { email },
     });
 
-    if (user && (await bcrypt.compare(password, user.password))) {
+    if (user && (await Bun.password.verify(password, user.password))) {
       const { password: _, ...result } = user;
       return result;
     }
@@ -439,7 +437,7 @@ export class AuthService {
       throw new BadRequestException('Invalid or expired reset token');
     }
 
-    const hashedPassword = await bcrypt.hash(dto.password, 10);
+    const hashedPassword = await Bun.password.hash(dto.password);
 
     await this.prisma.user.update({
       where: { id: user.id },
