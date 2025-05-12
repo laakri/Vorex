@@ -2,35 +2,37 @@ import { Controller, Post, Get, Body, Param, UseGuards, Req, UnauthorizedExcepti
 import { SellerApiService } from './seller-api.service';
 import { CreateOrderDto } from '../orders/dto/create-order.dto';
 import { ApiKeyGuard } from '@/common/guards/api-key.guard';
+import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
+import { GetUser } from '@/common/decorators/get-user.decorator';
 
 @Controller('seller-api')
 export class SellerApiController {
   constructor(private readonly sellerApiService: SellerApiService) {}
 
   @Get('me')
-  async getApiKey(@Req() req: any) {
-    if (!req.user || !req.user.id) throw new UnauthorizedException();
-    const apiKey = await this.sellerApiService.getApiKey(req.user.id);
-    const stats = await this.sellerApiService.getApiStats(req.user.id);
+  @UseGuards(JwtAuthGuard)
+  async getApiKey(@GetUser('id') userId: string) {
+    const apiKey = await this.sellerApiService.getApiKey(userId);
+    const stats = await this.sellerApiService.getApiStats(userId);
     return { apiKey, stats };
   }
 
   @Get('history')
-  async getApiHistory(@Req() req: any) {
-    if (!req.user || !req.user.id) throw new UnauthorizedException();
-    return this.sellerApiService.getApiHistory(req.user.id);
+  @UseGuards(JwtAuthGuard)
+  async getApiHistory(@GetUser('id') userId: string) {
+    return this.sellerApiService.getApiHistory(userId);
   }
 
   @Post('generate-key')
-  async generateApiKey(@Req() req: any) {
-    if (!req.user || !req.user.id) throw new UnauthorizedException();
-    return this.sellerApiService.generateApiKey(req.user.id);
+  @UseGuards(JwtAuthGuard)
+  async generateApiKey(@GetUser('id') userId: string) {
+    return this.sellerApiService.generateApiKey(userId);
   }
 
   @Post('revoke-key')
-  async revokeApiKey(@Req() req: any) {
-    if (!req.user || !req.user.id) throw new UnauthorizedException();
-    return this.sellerApiService.revokeApiKey(req.user.id);
+  @UseGuards(JwtAuthGuard)
+  async revokeApiKey(@GetUser('id') userId: string) {
+    return this.sellerApiService.revokeApiKey(userId);
   }
 
   @Post('orders')

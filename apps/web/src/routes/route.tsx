@@ -198,11 +198,7 @@ export function AppRoutes() {
         <Route
           path="api"
           element={
-            <ProtectedRoute>
-              <SellerGuard>
                 <SellerApiPage />
-              </SellerGuard>
-            </ProtectedRoute>
           }
         />
       </Route>

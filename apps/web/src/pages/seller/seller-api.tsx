@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Eye, EyeOff, Copy, RefreshCcw, FileText, BarChart2, History, Terminal } from "lucide-react";
+import  api  from "@/lib/axios";
 
 interface ApiHistoryEntry {
   id: string;
@@ -36,8 +37,7 @@ export function SellerApiPage() {
   async function fetchApiKey() {
     setLoading(true);
     try {
-      const res = await fetch("/api/seller-api/me", { credentials: "include" });
-      const data = await res.json();
+      const { data } = await api.get("/seller-api/me");
       if (data.apiKey) {
         setApiKey(data.apiKey);
         setHasKey(true);
@@ -46,10 +46,11 @@ export function SellerApiPage() {
         setHasKey(false);
       }
       if (data.stats) setStats(data.stats);
-    } catch {
+    } catch (error) {
       setApiKey(null);
       setHasKey(false);
       setStats(null);
+      toast.error("Failed to fetch API key");
     } finally {
       setLoading(false);
     }
@@ -58,11 +59,11 @@ export function SellerApiPage() {
   async function fetchApiHistory() {
     setHistoryLoading(true);
     try {
-      const res = await fetch("/api/seller-api/history", { credentials: "include" });
-      const data = await res.json();
+      const { data } = await api.get("/seller-api/history");
       setHistory(Array.isArray(data) ? data : []);
-    } catch {
+    } catch (error) {
       setHistory([]);
+      toast.error("Failed to fetch API history");
     } finally {
       setHistoryLoading(false);
     }
@@ -71,11 +72,7 @@ export function SellerApiPage() {
   async function handleGenerate() {
     setLoading(true);
     try {
-      const res = await fetch("/api/seller-api/generate-key", {
-        method: "POST",
-        credentials: "include",
-      });
-      const data = await res.json();
+      const { data } = await api.post("/seller-api/generate-key");
       if (data.apiKey) {
         setApiKey(data.apiKey);
         setHasKey(true);
@@ -84,7 +81,7 @@ export function SellerApiPage() {
       } else {
         toast.error("Failed to generate API key");
       }
-    } catch {
+    } catch (error) {
       toast.error("Failed to generate API key");
     } finally {
       setLoading(false);
@@ -94,15 +91,12 @@ export function SellerApiPage() {
   async function handleRevoke() {
     setLoading(true);
     try {
-      await fetch("/api/seller-api/revoke-key", {
-        method: "POST",
-        credentials: "include",
-      });
+      await api.post("/seller-api/revoke-key");
       setApiKey(null);
       setHasKey(false);
       setShowKey(false);
       toast.success("API key revoked");
-    } catch {
+    } catch (error) {
       toast.error("Failed to revoke API key");
     } finally {
       setLoading(false);
@@ -137,7 +131,9 @@ export function SellerApiPage() {
             </Button>
           )}
         </div>
-        {hasKey ? (
+        {loading ? (
+          <div className="text-muted-foreground text-sm">Loading...</div>
+        ) : hasKey ? (
           <div className="flex items-center gap-2">
             <Input
               type={showKey ? "text" : "password"}
