@@ -30,6 +30,7 @@ interface AuthState {
   logout: () => void;
   setVerifiedSeller: (status: boolean) => void;
   setVerifiedDriver: (status: boolean) => void;
+  updateUserRole: (role: "ADMIN" | "SELLER" | "WAREHOUSE_MANAGER" | "DRIVER") => void;
   signInWithGoogle: () => void;
   handleGoogleCallback: (token: string) => Promise<void>;
   requestPasswordReset: (email: string) => Promise<void>;
@@ -59,6 +60,15 @@ export const useAuthStore = create<AuthState>()(
         set((state) => ({
           isVerifiedDriver: status,
           user: state.user ? { ...state.user, isVerifiedDriver: status } : null,
+        }));
+      },
+
+      updateUserRole: (role: "ADMIN" | "SELLER" | "WAREHOUSE_MANAGER" | "DRIVER") => {
+        set((state) => ({
+          user: state.user ? {
+            ...state.user,
+            role: state.user.role.includes(role) ? state.user.role : [...state.user.role, role]
+          } : null,
         }));
       },
 

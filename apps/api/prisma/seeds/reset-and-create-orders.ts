@@ -129,7 +129,7 @@ const generateOrder = async (sellerId, products, sellerGovernorate) => {
 
 async function main() {
   try {
-    const SELLER_USER_ID = 'cm7sxtbh00000dazygnv6uruw';
+    const SELLER_USER_ID = 'cmb4vryr90000dal5n72ku2td';
 
     // Log all sellers to verify their user IDs
     const allSellers = await prisma.seller.findMany();

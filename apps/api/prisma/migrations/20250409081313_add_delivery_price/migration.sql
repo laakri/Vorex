@@ -1,2 +1,0 @@
--- AlterTable
-ALTER TABLE "Order" ADD COLUMN     "deliveryPrice" DOUBLE PRECISION NOT NULL DEFAULT 0;

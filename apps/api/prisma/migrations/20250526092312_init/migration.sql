@@ -20,7 +20,7 @@ CREATE TYPE "VehicleType" AS ENUM ('MOTORCYCLE', 'CAR', 'VAN', 'SMALL_TRUCK', 'L
 CREATE TYPE "VehicleStatus" AS ENUM ('ACTIVE', 'MAINTENANCE', 'REPAIR', 'OUT_OF_SERVICE');
 
 -- CreateEnum
-CREATE TYPE "OrderStatus" AS ENUM ('PENDING', 'LOCAL_ASSIGNED_TO_PICKUP', 'LOCAL_PICKED_UP', 'LOCAL_DELIVERED', 'CITY_ASSIGNED_TO_PICKUP', 'CITY_PICKED_UP', 'CITY_IN_TRANSIT_TO_WAREHOUSE', 'CITY_ARRIVED_AT_SOURCE_WAREHOUSE', 'CITY_READY_FOR_INTERCITY_TRANSFER', 'CITY_IN_TRANSIT_TO_DESTINATION_WAREHOUSE', 'CITY_ARRIVED_AT_DESTINATION_WAREHOUSE', 'CITY_READY_FOR_LOCAL_DELIVERY', 'CITY_DELIVERED', 'CANCELLED', 'CITY_ASSIGNED_TO_PICKUP_ACCEPTED', 'CITY_READY_FOR_INTERCITY_TRANSFER_BATCHED', 'CITY_READY_FOR_LOCAL_DELIVERY_BATCHED');
+CREATE TYPE "OrderStatus" AS ENUM ('PENDING', 'LOCAL_ASSIGNED_TO_PICKUP', 'LOCAL_PICKED_UP', 'LOCAL_DELIVERED', 'CITY_ASSIGNED_TO_PICKUP', 'CITY_PICKED_UP', 'CITY_ARRIVED_AT_SOURCE_WAREHOUSE', 'CITY_READY_FOR_INTERCITY_TRANSFER', 'CITY_READY_FOR_INTERCITY_TRANSFER_BATCHED', 'CITY_IN_TRANSIT_TO_DESTINATION_WAREHOUSE', 'CITY_ARRIVED_AT_DESTINATION_WAREHOUSE', 'CITY_READY_FOR_LOCAL_DELIVERY', 'CITY_READY_FOR_LOCAL_DELIVERY_BATCHED', 'CITY_DELIVERED', 'CANCELLED');
 
 -- CreateEnum
 CREATE TYPE "RouteStatus" AS ENUM ('PENDING', 'IN_PROGRESS', 'COMPLETED', 'FAILED');
@@ -34,6 +34,9 @@ CREATE TYPE "BatchType" AS ENUM ('LOCAL_PICKUP', 'LOCAL_SELLERS_WAREHOUSE', 'LOC
 -- CreateEnum
 CREATE TYPE "BatchStatus" AS ENUM ('COLLECTING', 'PROCESSING', 'COMPLETED');
 
+-- CreateEnum
+CREATE TYPE "PaymentStatus" AS ENUM ('PENDING', 'PAID', 'CANCELLED');
+
 -- CreateTable
 CREATE TABLE "User" (
     "id" TEXT NOT NULL,
@@ -45,14 +48,35 @@ CREATE TABLE "User" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "isVerifiedDriver" BOOLEAN NOT NULL DEFAULT false,
+    "isEmailVerified" BOOLEAN NOT NULL DEFAULT false,
+    "verificationToken" TEXT,
+    "resetPasswordToken" TEXT,
+    "resetPasswordExpires" TIMESTAMP(3),
 
     CONSTRAINT "User_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Notification" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "type" TEXT NOT NULL,
+    "title" TEXT NOT NULL,
+    "message" TEXT NOT NULL,
+    "isRead" BOOLEAN NOT NULL DEFAULT false,
+    "data" JSONB,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "orderId" TEXT,
+
+    CONSTRAINT "Notification_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "Seller" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
+    "apiKey" TEXT,
     "businessName" TEXT NOT NULL,
     "businessType" TEXT NOT NULL,
     "description" TEXT,
@@ -98,6 +122,7 @@ CREATE TABLE "Order" (
     "warehouseId" TEXT,
     "status" "OrderStatus" NOT NULL DEFAULT 'PENDING',
     "totalAmount" DOUBLE PRECISION NOT NULL,
+    "deliveryPrice" DOUBLE PRECISION NOT NULL DEFAULT 0,
     "address" TEXT NOT NULL,
     "city" TEXT NOT NULL,
     "governorate" TEXT NOT NULL,
@@ -115,6 +140,7 @@ CREATE TABLE "Order" (
     "isLocalDelivery" BOOLEAN NOT NULL DEFAULT false,
     "batchId" TEXT,
     "secondaryWarehouseId" TEXT,
+    "estimatedDeliveryTime" TIMESTAMP(3),
 
     CONSTRAINT "Order_pkey" PRIMARY KEY ("id")
 );
@@ -405,11 +431,45 @@ CREATE TABLE "VehicleIssue" (
     CONSTRAINT "VehicleIssue_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "DriverEarnings" (
+    "id" TEXT NOT NULL,
+    "driverId" TEXT NOT NULL,
+    "orderId" TEXT NOT NULL,
+    "routeId" TEXT,
+    "batchId" TEXT,
+    "baseAmount" DOUBLE PRECISION NOT NULL,
+    "bonusAmount" DOUBLE PRECISION NOT NULL,
+    "totalAmount" DOUBLE PRECISION NOT NULL,
+    "percentage" DOUBLE PRECISION NOT NULL DEFAULT 70,
+    "status" "PaymentStatus" NOT NULL DEFAULT 'PENDING',
+    "paidAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "DriverEarnings_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "ApiLog" (
+    "id" TEXT NOT NULL,
+    "sellerId" TEXT NOT NULL,
+    "endpoint" TEXT NOT NULL,
+    "status" INTEGER NOT NULL,
+    "responseTime" INTEGER NOT NULL,
+    "timestamp" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "ApiLog_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Seller_userId_key" ON "Seller"("userId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Seller_apiKey_key" ON "Seller"("apiKey");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Product_sku_key" ON "Product"("sku");
@@ -446,6 +506,12 @@ CREATE UNIQUE INDEX "Refund_orderId_key" ON "Refund"("orderId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Batch_routeId_key" ON "Batch"("routeId");
+
+-- AddForeignKey
+ALTER TABLE "Notification" ADD CONSTRAINT "Notification_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Notification" ADD CONSTRAINT "Notification_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "Order"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Seller" ADD CONSTRAINT "Seller_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -533,3 +599,18 @@ ALTER TABLE "MaintenanceRecord" ADD CONSTRAINT "MaintenanceRecord_vehicleId_fkey
 
 -- AddForeignKey
 ALTER TABLE "VehicleIssue" ADD CONSTRAINT "VehicleIssue_vehicleId_fkey" FOREIGN KEY ("vehicleId") REFERENCES "Vehicle"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "DriverEarnings" ADD CONSTRAINT "DriverEarnings_driverId_fkey" FOREIGN KEY ("driverId") REFERENCES "Driver"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "DriverEarnings" ADD CONSTRAINT "DriverEarnings_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "Order"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "DriverEarnings" ADD CONSTRAINT "DriverEarnings_routeId_fkey" FOREIGN KEY ("routeId") REFERENCES "DeliveryRoute"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "DriverEarnings" ADD CONSTRAINT "DriverEarnings_batchId_fkey" FOREIGN KEY ("batchId") REFERENCES "Batch"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ApiLog" ADD CONSTRAINT "ApiLog_sellerId_fkey" FOREIGN KEY ("sellerId") REFERENCES "Seller"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
