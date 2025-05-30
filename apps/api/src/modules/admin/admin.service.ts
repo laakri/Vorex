@@ -140,32 +140,49 @@ export class AdminService {
   }
 
   async createWarehouseManager(createWarehouseManagerDto: {
-    name: string;
-    email: string;
+    userId: string;
     warehouseId: string;
   }) {
-    // First create the user
-    const user = await this.prisma.user.create({
-      data: {
-        fullName: createWarehouseManagerDto.name,
-        email: createWarehouseManagerDto.email,
-        password: uuidv4(), // Generate a random password
-        role: [Role.WAREHOUSE_MANAGER],
-      },
+    // First check if the user exists
+    const user = await this.prisma.user.findUnique({
+      where: { id: createWarehouseManagerDto.userId },
     });
+
+    if (!user) {
+      throw new NotFoundException(`User with ID ${createWarehouseManagerDto.userId} not found`);
+    }
+
+    // Check if the warehouse exists
+    const warehouse = await this.prisma.warehouse.findUnique({
+      where: { id: createWarehouseManagerDto.warehouseId },
+    });
+
+    if (!warehouse) {
+      throw new NotFoundException(`Warehouse with ID ${createWarehouseManagerDto.warehouseId} not found`);
+    }
+
+    // Check if the user is already a manager of any warehouse
+    const existingManager = await this.prisma.warehouseManager.findUnique({
+      where: { userId: createWarehouseManagerDto.userId },
+    });
+
+    if (existingManager) {
+      throw new BadRequestException('User is already assigned as a warehouse manager');
+    }
 
     // Generate a unique employee ID
     const employeeId = `EMP-${uuidv4().substring(0, 8)}`;
 
-    // Then create the warehouse manager relationship
-    return this.prisma.warehouseManager.create({
+    // Create the warehouse manager relationship
+    const manager = await this.prisma.warehouseManager.create({
       data: {
-        userId: user.id,
+        userId: createWarehouseManagerDto.userId,
         warehouseId: createWarehouseManagerDto.warehouseId,
         employeeId,
         securityClearance: 'BASIC',
         shiftPreference: 'MORNING',
         emergencyContact: '',
+        specializations: [],
       },
       include: {
         user: {
@@ -185,6 +202,18 @@ export class AdminService {
         },
       },
     });
+
+    // Update user's role to include WAREHOUSE_MANAGER if not already present
+    if (!user.role.includes(Role.WAREHOUSE_MANAGER)) {
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          role: [...user.role, Role.WAREHOUSE_MANAGER],
+        },
+      });
+    }
+
+    return manager;
   }
 
   async updateWarehouseManagerStatus(id: string, status: 'active' | 'inactive') {
