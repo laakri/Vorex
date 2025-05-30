@@ -17,77 +17,69 @@ export function MainHomePage() {
   return (
     <>
       {/* HERO SECTION */}
-      <section className="relative min-h-screen flex items-center justify-center bg-background text-foreground overflow-hidden">
-        {/* Cinematic dark overlay */}
-        <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-black opacity-90 z-0" />
-        {/* Subtle gold/yellow radial highlight */}
-        <div className="absolute left-1/2 top-0 -translate-x-1/2 w-[80vw] h-[40vw] bg-[radial-gradient(ellipse_at_center,_rgba(255,215,0,0.08)_0%,_transparent_80%)] z-0" />
-        <div className="container relative z-10 flex flex-col lg:flex-row items-center justify-between gap-16 py-24">
-          {/* Left: Headline & CTA */}
-          <div className="max-w-xl space-y-8">
-            <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary shadow">
-              <Zap className="h-4 w-4" />
-              Unified Shipment Platform
-            </div>
-            <h1 className="text-5xl md:text-6xl font-extrabold tracking-tight leading-tight">
-              Ship with <span className="text-primary">Confidence</span>
-            </h1>
-            <p className="text-lg text-muted-foreground max-w-md">
-              Real-time tracking, instant quotes, and seamless management for all your shipments—one dashboard, every carrier.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 mt-8">
-              <Button size="lg" className="bg-primary text-primary-foreground font-semibold px-10 py-6 text-base rounded-xl shadow-lg hover:bg-primary/90">
-                <Link to="/register" className="flex items-center gap-2">
-                  Start Shipping
-                  <ArrowRight className="h-5 w-5" />
-                </Link>
-              </Button>
-              <Button variant="outline" size="lg" className="border-primary text-primary font-semibold px-8 py-6 rounded-xl">
-                <Link to="/track">Track a Package</Link>
-              </Button>
-            </div>
-            <div className="flex gap-4 mt-8 opacity-80">
-              {clientLogos.map((logo, i) => (
-                <span key={i} className="text-xs font-medium text-muted-foreground bg-card/60 px-3 py-1 rounded shadow border border-border">
-                  {logo}
-                </span>
-              ))}
-            </div>
+      <section className="relative bg-background text-foreground overflow-hidden">
+        <div className="min-h-screen flex flex-col justify-center items-center px-4 pb-0 relative z-10">
+          {/* Badge */}
+          <div className="inline-flex items-center gap-2 mb-4 text-sm font-medium text-primary bg-primary/10 px-4 py-1.5 rounded-full border border-primary/30 shadow-sm">
+            <Zap className="w-4 h-4" />
+            One Dashboard. Every Carrier.
           </div>
-          {/* Right: Shipment Card Preview */}
-          <div className="relative w-full max-w-md">
-            <div className="rounded-2xl border-2 border-primary/20 bg-card/80 shadow-2xl p-8 flex flex-col gap-6">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-primary font-bold text-lg flex items-center gap-2">
-                  <Truck className="h-5 w-5" /> Live Shipment
-                </span>
-                <span className="text-xs text-muted-foreground">In Transit</span>
-              </div>
-              <div className="relative h-32 w-full rounded-lg bg-muted/30 flex items-center justify-center overflow-hidden">
-                <Map className="absolute inset-0 w-full h-full opacity-10" />
-                <div className="relative z-10 flex flex-col items-center gap-1">
-                  <span className="text-xs text-muted-foreground">Tracking #</span>
-                  <span className="font-mono text-lg font-bold tracking-wider">VOX-9385-721</span>
-                  <span className="mt-2 flex items-center gap-2 text-sm text-primary">
-                    <Package className="h-4 w-4" /> San Francisco → New York
-                  </span>
-                </div>
-              </div>
-              <div className="flex items-center justify-between mt-2">
-                <div className="flex flex-col items-center">
-                  <span className="text-xs text-muted-foreground">Status</span>
-                  <span className="font-semibold text-green-400 flex items-center gap-1"><CheckCircle2 className="h-4 w-4" /> In Transit</span>
-                </div>
-                <div className="flex flex-col items-center">
-                  <span className="text-xs text-muted-foreground">ETA</span>
-                  <span className="font-semibold flex items-center gap-1"><Clock className="h-4 w-4 text-primary" /> 2d 4h</span>
-                </div>
-              </div>
+
+          {/* Title */}
+          <h1 className="text-5xl md:text-6xl font-extrabold tracking-tight leading-tight text-center">
+            Shipping Made <span className="text-primary">Seamless</span>
+          </h1>
+
+          {/* Subtitle */}
+          <p className="mt-4 text-lg text-muted-foreground max-w-xl text-center">
+            Real-time visibility, automated quotes, and unified tracking—all in one beautifully simple interface.
+          </p>
+
+          {/* CTAs */}
+          <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
+            <Button size="lg" className="px-8 py-5 text-base rounded-xl shadow-md">
+              <Link to="/register" className="flex items-center gap-2">
+                Start Shipping
+                <ArrowRight className="w-5 h-5" />
+              </Link>
+            </Button>
+            <Button variant="outline" size="lg" className="px-8 py-5 text-base rounded-xl">
+              <Link to="/track">Track a Package</Link>
+            </Button>
+          </div>
+
+          {/* Dashboard Preview */}
+          <div className="relative z-10 w-full max-w-6xl mx-auto mt-16 rounded-t-xl overflow-hidden shadow-2xl border border-border">
+            <div className="h-[600px] overflow-hidden rounded-t-xl">
+              <img
+                src="https://i.ibb.co/TMbtfFxn/Screenshot-2025-05-30-110220.png"
+                alt="Dashboard Preview"
+                className="w-full object-cover object-top"
+              />
             </div>
           </div>
         </div>
+        {/* WAVE CLIPPING IMAGE */}
+        <div className="absolute bottom-0 left-0 w-full z-20 pointer-events-none">
+          <svg
+            viewBox="0 0 1440 100"
+            className="w-full h-[100px]"
+            preserveAspectRatio="none"
+          >
+            <path d="M0,64 C360,100 1080,0 1440,64 L1440,160 L0,160 Z" fill="hsl(var(--card))" /> {/* Tailwind bg-muted */}
+          </svg>
+        </div>
+        
       </section>
-
+      {/* NEXT SECTION */}
+      <section className="bg-muted text-foreground  py-10 px-4">
+        <div className="max-w-6xl mx-auto">
+          <h2 className="text-3xl font-bold mb-4">Why Choose Us?</h2>
+          <p className="text-muted-foreground max-w-2xl">
+            Instant tracking, real-time updates, and reliable shipping performance across all your carriers—seamlessly.
+          </p>
+        </div>
+      </section>
       {/* STATS SECTION */}
       <section className="container py-16">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">

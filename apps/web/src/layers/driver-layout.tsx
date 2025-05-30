@@ -111,11 +111,11 @@ export function DriverLayout() {
   return (
     <div className="flex h-screen overflow-hidden">
       {/* Left Sidebar */}
-      <aside className={cn("border-r bg-background-secondary transition-all duration-300 flex flex-col h-screen", 
+      <aside className={cn("border-r bg-background-secondary transition-all duration-300 flex flex-col h-screen secondary-bg  border-transparent", 
         collapsed ? "w-[70px]" : "w-64"
       )}>
         {/* Header - Fixed height */}
-        <div className="h-14 flex items-center justify-between border-b px-3 shrink-0">
+        <div className="h-14 flex items-center justify-between  px-3 shrink-0">
           {!collapsed && (
             <Link to="/driver/dashboard" className="flex-1 px-1">
               <Logo />

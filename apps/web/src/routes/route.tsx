@@ -57,7 +57,6 @@ import UsersPage from "@/pages/admin/users";
 import WarehousesPage from "@/pages/admin/warehouses";
 import { DriverEarnings } from "@/pages/driver/driver-earnings";
 // Add voice agent import
-import { VoiceAgent } from "@/components/VoiceAgent";
 import { SellerApiPage } from "@/pages/seller/seller-api";
 
 export function AppRoutes() {
@@ -72,26 +71,7 @@ export function AppRoutes() {
         <Route path="contact" element={<MainContact />} />
         <Route path="/track" element={<TrackPage />} />
         <Route path="/track/:trackingId" element={<TrackOrderPage />} />
-        {/* Add voice agent route */}
-        <Route 
-          path="/voice-assistant" 
-          element={
-            <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center p-4">
-              <div className="w-full max-w-md space-y-8">
-                <div className="text-center">
-                  <h2 className="text-3xl font-bold tracking-tight">Voice Assistant</h2>
-                  <p className="mt-2 text-gray-600">Ask me anything about your vehicle</p>
-                </div>
-                <div className="flex justify-center">
-                  <VoiceAgent className="scale-150" />
-                </div>
-                <div className="text-center text-sm text-gray-500">
-                  Click the microphone to start speaking
-                </div>
-              </div>
-            </div>
-          } 
-        />
+       
       </Route>
 
       {/* Auth Platform */}

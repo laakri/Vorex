@@ -12,7 +12,6 @@ import * as z from "zod";
 import { Loader2, Warehouse as WarehouseIcon, Users as UsersIcon, UserPlus, Trash2 } from "lucide-react";
 import api from "@/lib/axios";
 import { Input } from '@/components/ui/input';
-import { toast } from 'sonner';
 
 // Form schema
 const assignManagerSchema = z.object({
@@ -74,6 +73,21 @@ export function AdminWarehouseManagersPage() {
       warehouseId: "",
     },
   });
+
+  // Fetch managers function
+  const fetchManagers = async () => {
+    try {
+      const response = await api.get('/admin/warehouse-managers');
+      setManagers(response.data);
+    } catch (error) {
+      console.error('Error fetching managers:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to load warehouse managers. Please try again.",
+      });
+    }
+  };
   
   // Fetch data
   useEffect(() => {
@@ -111,7 +125,11 @@ export function AdminWarehouseManagersPage() {
   // Handle manager assignment
   const onSubmit = async (data: z.infer<typeof assignManagerSchema>) => {
     try {
-      const response = await api.post('/admin/warehouse-managers', data);
+      console.log('Submitting data:', data); // Debug log
+      const response = await api.post('/admin/warehouse-managers', {
+        userId: data.userId,
+        warehouseId: data.warehouseId
+      });
       
       // Update local state with new manager
       const newManager = response.data;
@@ -167,13 +185,32 @@ export function AdminWarehouseManagersPage() {
   
   const handleAddManager = async () => {
     try {
-      await api.post('/admin/warehouse-managers', newManager);
-      toast.success('Warehouse manager added successfully');
+      // First create the user
+      const userResponse = await api.post('/users', {
+        fullName: newManager.name,
+        email: newManager.email,
+        role: ['WAREHOUSE_MANAGER']
+      });
+
+      // Then assign them as a warehouse manager
+      await api.post('/admin/warehouse-managers', {
+        userId: userResponse.data.id,
+        warehouseId: newManager.warehouseId
+      });
+
+      toast({
+        title: "Success",
+        description: "Warehouse manager added successfully.",
+      });
       setNewManager({ name: '', email: '', warehouseId: '' });
       fetchManagers();
     } catch (error) {
       console.error('Failed to add manager:', error);
-      toast.error('Failed to add warehouse manager');
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to add warehouse manager. Please try again.",
+      });
     }
   };
 
@@ -182,11 +219,18 @@ export function AdminWarehouseManagersPage() {
       await api.patch(`/admin/warehouse-managers/${managerId}/status`, {
         status: currentStatus === 'active' ? 'inactive' : 'active',
       });
-      toast.success('Manager status updated successfully');
+      toast({
+        title: "Success",
+        description: "Manager status updated successfully.",
+      });
       fetchManagers();
     } catch (error) {
       console.error('Failed to update manager status:', error);
-      toast.error('Failed to update manager status');
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to update manager status. Please try again.",
+      });
     }
   };
   

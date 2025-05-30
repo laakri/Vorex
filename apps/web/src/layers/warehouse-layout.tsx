@@ -136,13 +136,13 @@ export function WarehouseLayout() {
       {/* Sidebar - Fixed height with responsive classes */}
       <aside
         className={cn(
-          "border-r bg-background-secondary transition-all duration-300 flex flex-col h-screen",
+          "border-r bg-background-secondary transition-all duration-300 flex flex-col h-screen secondary-bg  border-transparent",
           collapsed ? "w-[70px]" : "w-64",
           "md:static absolute z-20"
         )}
       >
         {/* Header - Fixed height */}
-        <div className="h-14 flex items-center justify-between border-b px-3 shrink-0">
+        <div className="h-14 flex items-center justify-between  px-3 shrink-0">
           {collapsed ? (
             <WarehouseIcon className="h-8 w-8 text-primary" />
           ) : (

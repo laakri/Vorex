@@ -69,7 +69,7 @@ export function MainNav() {
     <>
       {/* Status banner with operational status */}
       {showBanner && (
-        <div className={`relative w-full bg-background/80 border-b py-1 transition-transform duration-300 ${scrolled ? '-translate-y-full' : 'translate-y-0'}`}>
+        <div className={`relative w-full secondary-bg border-b py-1 transition-transform duration-300 ${scrolled ? '-translate-y-full' : 'translate-y-0'}`}>
           <div className="container flex items-center justify-between">
             <div className="flex items-center gap-2 text-xs">
               <span className="h-1.5 w-1.5 rounded-full bg-green-500"></span>
