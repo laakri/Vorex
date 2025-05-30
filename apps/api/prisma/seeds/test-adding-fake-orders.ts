@@ -385,7 +385,7 @@ async function createFakeOrders(count: number, userId?: string) {
 async function main() {
   try {
     const FAKE_ORDERS_COUNT = 50;
-    const USER_ID = 'cmb4vryr90000dal5n72ku2td'; // The user ID provided
+    const USER_ID = 'cmbal4j7n000ddar1idfr7wmo'; // The user ID provided
     await createFakeOrders(FAKE_ORDERS_COUNT, USER_ID);
   } catch (error) {
     console.error('Error in main function:', error);
