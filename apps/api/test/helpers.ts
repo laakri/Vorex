@@ -48,7 +48,13 @@ export const createTestWarehouse = async (
 };
 
 export const cleanupTestData = async (prisma: PrismaClient) => {
+  // Delete in order to respect foreign key constraints
+  await prisma.routeStop.deleteMany();
   await prisma.deliveryRoute.deleteMany();
+  await prisma.notification.deleteMany();
+  await prisma.orderItem.deleteMany();
+  await prisma.product.deleteMany();
+  await prisma.seller.deleteMany();
   await prisma.user.deleteMany();
   await prisma.warehouse.deleteMany();
 }; 

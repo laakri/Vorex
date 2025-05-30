@@ -13,7 +13,9 @@ const config: Config = {
   setupFilesAfterEnv: ['<rootDir>/test/setup.ts'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
+    '^prisma/(.*)$': '<rootDir>/prisma/$1'
   },
+  moduleDirectories: ['node_modules', '<rootDir>'],
 };
 
 export default config; 
