@@ -94,26 +94,22 @@ jobs:
         docker ps
         docker compose logs
 
-    - name: Setup Deployment Directory
-      run: |
-        # Create deployment directories with proper permissions
-        sudo mkdir -p /home/laakri/projects/github-runners/vorex/_work/Vorex
-        sudo mkdir -p /home/laakri/projects/github-runners/vorex/dist
-        sudo chown -R $USER:$USER /home/laakri/projects/github-runners/vorex/_work/Vorex
-        sudo chown -R $USER:$USER /home/laakri/projects/github-runners/vorex/dist
-
     - name: Cleanup and Deploy
       run: |
-        # Remove old work directories
-        rm -rf /home/laakri/projects/github-runners/vorex/_work/Vorex/*
+        # Clean up old directories with sudo
+        sudo rm -rf /home/laakri/projects/github-runners/vorex/_work/Vorex
+        sudo rm -rf /home/laakri/projects/github-runners/vorex/dist
         
-        # Copy the built files to the correct location
+        # Create fresh directories
+        sudo mkdir -p /home/laakri/projects/github-runners/vorex/_work/Vorex
+        sudo mkdir -p /home/laakri/projects/github-runners/vorex/dist
+        
+        # Set permissions
+        sudo chown -R $USER:$USER /home/laakri/projects/github-runners/vorex/_work/Vorex
+        sudo chown -R $USER:$USER /home/laakri/projects/github-runners/vorex/dist
+        
+        # Copy the built files
         cp -r apps/web/dist/* /home/laakri/projects/github-runners/vorex/_work/Vorex/
-        
-        # Remove old files
-        rm -rf /home/laakri/projects/github-runners/vorex/dist/*
-        
-        # Copy the built files to the correct location
         cp -r apps/web/dist/* /home/laakri/projects/github-runners/vorex/dist/
         
         # Restart services
