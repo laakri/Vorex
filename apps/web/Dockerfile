@@ -30,10 +30,6 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 # Copy built application from builder stage
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Create a non-root user for security
-RUN addgroup -g 1001 -S nginx && \
-    adduser -S -D -H -u 1001 -s /sbin/nologin -G nginx nginx
-
 # Expose port 80
 EXPOSE 80
 
