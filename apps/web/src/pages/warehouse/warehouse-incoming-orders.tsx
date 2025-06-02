@@ -90,7 +90,7 @@ type Batch = {
   totalWeight: number;
   sourceWarehouseId?: string;
   destinationWarehouseId?: string;
-  batchId : string;
+  batchId: string;
   driverId?: string;
   driverName?: string;
   vehicleId?: string;
@@ -113,9 +113,39 @@ export default function IncomingOrdersPage() {
   const [processingAction, setProcessingAction] = useState(false);
 
   useEffect(() => {
-    fetchOrders();
-    fetchWarehouseSections();
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        await Promise.all([
+          fetchOrders(),
+          fetchWarehouseSections(),
+          fetchBatches()
+        ]);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
   }, [activeTab]);
+
+  const fetchBatches = async () => {
+    try {
+      const warehouseId = user?.warehouseId;
+      if (!warehouseId) throw new Error("No warehouse ID found");
+      
+      const response = await api.get(`/warehouse/${warehouseId}/batches`);
+      setBatches(response.data);
+    } catch (error) {
+      console.error("Error fetching batches:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load batches",
+        variant: "destructive",
+      });
+    }
+  };
 
   const fetchOrders = async () => {
     try {

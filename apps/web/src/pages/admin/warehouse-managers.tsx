@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Loader2, Warehouse as WarehouseIcon, Users as UsersIcon, UserPlus, Trash2 } from "lucide-react";
+import { Loader2, Users as UsersIcon, UserPlus } from "lucide-react";
 import api from "@/lib/axios";
 import { Input } from '@/components/ui/input';
 
@@ -152,27 +152,7 @@ export function AdminWarehouseManagersPage() {
     }
   };
   
-  // Handle manager removal
-  const handleRemoveManager = async (managerId: string) => {
-    try {
-      await api.delete(`/admin/warehouse-managers/${managerId}`);
-      
-      // Update local state
-      setManagers(managers.filter(manager => manager.id !== managerId));
-      
-      toast({
-        title: "Success",
-        description: "Warehouse manager removed successfully.",
-      });
-    } catch (error: any) {
-      console.error('Error removing manager:', error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error.response?.data?.message || "Failed to remove manager. Please try again.",
-      });
-    }
-  };
+  
   
   // Filter users to show only those who can be warehouse managers
   const eligibleUsers = users.filter(user => 
