@@ -7,17 +7,13 @@ import {
   Settings,
   LogOut,
   ChevronLeft,
-  Bell,
   Search,
   HelpCircle,
   Warehouse as WarehouseIcon,
   ShieldCheck,
   Truck,
   BarChart3,
- 
   FileText,
-  AlertCircle,
- 
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useState, useEffect } from "react";
@@ -32,7 +28,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const adminMenuItems = [
@@ -100,11 +95,6 @@ export function AdminLayout() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedMenu, setExpandedMenu] = useState<string | null>(null);
-  const [notifications, setNotifications] = useState([
-    { id: 1, title: "System Update", message: "New system update available", time: "10m ago", read: false },
-    { id: 2, title: "New User Registration", message: "5 new users registered today", time: "1h ago", read: false },
-    { id: 3, title: "Security Alert", message: "Unusual login attempt detected", time: "2h ago", read: true },
-  ]);
   
   // Add responsive behavior
   useEffect(() => {
@@ -143,8 +133,6 @@ export function AdminLayout() {
       setExpandedMenu(title);
     }
   };
-
-  const unreadNotificationsCount = notifications.filter(n => !n.read).length;
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
@@ -330,58 +318,6 @@ export function AdminLayout() {
           </div>
           
           <div className="flex items-center gap-4">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="relative">
-                  <Bell className="h-5 w-5" />
-                  {unreadNotificationsCount > 0 && (
-                    <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-medium text-white">
-                      {unreadNotificationsCount}
-                    </span>
-                  )}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-80">
-                <DropdownMenuLabel className="flex items-center justify-between">
-                  <span>Notifications</span>
-                  <Button variant="ghost" size="sm" className="h-auto p-0 text-xs text-primary">
-                    Mark all as read
-                  </Button>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <div className="max-h-80 overflow-y-auto">
-                  {notifications.map((notification) => (
-                    <DropdownMenuItem key={notification.id} className="p-0 focus:bg-transparent">
-                      <div className={cn(
-                        "flex gap-3 p-3 w-full cursor-pointer hover:bg-accent rounded-md",
-                        !notification.read && "bg-accent/30"
-                      )}>
-                        <div className={cn(
-                          "h-9 w-9 rounded-full flex items-center justify-center",
-                          !notification.read ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
-                        )}>
-                          <AlertCircle className="h-5 w-5" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between">
-                            <p className="text-sm font-medium">{notification.title}</p>
-                            <p className="text-xs text-muted-foreground">{notification.time}</p>
-                          </div>
-                          <p className="text-xs text-muted-foreground mt-1">{notification.message}</p>
-                        </div>
-                      </div>
-                    </DropdownMenuItem>
-                  ))}
-                </div>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="justify-center">
-                  <Button variant="ghost" size="sm" className="w-full text-primary">
-                    View all notifications
-                  </Button>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            
             <Button variant="ghost" size="icon">
               <HelpCircle className="h-5 w-5" />
             </Button>

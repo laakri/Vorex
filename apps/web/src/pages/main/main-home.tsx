@@ -3,13 +3,10 @@ import { Link } from "react-router-dom";
 import {
   Truck,
   Map,
-  CheckCircle2,
-  Clock,
   Shield,
   BarChart3,
   User,
   ArrowRight,
-  Package,
   Zap,
 } from "lucide-react";
 
@@ -141,14 +138,6 @@ export function MainHomePage() {
   );
 }
 
-const clientLogos = [
-  "Amazon",
-  "Shopify",
-  "Walmart",
-  "FedEx",
-  "DHL",
-  "UPS",
-];
 
 const stats = [
   { value: "20K+", label: "Active Shippers" },
