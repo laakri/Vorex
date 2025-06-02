@@ -36,12 +36,29 @@ jobs:
     - name: Install Dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y unzip curl
+        sudo apt-get install -y unzip curl openssl
     
     - name: Setup Bun
       uses: oven-sh/setup-bun@v1
       with:
         bun-version: latest
+
+    - name: Install Project Dependencies
+      run: |
+        cd apps/api
+        bun install
+        bun add uuid
+        cd ../web
+        bun install
+        cd ../..
+        
+    - name: Build Projects
+      run: |
+        cd apps/api
+        bun run build
+        cd ../web
+        bun run build
+        cd ../..
         
     - name: Deploy with Docker Compose
       env:
@@ -77,7 +94,7 @@ jobs:
         docker ps
         docker compose logs
 
-    - name: Cleanup old work directories
+    - name: Cleanup and Deploy
       run: |
         # Remove old work directories
         sudo rm -rf /home/laakri/projects/github-runners/vorex/_work/Vorex
@@ -86,21 +103,17 @@ jobs:
         sudo mkdir -p /home/laakri/projects/github-runners/vorex/_work/Vorex
         
         # Copy the built files to the correct location
-        sudo cp -r dist/* /home/laakri/projects/github-runners/vorex/_work/Vorex/
+        sudo cp -r apps/web/dist/* /home/laakri/projects/github-runners/vorex/_work/Vorex/
         
-        # Restart the service if needed
-        sudo systemctl restart vorex
-
-    - name: Deploy
-      run: |
-        # Ensure the target directory exists
+        # Ensure the dist directory exists
         sudo mkdir -p /home/laakri/projects/github-runners/vorex/dist/
         
         # Remove old files
         sudo rm -rf /home/laakri/projects/github-runners/vorex/dist/*
         
-        # Copy the built files to the correct location with sudo
-        sudo cp -r dist/* /home/laakri/projects/github-runners/vorex/dist/
+        # Copy the built files to the correct location
+        sudo cp -r apps/web/dist/* /home/laakri/projects/github-runners/vorex/dist/
         
-        # Restart Caddy to pick up the new files
+        # Restart services
+        sudo systemctl restart vorex
         sudo systemctl restart caddy 
