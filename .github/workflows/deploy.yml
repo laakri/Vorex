@@ -5,7 +5,6 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
-  workflow_dispatch:
 
 jobs:
   deploy:
@@ -36,29 +35,12 @@ jobs:
     - name: Install Dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y unzip curl openssl
+        sudo apt-get install -y unzip curl
     
     - name: Setup Bun
       uses: oven-sh/setup-bun@v1
       with:
         bun-version: latest
-
-    - name: Install Project Dependencies
-      run: |
-        cd apps/api
-        bun install
-        bun add uuid
-        cd ../web
-        bun install
-        cd ../..
-        
-    - name: Build Projects
-      run: |
-        cd apps/api
-        bun run build
-        cd ../web
-        bun run build
-        cd ../..
         
     - name: Deploy with Docker Compose
       env:
@@ -92,26 +74,4 @@ jobs:
         
         # Check container status
         docker ps
-        docker compose logs
-
-    - name: Cleanup and Deploy
-      run: |
-        # Clean up old directories with sudo
-        sudo rm -rf /home/laakri/projects/github-runners/vorex/_work/Vorex
-        sudo rm -rf /home/laakri/projects/github-runners/vorex/dist
-        
-        # Create fresh directories
-        sudo mkdir -p /home/laakri/projects/github-runners/vorex/_work/Vorex
-        sudo mkdir -p /home/laakri/projects/github-runners/vorex/dist
-        
-        # Set permissions
-        sudo chown -R $USER:$USER /home/laakri/projects/github-runners/vorex/_work/Vorex
-        sudo chown -R $USER:$USER /home/laakri/projects/github-runners/vorex/dist
-        
-        # Copy the built files
-        cp -r apps/web/dist/* /home/laakri/projects/github-runners/vorex/_work/Vorex/
-        cp -r apps/web/dist/* /home/laakri/projects/github-runners/vorex/dist/
-        
-        # Restart services
-        sudo systemctl restart vorex
-        sudo systemctl restart caddy 
+        docker compose logs 
