@@ -5,6 +5,7 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -74,4 +75,32 @@ jobs:
         
         # Check container status
         docker ps
-        docker compose logs 
+        docker compose logs
+
+    - name: Cleanup old work directories
+      run: |
+        # Remove old work directories
+        sudo rm -rf /home/laakri/projects/github-runners/vorex/_work/Vorex
+        
+        # Ensure the target directory exists
+        sudo mkdir -p /home/laakri/projects/github-runners/vorex/_work/Vorex
+        
+        # Copy the built files to the correct location
+        sudo cp -r dist/* /home/laakri/projects/github-runners/vorex/_work/Vorex/
+        
+        # Restart the service if needed
+        sudo systemctl restart vorex
+
+    - name: Deploy
+      run: |
+        # Ensure the target directory exists
+        sudo mkdir -p /home/laakri/projects/github-runners/vorex/dist/
+        
+        # Remove old files
+        sudo rm -rf /home/laakri/projects/github-runners/vorex/dist/*
+        
+        # Copy the built files to the correct location with sudo
+        sudo cp -r dist/* /home/laakri/projects/github-runners/vorex/dist/
+        
+        # Restart Caddy to pick up the new files
+        sudo systemctl restart caddy 
