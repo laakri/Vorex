@@ -7,5 +7,8 @@ module.exports = {
   resolver: {
     ...defaultConfig.resolver,
     sourceExts: [...defaultConfig.resolver.sourceExts, 'mjs'],
+    alias: {
+      'react-native$': 'react-native-web',
+    },
   },
 }; 

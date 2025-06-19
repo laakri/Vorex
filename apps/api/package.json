@@ -20,6 +20,7 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "prisma:generate": "prisma generate",
     "db:push": "prisma db push",
+    "prisma:studio": "prisma studio",
     "seed:products": "ts-node prisma/seeds/test-adding-fake-products.ts",
     "seed:orders": "ts-node prisma/seeds/test-adding-fake-orders.ts",
     "seed:warehouses": "ts-node prisma/seeds/create-three-warehouses.ts"
