@@ -5,15 +5,14 @@
 
 @layer base {
   :root {
-    /* light theme — unchanged */
     --background: 0 0% 100%;
-    --secondary-background: 0 0% 100%;     
+    --secondary-background: 0 0% 100%;    
     --foreground: 20 14.3% 4.1%;
     --card: 0 0% 100%;
     --card-foreground: 20 14.3% 4.1%;
     --popover: 0 0% 100%;
     --popover-foreground: 20 14.3% 4.1%;
-    --primary: 24.6 95% 53.1%;
+    --primary: 205 100% 65%;             
     --primary-foreground: 60 9.1% 97.8%;
     --secondary: 60 4.8% 95.9%;
     --secondary-foreground: 24 9.8% 10%;
@@ -25,40 +24,76 @@
     --destructive-foreground: 60 9.1% 97.8%;
     --border: 20 5.9% 90%;
     --input: 20 5.9% 90%;
-    --ring: 24.6 95% 53.1%;
+    --ring: 205 100% 65%;                 
     --radius: 0.3rem;
-  }
+}
 
   .dark {
-    --background: 213, 26%, 8%;  
-    --secondary-background: 210, 27%, 4%;  
-    --foreground: 0 0% 98%;     
-    --card:  205, 23%, 14%;
-    --card-foreground: 0 0% 98%;
-    --popover: 225 28% 17%;
+    /* Core backgrounds with deeper blacks and subtle color hints */
+    --background: 220, 35%, 6%;           /* Deeper black with blue undertone */
+    --secondary-background: 215, 40%, 3%; /* Almost pure black with cool hint */
+    --foreground: 0 0% 100%;              /* Pure white for maximum contrast */
+    
+    /* Cards with subtle glow potential */
+    --card: 210, 30%, 12%;                /* Richer dark blue-gray */
+    --card-foreground: 0 0% 96%;          /* Slightly softer white */
+    --popover: 225 35% 15%;               /* More saturated popup background */
     --popover-foreground: 0 0% 98%;
-    --primary: 210 100% 60%;          /* Neon blue (Docker blue-ish) */
-    --primary-foreground: 221 39% 11%;
-    --secondary: 222 19% 20%;         /* Gray-blue */
+    
+    /* Vibrant primary - electric blue */
+    --primary: 205 100% 65%;              /* Brighter, more electric blue */
+    --primary-foreground: 220 45% 8%;     /* Deeper contrast */
+    
+    /* Enhanced secondary with purple hint */
+    --secondary: 240 25% 18%;             /* Purple-gray for depth */
     --secondary-foreground: 0 0% 98%;
-    --muted: 222 19% 20%;
-    --muted-foreground: 220 9% 70%;
-    --accent: 174 60% 45%;            /* Aqua accent */
-    --accent-foreground: 221 39% 11%;
-    --destructive: 0 100% 64%;        /* Strong red */
+    
+    /* Muted with warmer undertones */
+    --muted: 235 20% 22%;                 /* Warmer muted with purple hint */
+    --muted-foreground: 215 15% 75%;      /* Brighter muted text */
+    
+    /* Vibrant accent - cyan/teal */
+    --accent: 180 85% 55%;                /* More saturated cyan */
+    --accent-foreground: 220 45% 8%;
+    
+    /* Enhanced destructive */
+    --destructive: 0 85% 62%;             /* Slightly deeper red */
     --destructive-foreground: 0 0% 100%;
-    --border: 220 16% 25%;            /* Border steel-gray */
-    --input: 220 16% 25%;
-    --ring: 210 100% 60%;
-    --radius: 0.375rem;
-
-    /* Custom Chart / UI tones */
-    --chart-1: 210 100% 60%;          /* Neon blue */
-    --chart-2: 174 60% 45%;           /* Aqua green */
-    --chart-3: 0 0% 98%;              /* White highlight */
-    --chart-4: 0 100% 64%;            /* Danger red */
-    --chart-5: 222 19% 20%;           /* Deep gray */
-  }
+    
+    /* More defined borders */
+    --border: 225 25% 28%;                /* Lighter, more blue border */
+    --input: 225 25% 28%;
+    --ring: 205 100% 65%;                 /* Match primary */
+    --radius: 0.5rem;                     /* Slightly more rounded */
+    
+    /* Enhanced chart colors with better variety */
+    --chart-1: 205 100% 65%;              /* Electric blue */
+    --chart-2: 160 80% 50%;               /* Vibrant emerald */
+    --chart-3: 280 100% 70%;              /* Bright purple */
+    --chart-4: 25 100% 60%;               /* Warm orange */
+    --chart-5: 340 85% 65%;               /* Hot pink */
+    --chart-6: 50 100% 55%;               /* Golden yellow */
+    
+    /* Additional alive colors for enhanced theming */
+    --success: 140 80% 50%;               /* Vibrant green */
+    --success-foreground: 220 45% 8%;
+    --warning: 40 100% 60%;               /* Bright amber */
+    --warning-foreground: 220 45% 8%;
+    --info: 200 100% 65%;                 /* Bright info blue */
+    --info-foreground: 220 45% 8%;
+    
+    /* Glow effects for interactive elements */
+    --glow-primary: 205 100% 65%;
+    --glow-accent: 180 85% 55%;
+    --glow-success: 140 80% 50%;
+    --glow-warning: 40 100% 60%;
+    --glow-danger: 0 85% 62%;
+    
+    /* Gradient stops for dynamic backgrounds */
+    --gradient-start: 220, 35%, 6%;
+    --gradient-mid: 210, 30%, 8%;
+    --gradient-end: 225, 25%, 10%;
+}
 }
 .secondary-bg {
   background-color: hsl(var(--secondary-background));
